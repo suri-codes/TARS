@@ -6,15 +6,19 @@ use db::Db;
 mod args;
 mod db;
 mod dirs;
+mod entry;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = CliArgs::parse();
-
     let db = Db::connect().await?;
-    // println!("Hello, world!");
+
     match args.command {
-        Commands::Add => {}
-        Commands::List(l_args) => {}
+        Commands::Add => {
+            // need to add to the thang
+        }
+        Commands::List(l_args) => {
+            // need to list all the groups
+        }
     }
 
     Ok(())

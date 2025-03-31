@@ -15,14 +15,22 @@ need to really figure out what we want
 lowkey gonna just go play warframe gang
 
 
+= A reminding daemon
+for later btw
+https://github.com/hoodie/notify-rust
+
 = command interface
 // what the fuck do i do with this
 tars add "work on x and y and something else gang wtf are you doing"
 
-group:
-prio:
-description:
-due-by:
+
+entry {
+  group:
+  prio:
+  description:
+  due-by:
+}
+
 
 
 

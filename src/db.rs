@@ -9,11 +9,15 @@ use crate::dirs::get_data_dir;
 
 const DB_FILE_NAME: &str = "tars.db";
 
+/// Represents the Sqlite database.
+/// Has methods to interact with stored data.
 pub struct Db {
     conn: SqliteConnection,
 }
 
 impl Db {
+    /// Connects to the sqlite database located
+    /// in the data directory for the app
     pub async fn connect() -> Result<Self> {
         let mut data_dir = get_data_dir();
         // create the directory
@@ -28,8 +32,6 @@ impl Db {
             db_path.to_str().ok_or(eyre!("Failed to convert path"))?
         );
 
-        println!("db path: {}", &full_path);
-
         let conn = SqliteConnectOptions::from_str(&full_path)?
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal)
@@ -37,5 +39,10 @@ impl Db {
             .await?;
 
         Ok(Db { conn })
+    }
+
+    /// Adds todo entry
+    pub fn add_entry() -> Result<()> {
+        Ok(())
     }
 }

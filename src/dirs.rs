@@ -2,7 +2,6 @@ use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use std::{env, path::PathBuf};
 
-
 lazy_static! {
     pub static ref PROJECT_NAME: String = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
     pub static ref DATA_FOLDER: Option<PathBuf> =
@@ -16,6 +15,7 @@ lazy_static! {
 }
 
 #[expect(unused)]
+/// Returns the directory that holds configuration information for the app.
 pub fn get_config_dir() -> PathBuf {
     if let Some(s) = CONFIG_FOLDER.clone() {
         s
@@ -26,6 +26,7 @@ pub fn get_config_dir() -> PathBuf {
     }
 }
 
+/// Returns the directory that holds data for the app.
 pub fn get_data_dir() -> PathBuf {
     if let Some(s) = DATA_FOLDER.clone() {
         s
