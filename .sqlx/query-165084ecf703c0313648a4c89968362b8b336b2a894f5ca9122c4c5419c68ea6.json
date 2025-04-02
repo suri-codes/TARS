@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)\n                VALUES (\n                    ?,\n                    (SELECT pub_id FROM Groups WHERE name = ?),\n                    ?,\n                    ?,\n                    ?,\n                    ?\n                )\n                RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: i64\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "pub_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "due",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "group_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "completed",
+        "ordinal": 6,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "165084ecf703c0313648a4c89968362b8b336b2a894f5ca9122c4c5419c68ea6"
+}
