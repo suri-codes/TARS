@@ -1,13 +1,13 @@
 use crate::args::{CliArgs, Commands};
 use clap::Parser;
 use color_eyre::eyre::Result;
-use common::db::Db;
+use common::orm::ORM;
 mod args;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = CliArgs::parse();
-    let db = Db::connect().await?;
+    let orm = ORM::connect().await?;
 
     match args.command {
         Commands::Add => {

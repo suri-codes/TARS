@@ -1,6 +1,11 @@
-use sqlx::types::chrono::{DateTime, Utc};
+use std::fmt::DebugStruct;
+
+use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
 use thiserror::Error;
-/// The priority of each entry
+
+use crate::ParseError;
+/// The priority varying priority levels for a Task.
+#[derive(sqlx::Type, Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Priority {
     Low,
     Medium,
@@ -9,14 +14,24 @@ pub enum Priority {
     Far,
 }
 
-#[derive(Error, Debug)]
-pub enum PriorityConvertError {
-    #[error("Failed to Parse Priority")]
-    FailedToParse,
+// Conversion from database i64 to Priority
+impl TryFrom<i64> for Priority {
+    type Error = ParseError;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Priority::Low),
+            1 => Ok(Priority::Medium),
+            2 => Ok(Priority::High),
+            3 => Ok(Priority::Asap),
+            4 => Ok(Priority::Far),
+            _ => Err(ParseError::FailedToParse),
+        }
+    }
 }
 
 impl TryFrom<String> for Priority {
-    type Error = PriorityConvertError;
+    type Error = ParseError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
@@ -44,14 +59,7 @@ impl TryFrom<String> for Priority {
             "F" => Ok(Priority::Far),
             "f" => Ok(Priority::Far),
 
-            _ => Err(PriorityConvertError::FailedToParse),
+            _ => Err(ParseError::FailedToParse),
         }
     }
-}
-
-pub struct Entry {
-    group: String,
-    priority: Priority,
-    descripiton: String,
-    due: DateTime<Utc>,
 }
