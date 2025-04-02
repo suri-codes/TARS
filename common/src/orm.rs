@@ -25,8 +25,11 @@ pub enum ORMError {
     SqlxError(#[from] sqlx::Error),
 }
 
+/// Differnt fetch types to specify
+/// ways to gather Tasks from the database.
 pub enum FetchType {
     ByGroup { group: String },
+    All,
 }
 
 impl ORM {
@@ -65,16 +68,18 @@ impl ORM {
 
         let record= sqlx::query!(
             r#"
-                INSERT INTO Tasks (group_id, name, priority, description, due)
+                INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)
                 VALUES (
-                    (SELECT id FROM Groups WHERE name = ?),
+                    ?,
+                    (SELECT pub_id FROM Groups WHERE name = ?),
                     ?,
                     ?,
                     ?,
                     ?
                 )
-                RETURNING Tasks.id, Tasks.name, Tasks.priority as "priority: i64", Tasks.description, Tasks.due, Tasks.group_id
+                RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: i64", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed
             "#,
+            *task.id,
             *task.group,
             *task.name,
             p,
@@ -89,11 +94,13 @@ impl ORM {
                 .fetch_one(&mut self.conn)
                 .await?;
 
-        let created_task = Task::new(
+        let created_task = Task::with_all_fields(
+            record.pub_id.try_into()?,
             record.name.try_into()?,
             group_name.try_into()?,
             record.priority.try_into()?,
             record.description,
+            record.completed,
             record.due,
         );
 
