@@ -32,6 +32,8 @@ impl Db {
             db_path.to_str().ok_or(eyre!("Failed to convert path"))?
         );
 
+        println!("db path: {}", full_path);
+
         let conn = SqliteConnectOptions::from_str(&full_path)?
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal)
@@ -42,7 +44,18 @@ impl Db {
     }
 
     /// Adds todo entry
-    pub fn add_entry() -> Result<()> {
+    pub async fn add_entry(&mut self) -> Result<()> {
+        // let x = sqlx::query_as!(
+        //     User,
+        //     r#"
+        //         SELECT UserPubId as id, Name, Suffix
+        //         FROM Users
+        //         WHERE $1 = Name
+        //         "#,
+        //     request.name
+        // )
+        // .fetch_all(&self.conn)
+        // .await?;
         Ok(())
     }
 }

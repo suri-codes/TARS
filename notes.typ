@@ -23,6 +23,7 @@ lowkey gonna just go play warframe gang
 - [ ] daemon setup for reminding
 - [ ] tui setup
 - [ ] cli setup
+- [ ] canvas lms integration
 
 
 = A reminding daemon
