@@ -1,10 +1,5 @@
-[package]
-name = "tars"
-authors = ["suri312006@gmail.com"]
 
-
-[[bin]]
-name =""
 
 [workspace]
 members = [ "tars-cli","tars-tui","tars-daemon", "common"]
+resolver = "3"

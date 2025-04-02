@@ -1,7 +1,8 @@
+use crate::args::{CliArgs, Commands};
 use clap::Parser;
 use color_eyre::eyre::Result;
-use tars::args::{CliArgs, Commands};
-use tars::db::Db;
+use common::db::Db;
+mod args;
 
 #[tokio::main]
 async fn main() -> Result<()> {
