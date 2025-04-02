@@ -1,4 +1,8 @@
+#import "@preview/cheq:0.2.2": checklist
 
+#show: checklist
+#show link: underline
+#set heading(numbering: "1.a.1. ")
 
 = TARS (Task Accumulation and Reminder Service)
 
@@ -13,6 +17,12 @@ sqlite for task database
 need to really figure out what we want
 
 lowkey gonna just go play warframe gang
+
+
+= TODO
+- [ ] daemon setup for reminding
+- [ ] tui setup
+- [ ] cli setup
 
 
 = A reminding daemon
@@ -30,10 +40,6 @@ entry {
   description:
   due-by:
 }
-
-
-
-
 
 tars list
 prints out all tasks in prio order
