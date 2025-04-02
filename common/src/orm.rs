@@ -7,6 +7,8 @@ use thiserror::Error;
 
 use crate::dirs::get_data_dir;
 use crate::types::Task;
+use crate::types::group::Group;
+use crate::types::id::Id;
 
 const DB_FILE_NAME: &str = "tars.db";
 
@@ -28,8 +30,9 @@ pub enum ORMError {
 /// Differnt fetch types to specify
 /// ways to gather Tasks from the database.
 pub enum FetchType {
-    ByGroup { group: String },
+    ByGroup { group: Group },
     All,
+    ById { id: Id },
 }
 
 impl ORM {
@@ -51,8 +54,6 @@ impl ORM {
                 .expect("Database Path should be a valid string.")
         );
 
-        // println!("db path: {}", full_path);
-
         let conn = SqliteConnectOptions::from_str(&full_path)?
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal)
@@ -60,6 +61,10 @@ impl ORM {
             .await?;
 
         Ok(ORM { conn })
+    }
+
+    pub async fn fetch_entries(&mut self, _fetch_type: FetchType) -> Result<Self, ORMError> {
+        todo!("implement fetch entries according to fetch type")
     }
 
     /// Adds todo entry

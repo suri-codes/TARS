@@ -14,7 +14,6 @@ lazy_static! {
             .map(PathBuf::from);
 }
 
-#[expect(unused)]
 /// Returns the directory that holds configuration information for the app.
 pub fn get_config_dir() -> PathBuf {
     if let Some(s) = CONFIG_FOLDER.clone() {

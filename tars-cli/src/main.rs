@@ -7,13 +7,13 @@ mod args;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = CliArgs::parse();
-    let orm = ORM::connect().await?;
+    let _orm = ORM::connect().await?;
 
     match args.command {
         Commands::Add => {
             // need to add to the thang
         }
-        Commands::List(l_args) => {
+        Commands::List(_l_args) => {
             // need to list all the groups
         }
     }
