@@ -1,28 +1,10 @@
 [package]
 name = "tars"
-version = "0.1.0"
-edition = "2024"
+authors = ["suri312006@gmail.com"]
+
 
 [[bin]]
-name="tars-cli"
-path="src/bin/cli/main.rs"
+name =""
 
-[[bin]]
-name="tars-tui"
-path="src/bin/tui/main.rs"
-
-[[bin]]
-name="tars-d"
-path="src/bin/daemon/main.rs"
-
-
-[dependencies]
-chrono = "0.4.40"
-clap = { version = "4.5.34", features = ["derive"] }
-color-eyre = "0.6.3"
-directories = "6.0.0"
-lazy_static = "1.5.0"
-log = "0.4.27"
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs" ,"sqlite", "macros", "migrate", "chrono"] }
-thiserror = "2.0.12"
-tokio = { version = "1.44.1", features = ["full"] }
+[workspace]
+members = [ "tars-cli","tars-tui","tars-daemon", "common"]
