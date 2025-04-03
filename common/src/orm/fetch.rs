@@ -24,16 +24,32 @@ pub struct FetchOptions {
     completion_status: CompletionStatus,
 }
 
+impl FetchOptions {
+    fn new() {
+        
+    }
+    
+}
+
 impl ORM {
     pub async fn fetch_groups(&mut self) -> Result<Vec<Group>, ORMError> {
-        let results: Vec<Group> = query_scalar!(r#"SELECT name FROM Groups"#)
+        // let results: Vec<Group> =
+        let query_results = query_scalar!(r#"SELECT name FROM Groups"#)
             .fetch_all(&mut self.conn)
-            .await?
-            .iter()
-            .map(|e| e.as_str().try_into().expect("lol"))
-            .collect();
+            .await;
 
-        todo!()
+        let results = match query_results {
+            Ok(v) => v,
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => Vec::new(),
+                _ => return Err(ORMError::SqlxError(e)),
+            },
+        }
+        .iter()
+        .map(|e| e.as_str().try_into().expect("should be able to parse str"))
+        .collect();
+
+        Ok(results)
     }
 
     pub async fn fetch_tasks(

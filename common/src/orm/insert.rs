@@ -6,6 +6,11 @@ impl ORM {
     pub async fn insert_task(&mut self, task: Task) -> Result<(), ORMError> {
         let p = task.priority as i64;
 
+        let groups = self.fetch_groups().await?;
+        if !groups.contains(&task.group) {
+            self.insert_group(task.group.as_str().try_into()?).await?;
+        }
+
         let record= sqlx::query!(
             r#"
                 INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)
@@ -30,7 +35,7 @@ impl ORM {
         .await?;
 
         let group_name =
-            sqlx::query_scalar!("SELECT name FROM Groups WHERE id = $1", record.group_id)
+            sqlx::query_scalar!("SELECT name FROM Groups WHERE pub_id = $1", record.group_id)
                 .fetch_one(&mut self.conn)
                 .await?;
 

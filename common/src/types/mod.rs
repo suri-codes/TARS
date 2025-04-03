@@ -3,6 +3,8 @@ mod id;
 mod name;
 mod priority;
 
+use std::fmt::Display;
+
 pub use group::*;
 pub use id::*;
 pub use name::*;
@@ -57,5 +59,11 @@ impl Task {
             description,
             due,
         }
+    }
+}
+
+impl Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unimplemented!()
     }
 }

@@ -49,6 +49,7 @@ impl TryFrom<&str> for Priority {
             "asap" => Ok(Priority::Asap),
             "A" => Ok(Priority::Asap),
             "a" => Ok(Priority::Asap),
+
             "Far" => Ok(Priority::Far),
             "far" => Ok(Priority::Far),
             "F" => Ok(Priority::Far),
