@@ -25,11 +25,11 @@ impl TryFrom<i64> for Priority {
     }
 }
 
-impl TryFrom<String> for Priority {
+impl TryFrom<&str> for Priority {
     type Error = ParseError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
             "Low" => Ok(Priority::Low),
             "low" => Ok(Priority::Low),
             "L" => Ok(Priority::Low),

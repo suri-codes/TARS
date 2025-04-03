@@ -50,7 +50,7 @@ impl ORM {
     }
 
     pub async fn insert_group(&mut self, group: Group) -> Result<(), ORMError> {
-        let id = Id::default();
+        let new_id = Id::default();
         let record = sqlx::query_scalar!(
             r#"
                 INSERT INTO Groups (pub_id, name)
@@ -60,12 +60,14 @@ impl ORM {
                 )
                 RETURNING Groups.name as "0"
             "#,
-            *id,
+            *new_id,
             *group
         )
         .fetch_one(&mut self.conn)
         .await?;
 
-        todo!()
+        assert_eq!(group, record.as_str().try_into()?);
+
+        Ok(())
     }
 }

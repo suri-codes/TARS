@@ -32,17 +32,6 @@ impl ORM {
             .iter()
             .map(|e| e.as_str().try_into().expect("lol"))
             .collect();
-        // let results = sqlx::query_as!(
-        //     Group,
-        //     r#"
-        //             SELECT
-        //             name as "group: Group"
-        //             FROM Groups
-
-        //     "#,
-        // )
-        // .fetch_all(&mut self.conn)
-        // .await;
 
         todo!()
     }
