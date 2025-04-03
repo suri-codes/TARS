@@ -1,5 +1,5 @@
 use super::{ORM, ORMError};
-use crate::types::Task;
+use crate::types::{Group, Id, Task};
 
 /// Adds todo entry
 impl ORM {
@@ -47,5 +47,25 @@ impl ORM {
         assert_eq!(task, created_task);
 
         Ok(())
+    }
+
+    pub async fn insert_group(&mut self, group: Group) -> Result<(), ORMError> {
+        let id = Id::default();
+        let record = sqlx::query_scalar!(
+            r#"
+                INSERT INTO Groups (pub_id, name)
+                VALUES (
+                    ?,
+                    ?
+                )
+                RETURNING Groups.name as "0"
+            "#,
+            *id,
+            *group
+        )
+        .fetch_one(&mut self.conn)
+        .await?;
+
+        todo!()
     }
 }
