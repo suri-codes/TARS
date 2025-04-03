@@ -1,12 +1,13 @@
-pub mod group;
-pub mod id;
-pub mod name;
-pub mod priority;
+mod group;
+mod id;
+mod name;
+mod priority;
 
-use group::Group;
-use id::Id;
-use name::Name;
-use priority::Priority;
+pub use group::*;
+pub use id::*;
+pub use name::*;
+pub use priority::*;
+
 use sqlx::types::chrono::NaiveDateTime;
 
 #[derive(PartialEq, Eq, Debug)]

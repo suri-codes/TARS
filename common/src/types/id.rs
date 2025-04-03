@@ -1,5 +1,9 @@
 use nanoid::nanoid;
-use std::ops::{Deref, DerefMut};
+use sqlx::{Database, Decode};
+use std::{
+    error::Error,
+    ops::{Deref, DerefMut},
+};
 
 use crate::ParseError;
 
@@ -30,5 +34,29 @@ impl TryFrom<String> for Id {
     type Error = ParseError;
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Ok(Self(value))
+    }
+}
+// DB is the database driver
+// `'r` is the lifetime of the `Row` being decoded
+impl<'r, DB: Database> Decode<'r, DB> for Id
+where
+    // we want to delegate some of the work to string decoding so let's make sure strings
+    // are supported by the database
+    &'r str: Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as Database>::ValueRef<'r>,
+    ) -> Result<Id, Box<dyn Error + 'static + Send + Sync>> {
+        // the interface of ValueRef is largely unstable at the moment
+        // so this is not directly implementable
+
+        // however, you can delegate to a type that matches the format of the type you want
+        // to decode (such as a UTF-8 string)
+
+        let value = <&str as Decode<DB>>::decode(value)?;
+
+        // now you can parse this into your type (assuming there is a `FromStr`)
+
+        Ok(Id(value.parse()?))
     }
 }
