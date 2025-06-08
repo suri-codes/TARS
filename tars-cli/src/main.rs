@@ -44,8 +44,8 @@ async fn main() -> Result<()> {
         }
         Commands::List(_l_args) => {
             // need to list all the groups
-            let tasks = orm.fetch_tasks(FetchOptions{
-            });
+            // let tasks = orm.fetch_tasks(FetchOptions{ fetch_type: todo!(), completion_status: todo!() });
+            todo!()
         }
     }
 
