@@ -1,4 +1,4 @@
-use reqwest::{Client, ClientBuilder, Error};
+use reqwest::{Client, ClientBuilder};
 
 use crate::{TarsError, types::Task};
 
@@ -8,12 +8,14 @@ struct TarsClient {
     base_url: String,
 }
 
+// fix the docs for these
 impl TarsClient {
     /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
+    #[expect(unused)]
     async fn new(base_url: String) -> Result<Self, TarsError> {
         let app_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         let client = ClientBuilder::new().user_agent(app_agent).build()?;
@@ -25,6 +27,7 @@ impl TarsClient {
     /// # Errors
     ///
     /// This function will return an error if .
+    #[expect(unused)]
     async fn get_tasks(&mut self) -> Result<Vec<Task>, TarsError> {
         let resp: Vec<Task> = self
             .client
