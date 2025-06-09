@@ -31,10 +31,9 @@ impl Default for Id {
     }
 }
 
-impl TryFrom<String> for Id {
-    type Error = ParseError;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Ok(Self(value))
+impl From<String> for Id {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 

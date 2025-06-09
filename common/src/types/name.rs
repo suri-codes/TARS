@@ -23,11 +23,14 @@ impl DerefMut for Name {
     }
 }
 
-impl TryFrom<&str> for Name {
-    type Error = ParseError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        //TODO: place parsing here to validate name!
-        Ok(Self(value.to_owned()))
+impl From<&str> for Name {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+}
+impl From<String> for Name {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 

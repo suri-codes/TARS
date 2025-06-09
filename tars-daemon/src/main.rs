@@ -22,7 +22,7 @@ async fn main() {
     // TODO: need to integrate a daemon log file aswell
 
     //TODO: also create a notifier thread later
-    //
+
     let app = Router::new()
         .route("/", get(root))
         .layer(Extension(create_pool().await));
@@ -31,7 +31,7 @@ async fn main() {
 
     let listener = TcpListener::bind(DAEMON_ADDR).await.unwrap();
 
-    info!("App lisening on 0.0.0.0:3000");
+    info!("App lisening on {}", DAEMON_ADDR);
 
     if let Err(e) = axum::serve(listener, app).await {
         error!("{e}");
@@ -45,7 +45,7 @@ async fn root() -> &'static str {
 
 async fn create_pool() -> Pool<Sqlite> {
     let mut data_dir = get_data_dir();
-    // create the directory
+
     let _ = create_dir_all(&data_dir);
 
     data_dir.push(DB_FILE_NAME);

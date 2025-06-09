@@ -6,8 +6,6 @@ use std::{
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode};
 
-use crate::ParseError;
-
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Group(String);
 
@@ -23,11 +21,16 @@ impl DerefMut for Group {
         &mut self.0
     }
 }
-impl TryFrom<&str> for Group {
-    type Error = ParseError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        //TODO: place parsing here to validate group!
-        Ok(Self(value.to_owned()))
+
+impl From<&str> for Group {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+}
+
+impl From<String> for Group {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
