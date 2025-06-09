@@ -3,11 +3,12 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode};
 
 use crate::ParseError;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Group(String);
 
 impl Deref for Group {

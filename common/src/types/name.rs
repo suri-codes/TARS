@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode};
 
 use crate::ParseError;
@@ -6,7 +7,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Name(String);
 
 impl Deref for Name {

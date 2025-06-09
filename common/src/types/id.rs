@@ -1,4 +1,5 @@
 use nanoid::nanoid;
+use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode};
 use std::{
     error::Error,
@@ -7,7 +8,7 @@ use std::{
 
 use crate::ParseError;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Id(String);
 
 impl Deref for Id {
@@ -36,6 +37,7 @@ impl TryFrom<String> for Id {
         Ok(Self(value))
     }
 }
+
 // DB is the database driver
 // `'r` is the lifetime of the `Row` being decoded
 impl<'r, DB: Database> Decode<'r, DB> for Id

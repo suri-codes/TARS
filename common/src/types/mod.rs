@@ -10,9 +10,10 @@ pub use id::*;
 pub use name::*;
 pub use priority::*;
 
-use sqlx::types::chrono::NaiveDateTime;
+use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Task {
     pub id: Id,
     pub group: Group,

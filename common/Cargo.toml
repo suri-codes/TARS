@@ -5,7 +5,11 @@ edition = "2024"
 
 [dependencies]
 lazy_static = "1.5.0"
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs" ,"sqlite", "macros", "migrate", "chrono"] }
 thiserror = "2.0.12"
 directories = "6.0.0"
 nanoid = "0.4.0"
+reqwest = { version = "0.12.19", features = ["json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.45.1", features = ["full"] }
+sqlx = { version = "0.8.6", features = ["chrono"] }
+chrono = { version = "0.4.41", features = ["serde"] }

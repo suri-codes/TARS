@@ -3,10 +3,7 @@ use std::io::{Write, stdin, stdout};
 use crate::args::{CliArgs, Commands};
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use common::{
-    orm::{FetchOptions, ORM},
-    types::{Group, Name, Priority, Task},
-};
+use common::types::{Group, Name, Priority, Task};
 use sqlx::types::chrono::NaiveDateTime;
 mod args;
 
@@ -14,7 +11,6 @@ mod args;
 async fn main() -> Result<()> {
     color_eyre::install()?;
     let args = CliArgs::parse();
-    let mut orm = ORM::connect().await?;
 
     match args.command {
         Commands::Add => {
@@ -40,7 +36,7 @@ async fn main() -> Result<()> {
             };
 
             let task = Task::new(group, name, priority, description, due);
-            orm.insert_task(task).await?;
+            // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {
             // need to list all the groups
