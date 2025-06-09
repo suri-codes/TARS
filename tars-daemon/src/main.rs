@@ -1,60 +1,77 @@
 use axum::{
-    Json, Router,
-    http::StatusCode,
+    Extension, Router,
     routing::{get, post},
 };
-use serde::{Deserialize, Serialize};
-use tracing::info;
+use common::{DAEMON_ADDR, dirs::get_data_dir};
+use handlers::add_task_handlers;
+use sqlx::{
+    Pool, Sqlite, SqlitePool,
+    sqlite::{SqliteConnectOptions, SqliteJournalMode},
+};
+use std::{fs::create_dir_all, str::FromStr};
+use tokio::net::TcpListener;
+use tracing::{error, info};
+
+mod handlers;
+
+const DB_FILE_NAME: &str = "tars.db";
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
     tracing_subscriber::fmt::init();
+    // TODO: need to integrate a daemon log file aswell
 
-    // build our application with a route
+    //TODO: also create a notifier thread later
+    //
     let app = Router::new()
-        // `GET /` goes to `root`
         .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user));
+        .layer(Extension(create_pool().await));
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let app = add_task_handlers(app);
+
+    let listener = TcpListener::bind(DAEMON_ADDR).await.unwrap();
+
     info!("App lisening on 0.0.0.0:3000");
-    axum::serve(listener, app).await.unwrap();
+
+    if let Err(e) = axum::serve(listener, app).await {
+        error!("{e}");
+        panic!("{e}")
+    };
 }
 
-// basic handler that responds with a static string
 async fn root() -> &'static str {
-    tracing::info!("hello world request!");
-    "Hello, World!"
+    "ligma nuts pal"
 }
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
+async fn create_pool() -> Pool<Sqlite> {
+    let mut data_dir = get_data_dir();
+    // create the directory
+    let _ = create_dir_all(&data_dir);
+
+    data_dir.push(DB_FILE_NAME);
+
+    let db_path = data_dir;
+
+    let full_path = format!(
+        "sqlite://{}",
+        db_path
+            .to_str()
+            .expect("Database Path should be a valid string.")
+    );
+
+    let sqlite_opts = SqliteConnectOptions::from_str(&full_path)
+        .expect("failed")
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal);
+
+    let Ok(pool) = SqlitePool::connect_with(sqlite_opts.clone()).await else {
+        let msg = format!(
+            "Failed to create sqlite pool. Connection Options: {:?}",
+            sqlite_opts,
+        );
+        error!("{msg}");
+        panic!("{msg}")
     };
 
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
-
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
+    pool
 }
