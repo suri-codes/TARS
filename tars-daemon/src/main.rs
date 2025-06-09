@@ -4,8 +4,7 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use tracing::{Level, error, info};
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing::info;
 
 #[tokio::main]
 async fn main() {

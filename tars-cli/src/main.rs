@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
                 }
             };
 
-            let task = Task::new(group, name, priority, description, due);
+            let _task = Task::new(group, name, priority, description, due);
             // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {

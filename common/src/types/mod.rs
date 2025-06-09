@@ -64,7 +64,7 @@ impl Task {
 }
 
 impl Display for Task {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         unimplemented!()
     }
 }
