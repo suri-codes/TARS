@@ -24,7 +24,7 @@ impl IntoResponse for TarsError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
             TarsError::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            TarsError::Sqlx(e) => match e {
+            TarsError::Sqlx(ref e) => match e {
                 //TODO: actually match over the sqlx errors
                 sqlx::Error::InvalidArgument(_) => StatusCode::BAD_REQUEST,
                 sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
@@ -32,6 +32,10 @@ impl IntoResponse for TarsError {
             },
             TarsError::Parse(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
+
+        // inject error into here!
+        tracing::error!("TarsError: {}, returning status code: {}", self, status);
+
         status.into_response()
     }
 }

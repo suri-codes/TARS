@@ -62,13 +62,9 @@ impl Display for Task {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UpdateTask {
-    to_update_id: Id,
-    updated_data: Task,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub enum TaskFetchOptions {
-    ById { id: Id },
-    // TODO: add more as they come
+    // NOTE: only add those we deem necessary, dont have to add shit just to add them
+    // ById { id: Id },
+    // ByGroup { group: Group },
+    All,
 }
