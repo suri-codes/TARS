@@ -30,15 +30,6 @@ async fn create_task(
 
     // first we want to check if there exists a group with the same one as
     // this task, otherwise we cant make it!
-    let group_name = sqlx::query!(
-        r#"
-        SELECT pub_id FROM Groups WHERE name = ?
-        "#,
-        *task.group
-    )
-    .fetch_one(&pool)
-    .await?
-    .pub_id;
 
     let inserted = sqlx::query!(
         r#"
@@ -55,7 +46,7 @@ async fn create_task(
             
         "#,
         *task.id,
-        *task.group,
+        *task.group.id,
         *task.name,
         p,
         task.description,
@@ -64,10 +55,20 @@ async fn create_task(
     .fetch_one(&pool)
     .await?;
 
+    let group = sqlx::query_as!(
+        Group,
+        r#"
+        SELECT name as "name: Name", pub_id as "id: Id" FROM Groups WHERE pub_id = ?
+        "#,
+        inserted.group_id
+    )
+    .fetch_one(&pool)
+    .await?;
+
     let created_task = Task::with_all_fields(
-        inserted.pub_id.into(),
-        group_name.into(),
-        inserted.name.into(),
+        inserted.pub_id,
+        group,
+        inserted.name,
         inserted.priority.try_into()?,
         inserted.description,
         inserted.completed,
@@ -93,13 +94,13 @@ async fn fetch_task(
 ) -> Result<Json<Vec<Task>>, TarsError> {
     match payload {
         TaskFetchOptions::All => {
-            let all_tasks = sqlx::query_as!(
-                Task,
+            let records = sqlx::query!(
                 r#"
                     SELECT
-                        t.pub_id as "id: Id",
-                        t.name as "name: Name",
-                        g.name as "group: Group",
+                        t.pub_id as task_pub_id,
+                        t.name as task_name,
+                        g.name  as group_name,
+                        g.pub_id as group_pub_id ,
                         t.priority as "priority: Priority",
                         t.description,
                         t.completed,
@@ -112,7 +113,22 @@ async fn fetch_task(
             .fetch_all(&pool)
             .await?;
 
-            Ok(Json::from(all_tasks))
+            let tasks: Vec<Task> = records
+                .into_iter()
+                .map(|row| {
+                    Task::with_all_fields(
+                        row.task_pub_id,
+                        Group::with_all_fields(row.group_pub_id, row.group_name),
+                        row.task_name,
+                        row.priority,
+                        row.description,
+                        row.completed,
+                        row.due,
+                    )
+                })
+                .collect();
+
+            Ok(Json::from(tasks))
         }
     }
 }
@@ -129,12 +145,7 @@ async fn update_task(
     Extension(pool): Extension<Pool<Sqlite>>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
-    let group_pub_id = sqlx::query_scalar!("SELECT pub_id FROM Groups WHERE name = ?", *task.group)
-        .fetch_one(&pool)
-        .await?;
-
-    let updated = sqlx::query_as!(
-        Task,
+    let row = sqlx::query!(
         r#"
         UPDATE Tasks
         SET
@@ -146,9 +157,10 @@ async fn update_task(
             group_id = ?
         WHERE pub_id = ?
         RETURNING 
-            pub_id as "id: Id",
-            name as "name: Name",
-            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group: Group",
+            pub_id as task_pub_id,
+            name as task_name,
+            group_id,
+            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
             priority as "priority: Priority",
             description,
             completed,
@@ -159,16 +171,26 @@ async fn update_task(
         task.description,
         task.completed,
         task.due,
-        group_pub_id,
+        *task.group.id,
         *task.id
     )
     .fetch_one(&pool)
     .await?;
 
-    // if they dont match, we have a problem!
-    assert_eq!(updated, task);
+    let updated_task = Task::with_all_fields(
+        row.task_pub_id,
+        Group::with_all_fields(row.group_id, row.group_name),
+        row.task_name,
+        row.priority,
+        row.description,
+        row.completed,
+        row.due,
+    );
 
-    Ok(Json::from(updated))
+    // if they dont match, we have a problem!
+    assert_eq!(updated_task, task);
+
+    Ok(Json::from(updated_task))
 }
 
 /// Takes in a task `ID`, deletes it, and returns the deleted task.
@@ -184,18 +206,17 @@ async fn delete_task(
     Json(payload): Json<Id>,
 ) -> Result<Json<Task>, TarsError> {
     let mut tx = pool.begin().await?;
-    let deleted_task = sqlx::query_as!(
-        Task,
+    let row = sqlx::query!(
         r#"
             SELECT
-                t.pub_id as "id: Id",
-                t.name as "name: Name",
-                g.name as "group: Group",
-                t.priority as "priority: Priority",
+                t.pub_id as task_id,
+                t.name as task_name,
+                g.name as group_name,
+                t.group_id,
+                t.priority ,
                 t.description,
                 t.completed,
                 t.due
-
                 FROM Tasks t
                 JOIN Groups g ON t.group_id = g.pub_id
                 WHERE t.pub_id = ?
@@ -205,6 +226,16 @@ async fn delete_task(
     )
     .fetch_one(&mut *tx)
     .await?;
+
+    let deleted_task = Task::with_all_fields(
+        row.task_id,
+        Group::with_all_fields(row.group_id, row.group_name),
+        row.task_name,
+        row.priority.try_into()?,
+        row.description,
+        row.completed,
+        row.due,
+    );
 
     sqlx::query!("DELETE FROM Tasks WHERE pub_id = ?", *payload)
         .execute(&mut *tx)

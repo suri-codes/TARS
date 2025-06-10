@@ -18,18 +18,18 @@ pub struct Task {
 
 impl Task {
     pub fn with_all_fields(
-        id: Id,
-        group: Group,
-        name: Name,
+        id: impl Into<Id>,
+        group: impl Into<Group>,
+        name: impl Into<Name>,
         priority: Priority,
         description: String,
         completed: bool,
         due: Option<NaiveDateTime>,
     ) -> Self {
         Self {
-            id,
-            group,
-            name,
+            id: id.into(),
+            group: group.into(),
+            name: name.into(),
             priority,
             description,
             completed,

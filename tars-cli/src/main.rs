@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
             let name: Name = prompt_user("Task Name")?.as_str().try_into()?;
 
             //TODO: print existing groups
-            let group: Group = prompt_user("Group Name")?.as_str().try_into()?;
+            // let group: Group = prompt_user("Group Name")?.as_str().try_into()?;
             let priority: Priority =
                 prompt_user("Priority Level [(L)ow|(M)edium|(H)igh|(A)SAP|(F)ar]")?
                     .as_str()
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
                 }
             };
 
-            let _task = Task::new(group, name, priority, description, due);
+            // let _task = Task::new(group, name, priority, description, due);
             // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {

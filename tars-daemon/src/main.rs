@@ -3,7 +3,7 @@ use axum::{
     routing::{get, post},
 };
 use common::{DAEMON_ADDR, dirs::get_data_dir};
-use handlers::add_task_handlers;
+use handlers::{add_group_handlers, add_task_handlers};
 use sqlx::{
     Pool, Sqlite, SqlitePool,
     sqlite::{SqliteConnectOptions, SqliteJournalMode},
@@ -28,6 +28,7 @@ async fn main() {
         .layer(Extension(create_pool().await));
 
     let app = add_task_handlers(app);
+    let app = add_group_handlers(app);
 
     let listener = TcpListener::bind(DAEMON_ADDR).await.unwrap();
 
