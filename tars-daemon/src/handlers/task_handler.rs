@@ -247,3 +247,26 @@ async fn delete_task(
 
     Ok(Json::from(deleted_task))
 }
+
+#[cfg(test)]
+mod tests {
+    use common::TarsClient;
+
+    use crate::utils::new_test_daemon;
+
+    #[tokio::test]
+    async fn lol() {
+        let (d, addr) = new_test_daemon().await;
+        let d_addr = addr.clone();
+        let x = tokio::spawn(async move {
+            d.run(d_addr.clone().as_str()).await;
+        });
+
+        // now we can start using the client to test?
+        let client = TarsClient::new(addr)
+            .await
+            .expect("failed to instantiate client");
+
+        // ok now what
+    }
+}

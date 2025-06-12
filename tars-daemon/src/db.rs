@@ -3,13 +3,10 @@ use std::{path::PathBuf, str::FromStr};
 use common::{dirs::get_data_dir, types::Id};
 use sqlx::{
     Pool, Sqlite, SqlitePool,
-    error::DatabaseError,
     sqlite::{SqliteConnectOptions, SqliteJournalMode},
 };
-use tokio::{fs::create_dir_all, time::error};
+use tokio::fs::create_dir_all;
 use tracing::error;
-
-const DB_FILE_NAME: &str = "tars.db";
 
 pub struct Db {
     pub pool: Pool<Sqlite>,
@@ -25,7 +22,7 @@ impl Db {
             };
 
             let _ = create_dir_all(&dir).await;
-            dir.push(DB_FILE_NAME);
+            dir.push("tars.db");
 
             format!(
                 "sqlite://{}",
@@ -34,7 +31,6 @@ impl Db {
             )
         };
 
-        // if the db doesnt exist already, lets apply migrations to it too.
         let sqlite_opts = SqliteConnectOptions::from_str(&path)
             .inspect_err(|e| {
                 error!(
@@ -43,10 +39,8 @@ impl Db {
                 )
             })
             .unwrap()
-            // .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal);
 
-        // ok lets try connecting
         let pool = match SqlitePool::connect_with(sqlite_opts.clone()).await {
             Ok(p) => Ok(p),
             Err(sqlx::Error::Database(_)) => {
