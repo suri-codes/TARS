@@ -1,11 +1,5 @@
 use common::DAEMON_ADDR;
-use daemon::TarsDaemon;
-use db::Db;
-
-mod daemon;
-mod db;
-mod handlers;
-mod utils;
+use tars_daemon::{Db, TarsDaemon};
 
 #[tokio::main]
 async fn main() {

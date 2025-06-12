@@ -1,4 +1,4 @@
-use crate::{daemon::TarsDaemon, db::Db};
+use tars_daemon::{Db, TarsDaemon};
 
 pub async fn new_test_daemon() -> (TarsDaemon, String) {
     let db = Db::new(true).await;
