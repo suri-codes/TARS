@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Id, Name};
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Group {
     pub id: Id,
     pub name: Name,

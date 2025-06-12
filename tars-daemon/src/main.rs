@@ -3,7 +3,9 @@ use tars_daemon::{Db, TarsDaemon};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
     // TODO: need to integrate a daemon log file aswell
     let db = Db::new(true).await;
 

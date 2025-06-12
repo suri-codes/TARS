@@ -3,7 +3,10 @@ use std::io::{Write, stdin, stdout};
 use crate::args::{CliArgs, Commands};
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use common::types::{Name, Priority};
+use common::{
+    TarsClient,
+    types::{Name, Priority, TaskFetchOptions},
+};
 use sqlx::types::chrono::NaiveDateTime;
 mod args;
 
@@ -39,9 +42,13 @@ async fn main() -> Result<()> {
             // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {
-            // need to list all the groups
-            // let tasks = orm.fetch_tasks(FetchOptions{ fetch_type: todo!(), completion_status: todo!() });
-            todo!()
+            let mut client = TarsClient::new("http://127.0.0.1:42069".to_owned())
+                .await
+                .unwrap();
+
+            let tasks = client.get_tasks(TaskFetchOptions::All).await?;
+
+            println!("{:?}", tasks);
         }
     }
 

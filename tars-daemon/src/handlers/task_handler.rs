@@ -1,17 +1,25 @@
-use axum::{Extension, Json, Router, routing::post};
+use axum::{Json, extract::State, routing::post};
 use common::{
     TarsError,
     types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
 use sqlx::{Pool, Sqlite};
+use tracing::info;
+
+use crate::TarsRouter;
 
 /// Takes in a router and appends all the handlers related to tasks.
-pub fn add_task_handlers(router: Router) -> Router {
-    router
-        .route("/task/create", post(create_task))
-        .route("/task/search", post(fetch_task))
-        .route("/task/update", post(update_task))
-        .route("/task/delete", post(delete_task))
+// pub fn add_task_handlers(router: TarsRouter) -> TarsRouter {
+//     router
+//         .route("/task/create", post(create_task))
+//         .route("/task/fetch", post(fetch_task))
+//         .route("/task/update", post(update_task))
+//         .route("/task/delete", post(delete_task))
+//         .route("/task/test", post(test))
+// }
+
+pub async fn test(State(pool): State<Pool<Sqlite>>) -> Result<&'static str, TarsError> {
+    Ok("lol")
 }
 
 /// Takes in a task and then writes that task to the database.
@@ -23,7 +31,7 @@ pub fn add_task_handlers(router: Router) -> Router {
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn create_task(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
     let p = task.priority as i64;
@@ -86,9 +94,11 @@ async fn create_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn fetch_task(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(payload): Json<TaskFetchOptions>,
 ) -> Result<Json<Vec<Task>>, TarsError> {
+    info!("Received fetch_task request with payload: {:?}", payload);
+
     match payload {
         TaskFetchOptions::All => {
             let records = sqlx::query!(
@@ -125,6 +135,8 @@ async fn fetch_task(
                 })
                 .collect();
 
+            info!("returning: {:?}", Json::from(tasks.clone()));
+
             Ok(Json::from(tasks))
         }
     }
@@ -139,7 +151,7 @@ async fn fetch_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn update_task(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
     let row = sqlx::query!(
@@ -199,7 +211,7 @@ async fn update_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn delete_task(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(payload): Json<Id>,
 ) -> Result<Json<Task>, TarsError> {
     let mut tx = pool.begin().await?;

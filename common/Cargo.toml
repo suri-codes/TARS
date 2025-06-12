@@ -15,3 +15,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.45.1", features = ["full"] }
 sqlx = { version = "0.8.6", features = ["chrono"] }
 chrono = { version = "0.4.41", features = ["serde"] }
+url = "2.5.4"

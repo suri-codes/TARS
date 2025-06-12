@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{Group, Id, Name, Priority};
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub id: Id,
     pub group: Group,

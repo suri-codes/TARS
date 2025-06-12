@@ -1,24 +1,35 @@
-use axum::{Extension, Router, routing::get};
+use axum::{
+    Extension, Router,
+    extract::State,
+    routing::{get, post},
+};
+use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tracing::{error, info};
 
 use crate::{
     db::Db,
-    handlers::{add_group_handlers, add_task_handlers},
+    handlers::test,
+    // handlers::{add_group_handlers, add_task_handlers},
 };
 
 pub struct TarsDaemon {
-    app: Router,
+    app: TarsRouter,
 }
+
+pub type TarsRouter = Router;
 
 impl TarsDaemon {
     pub async fn init(db: Db) -> Self {
-        let app = Router::new()
+        let app: TarsRouter = Router::new()
             .route("/", get(root))
-            .layer(Extension(db.pool));
+            .route("/task/test", post(test))
+            .with_state(db.pool);
 
-        let app = add_task_handlers(app);
-        let app = add_group_handlers(app);
+        // let app = add_task_handlers(app);
+        // let app = add_group_handlers(app);
+
+        info!("final router: {:?}", app);
 
         Self { app }
     }
@@ -32,6 +43,8 @@ impl TarsDaemon {
             error!("{e}");
             panic!("{e}")
         };
+
+        // With this:
     }
 }
 

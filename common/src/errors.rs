@@ -18,6 +18,9 @@ pub enum TarsError {
 
     #[error("Conversion Error!")]
     Parse(#[from] ParseError),
+
+    #[error("Url Error!")]
+    UrlError(#[from] url::ParseError),
 }
 
 impl IntoResponse for TarsError {
@@ -31,6 +34,8 @@ impl IntoResponse for TarsError {
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             },
             TarsError::Parse(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            // this would never be hit
+            TarsError::UrlError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         tracing::error!("TarsError: {}, returning status code: {}", self, status);

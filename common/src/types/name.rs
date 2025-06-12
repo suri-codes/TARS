@@ -6,7 +6,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Name(String);
 
 impl Deref for Name {

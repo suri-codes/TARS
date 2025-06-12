@@ -1,5 +1,6 @@
 use axum::{
-    Extension, Json, Router,
+    Json,
+    extract::State,
     routing::{get, post},
 };
 use common::{
@@ -8,14 +9,16 @@ use common::{
 };
 use sqlx::{Pool, Sqlite};
 
+use crate::TarsRouter;
+
 /// Takes in a router and appends all handlers related to groups
-pub fn add_group_handlers(router: Router) -> Router {
-    router
-        .route("/group", get(fetch_groups))
-        .route("/group/create", post(create_group))
-        .route("/group/update", post(update_group))
-        .route("/group/delete", post(delete_group))
-}
+// pub fn add_group_handlers(router: TarsRouter) -> TarsRouter {
+//     router
+//         .route("/group", get(fetch_groups))
+//         .route("/group/create", post(create_group))
+//         .route("/group/update", post(update_group))
+//         .route("/group/delete", post(delete_group))
+// }
 
 /// Takes in a `Group` and then writes that group to the database.
 ///
@@ -26,7 +29,7 @@ pub fn add_group_handlers(router: Router) -> Router {
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn create_group(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(group): Json<Group>,
 ) -> Result<Json<Group>, TarsError> {
     // let new_id = Id::default();
@@ -59,9 +62,7 @@ async fn create_group(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
-async fn fetch_groups(
-    Extension(pool): Extension<Pool<Sqlite>>,
-) -> Result<Json<Vec<Group>>, TarsError> {
+async fn fetch_groups(State(pool): State<Pool<Sqlite>>) -> Result<Json<Vec<Group>>, TarsError> {
     let groups = sqlx::query_as!(
         Group,
         r#"
@@ -86,7 +87,7 @@ async fn fetch_groups(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn update_group(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(group): Json<Group>,
 ) -> Result<Json<Group>, TarsError> {
     let updated = sqlx::query_as!(
@@ -121,7 +122,7 @@ async fn update_group(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn delete_group(
-    Extension(pool): Extension<Pool<Sqlite>>,
+    State(pool): State<Pool<Sqlite>>,
     Json(group): Json<Group>,
 ) -> Result<Json<Group>, TarsError> {
     let deleted = sqlx::query_as!(
