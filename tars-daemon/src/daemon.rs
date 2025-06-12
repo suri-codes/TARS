@@ -15,7 +15,6 @@ impl TarsDaemon {
     pub async fn init(db: Db) -> Self {
         let app = Router::new()
             .route("/", get(root))
-            // TODO: fix this bruh
             .layer(Extension(db.pool));
 
         let app = add_task_handlers(app);

@@ -33,7 +33,6 @@ impl IntoResponse for TarsError {
             TarsError::Parse(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        // inject error into here!
         tracing::error!("TarsError: {}, returning status code: {}", self, status);
 
         status.into_response()

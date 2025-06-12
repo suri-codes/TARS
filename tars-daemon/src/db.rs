@@ -8,11 +8,23 @@ use sqlx::{
 use tokio::fs::create_dir_all;
 use tracing::error;
 
+/// Holds the pool to a database.
+/// Mostly constructed as this type because it has logic to create a new db w migrations
+/// or test databases.
+///
+/// NOTE: Will panic if anything goes wrong.
 pub struct Db {
     pub pool: Pool<Sqlite>,
 }
 
 impl Db {
+    /// Creates a new Db
+    ///
+    /// If database already exists, will just return a pool connected to that
+    /// If not, creates a new one with migrations
+    ///
+    /// Can also create test databases.
+    ///
     pub async fn new(is_test: bool) -> Self {
         let path = {
             let mut dir = if is_test {

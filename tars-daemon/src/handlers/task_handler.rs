@@ -28,9 +28,6 @@ async fn create_task(
 ) -> Result<Json<Task>, TarsError> {
     let p = task.priority as i64;
 
-    // first we want to check if there exists a group with the same one as
-    // this task, otherwise we cant make it!
-
     let inserted = sqlx::query!(
         r#"
             INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)
