@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
-use axum::Json;
 use reqwest::{Client, ClientBuilder, Url};
-use tracing::info;
 
 use crate::{
     TarsError,
@@ -37,7 +35,6 @@ impl TarsClient {
     /// # Errors
     ///
     /// This function will return an error if .
-    #[expect(unused)]
     pub async fn get_tasks(&mut self, opts: TaskFetchOptions) -> Result<Vec<Task>, TarsError> {
         let url = self.base_path.join("/task/fetch")?;
 

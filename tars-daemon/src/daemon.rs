@@ -1,43 +1,48 @@
-use axum::{
-    Extension, Router,
-    extract::State,
-    routing::{get, post},
-};
+use axum::{Router, routing::get};
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tracing::{error, info};
 
 use crate::{
     db::Db,
-    handlers::test,
-    // handlers::{add_group_handlers, add_task_handlers},
+    handlers::{group_router, task_router},
 };
 
 pub struct TarsDaemon {
-    app: TarsRouter,
+    app: Router,
+    state: DaemonState,
 }
 
-pub type TarsRouter = Router;
+#[derive(Clone)]
+pub struct DaemonState {
+    pub pool: Pool<Sqlite>,
+    addr: String,
+}
+
+impl DaemonState {
+    pub fn new(db: Db, addr: &str) -> Self {
+        DaemonState {
+            pool: db.pool,
+            addr: addr.to_owned(),
+        }
+    }
+}
 
 impl TarsDaemon {
-    pub async fn init(db: Db) -> Self {
-        let app: TarsRouter = Router::new()
+    pub async fn init(state: DaemonState) -> Self {
+        let app = Router::new()
             .route("/", get(root))
-            .route("/task/test", post(test))
-            .with_state(db.pool);
+            .nest("/task", task_router())
+            .nest("/group", group_router())
+            .with_state(state.clone());
 
-        // let app = add_task_handlers(app);
-        // let app = add_group_handlers(app);
-
-        info!("final router: {:?}", app);
-
-        Self { app }
+        Self { app, state }
     }
 
-    pub async fn run(self, addr: &str) {
-        let listener = TcpListener::bind(addr).await.unwrap();
+    pub async fn run(self) {
+        let listener = TcpListener::bind(&self.state.addr).await.unwrap();
 
-        info!("App lisening on {}", addr);
+        info!("App lisening on {}", self.state.addr);
 
         if let Err(e) = axum::serve(listener, self.app).await {
             error!("{e}");

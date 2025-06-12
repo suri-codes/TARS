@@ -1,25 +1,19 @@
-use axum::{Json, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use common::{
     TarsError,
     types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use sqlx::{Pool, Sqlite};
 use tracing::info;
 
-use crate::TarsRouter;
+use crate::DaemonState;
 
-/// Takes in a router and appends all the handlers related to tasks.
-// pub fn add_task_handlers(router: TarsRouter) -> TarsRouter {
-//     router
-//         .route("/task/create", post(create_task))
-//         .route("/task/fetch", post(fetch_task))
-//         .route("/task/update", post(update_task))
-//         .route("/task/delete", post(delete_task))
-//         .route("/task/test", post(test))
-// }
-
-pub async fn test(State(pool): State<Pool<Sqlite>>) -> Result<&'static str, TarsError> {
-    Ok("lol")
+/// Returns a router with all the task specific endpoints
+pub fn task_router() -> Router<DaemonState> {
+    Router::new()
+        .route("/create", post(create_task))
+        .route("/fetch", post(fetch_task))
+        .route("/update", post(update_task))
+        .route("/delete", post(delete_task))
 }
 
 /// Takes in a task and then writes that task to the database.
@@ -30,8 +24,8 @@ pub async fn test(State(pool): State<Pool<Sqlite>>) -> Result<&'static str, Tars
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
-async fn create_task(
-    State(pool): State<Pool<Sqlite>>,
+pub async fn create_task(
+    State(state): State<DaemonState>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
     let p = task.priority as i64;
@@ -57,7 +51,7 @@ async fn create_task(
         task.description,
         task.due
     )
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await?;
 
     let group = sqlx::query_as!(
@@ -67,7 +61,7 @@ async fn create_task(
         "#,
         inserted.group_id
     )
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await?;
 
     let created_task = Task::with_all_fields(
@@ -94,7 +88,7 @@ async fn create_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn fetch_task(
-    State(pool): State<Pool<Sqlite>>,
+    State(state): State<DaemonState>,
     Json(payload): Json<TaskFetchOptions>,
 ) -> Result<Json<Vec<Task>>, TarsError> {
     info!("Received fetch_task request with payload: {:?}", payload);
@@ -117,7 +111,7 @@ async fn fetch_task(
                         
                 "#,
             )
-            .fetch_all(&pool)
+            .fetch_all(&state.pool)
             .await?;
 
             let tasks: Vec<Task> = records
@@ -151,7 +145,7 @@ async fn fetch_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn update_task(
-    State(pool): State<Pool<Sqlite>>,
+    State(state): State<DaemonState>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
     let row = sqlx::query!(
@@ -183,7 +177,7 @@ async fn update_task(
         *task.group.id,
         *task.id
     )
-    .fetch_one(&pool)
+    .fetch_one(&state.pool)
     .await?;
 
     let updated_task = Task::with_all_fields(
@@ -211,10 +205,10 @@ async fn update_task(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 async fn delete_task(
-    State(pool): State<Pool<Sqlite>>,
+    State(state): State<DaemonState>,
     Json(payload): Json<Id>,
 ) -> Result<Json<Task>, TarsError> {
-    let mut tx = pool.begin().await?;
+    let mut tx = state.pool.begin().await?;
     let row = sqlx::query!(
         r#"
             SELECT
