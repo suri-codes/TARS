@@ -15,11 +15,10 @@ impl TarsClient {
     /// # Errors
     ///
     /// This function will return an error if .
-    #[expect(unused)]
     pub async fn new(base_url: String) -> Result<Self, TarsError> {
         let app_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         let client = ClientBuilder::new().user_agent(app_agent).build()?;
-        todo!()
+        Ok(Self { client, base_url })
     }
     /// Returns ... from db of this [`TarsClient`].
     ///

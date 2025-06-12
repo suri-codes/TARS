@@ -255,7 +255,7 @@ mod tests {
     use crate::utils::new_test_daemon;
 
     #[tokio::test]
-    async fn lol() {
+    async fn task_tests() {
         let (d, addr) = new_test_daemon().await;
         let d_addr = addr.clone();
         let _x = tokio::spawn(async move {

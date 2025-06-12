@@ -1,6 +1,5 @@
 use crate::{daemon::TarsDaemon, db::Db};
 
-#[expect(unused)]
 pub async fn new_test_daemon() -> (TarsDaemon, String) {
     let db = Db::new(true).await;
     let daemon = TarsDaemon::init(db).await;
