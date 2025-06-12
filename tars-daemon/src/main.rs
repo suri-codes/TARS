@@ -1,9 +1,10 @@
 use common::DAEMON_ADDR;
 use daemon::TarsDaemon;
+use db::Db;
 
 mod daemon;
+mod db;
 mod handlers;
-const DB_FILE_NAME: &str = "tars.db";
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +12,9 @@ async fn main() {
     // TODO: need to integrate a daemon log file aswell
 
     //TODO: also create a notifier thread later
-    let daemon = TarsDaemon::init(DB_FILE_NAME).await;
+    // let daemon = TarsDaemon::init().await;
 
-    daemon.run(DAEMON_ADDR).await;
+    // daemon.run(DAEMON_ADDR).await;
+    //
+    let db = Db::new(true).await;
 }

@@ -9,17 +9,22 @@ use sqlx::{
 use tokio::net::TcpListener;
 use tracing::{error, info};
 
-use crate::handlers::{add_group_handlers, add_task_handlers};
+use crate::{
+    db::Db,
+    handlers::{add_group_handlers, add_task_handlers},
+};
 
 pub struct TarsDaemon {
     app: Router,
 }
 
 impl TarsDaemon {
-    pub async fn init(db_url: &str) -> Self {
+    pub async fn init(db: Db) -> Self {
         let app = Router::new()
             .route("/", get(root))
-            .layer(Extension(create_pool(db_url).await));
+            // TODO: fix this bruh
+            // .layer(Extension(create_pool(db_url).await));
+            ;
 
         let app = add_task_handlers(app);
         let app = add_group_handlers(app);
