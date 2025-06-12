@@ -3,7 +3,7 @@ use std::io::{Write, stdin, stdout};
 use crate::args::{CliArgs, Commands};
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
-use common::types::{Group, Name, Priority, Task};
+use common::types::{Name, Priority};
 use sqlx::types::chrono::NaiveDateTime;
 mod args;
 
@@ -14,20 +14,20 @@ async fn main() -> Result<()> {
 
     match args.command {
         Commands::Add => {
-            let name: Name = prompt_user("Task Name")?.as_str().try_into()?;
+            let _name: Name = prompt_user("Task Name")?.as_str().into();
 
             //TODO: print existing groups
-            let group: Group = prompt_user("Group Name")?.as_str().try_into()?;
-            let priority: Priority =
+            // let group: Group = prompt_user("Group Name")?.as_str().try_into()?;
+            let _priority: Priority =
                 prompt_user("Priority Level [(L)ow|(M)edium|(H)igh|(A)SAP|(F)ar]")?
                     .as_str()
                     .try_into()?;
 
-            let description = prompt_user("Task Description")?;
+            let _description = prompt_user("Task Description")?;
 
             let due_str = prompt_user("Due Date (YYYY-MM-DD HH:MM:SS)")?;
 
-            let due = match NaiveDateTime::parse_from_str(&due_str, "%Y-%m-%d %H:%M:%S") {
+            let _due = match NaiveDateTime::parse_from_str(&due_str, "%Y-%m-%d %H:%M:%S") {
                 Ok(parsed_time) => Some(parsed_time),
                 Err(_) => {
                     println!("{}", "Failed to Parse, using None as due date".magenta());
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
                 }
             };
 
-            let _task = Task::new(group, name, priority, description, due);
+            // let _task = Task::new(group, name, priority, description, due);
             // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {

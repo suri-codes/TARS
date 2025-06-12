@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "task_pub_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_pub_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "completed",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "due",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "06fc6d5721c8bbf80c50854ef89b78ecf4fb00282dadd47015718051e8d7eaaf"
+}
