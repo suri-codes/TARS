@@ -258,15 +258,15 @@ mod tests {
     async fn lol() {
         let (d, addr) = new_test_daemon().await;
         let d_addr = addr.clone();
-        let x = tokio::spawn(async move {
+        let _x = tokio::spawn(async move {
             d.run(d_addr.clone().as_str()).await;
         });
 
         // now we can start using the client to test?
-        let client = TarsClient::new(addr)
+        let _client = TarsClient::new(addr)
             .await
             .expect("failed to instantiate client");
 
-        // ok now what
+        //TODO: finish up the client implementation so we can actually write these tests
     }
 }

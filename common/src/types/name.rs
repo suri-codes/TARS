@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode};
 
-use crate::ParseError;
 use std::{
     error::Error,
     ops::{Deref, DerefMut},

@@ -6,8 +6,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::ParseError;
-
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Id(String);
 
