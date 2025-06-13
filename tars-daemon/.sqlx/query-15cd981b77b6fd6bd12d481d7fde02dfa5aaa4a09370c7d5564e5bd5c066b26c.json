@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        t.priority  ,\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
   "describe": {
     "columns": [
       {
@@ -24,7 +24,7 @@
         "type_info": "Text"
       },
       {
-        "name": "priority: Priority",
+        "name": "priority",
         "ordinal": 4,
         "type_info": "Integer"
       },
@@ -58,5 +58,5 @@
       true
     ]
   },
-  "hash": "06fc6d5721c8bbf80c50854ef89b78ecf4fb00282dadd47015718051e8d7eaaf"
+  "hash": "15cd981b77b6fd6bd12d481d7fde02dfa5aaa4a09370c7d5564e5bd5c066b26c"
 }

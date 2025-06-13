@@ -6,7 +6,9 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+/// Name type for Tasks and Groups, ensures that the string inside is a
+/// properly parsed name.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Name(String);
 
 impl Deref for Name {

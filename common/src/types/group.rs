@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
+use tracing::error;
+
+use crate::{TarsClient, TarsError};
 
 use super::{Id, Name};
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Group {
     pub id: Id,
     pub name: Name,
@@ -14,5 +17,96 @@ impl Group {
             id: id.into(),
             name: name.into(),
         }
+    }
+
+    /// Creates a new `Group` through the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
+    pub async fn new(client: &TarsClient, name: impl Into<Name>) -> Result<Self, TarsError> {
+        let group = Group::with_all_fields(Id::default(), name);
+
+        let res: Group = client
+            .conn
+            .post(client.base_path.join("/group/create")?)
+            .json(&group)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?;
+
+        Ok(res)
+    }
+
+    /// Fetches all `Group`s.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
+    pub async fn fetch_all(client: &TarsClient) -> Result<Vec<Group>, TarsError> {
+        let res: Vec<Group> = client
+            .conn
+            .get(client.base_path.join("/group")?)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error Fetching Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error Fetching Group: {:?}", e))?;
+
+        Ok(res)
+    }
+
+    /// Sync's this `Group` with its representation in database, via the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// + Something goes wrong with the requests to the Daemon.
+    /// + Will panic at runtime if the sync'd `Group` doesnt match with `self`
+    pub async fn sync(&self, client: &TarsClient) -> Result<(), TarsError> {
+        let res: Group = client
+            .conn
+            .post(client.base_path.join("/group/update")?)
+            .json(self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error Sync'ing Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error Sync'ing Group: {:?}", e))?;
+
+        assert_eq!(res, *self);
+
+        Ok(())
+    }
+
+    /// Deletes this `Group` via the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// + Something goes wrong with the requests to the Daemon.
+    /// + Will panic at runtime if deleted `Group` doesnt match the `Group` we wanted to delete.
+    pub async fn delete(self, client: &TarsClient) -> Result<(), TarsError> {
+        let deleted: Group = client
+            .conn
+            .post(client.base_path.join("/group/update")?)
+            .json(&self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error Deleting Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error Deleting Group: {:?}", e))?;
+
+        assert_eq!(deleted, self);
+
+        Ok(())
     }
 }
