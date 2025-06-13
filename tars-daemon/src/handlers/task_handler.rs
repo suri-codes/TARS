@@ -10,6 +10,7 @@ use crate::DaemonState;
 /// Returns a router with all the task specific endpoints
 pub fn task_router() -> Router<DaemonState> {
     Router::new()
+        //TODO: there have to be better ways to do these routes
         .route("/create", post(create_task))
         .route("/fetch", post(fetch_task))
         .route("/update", post(update_task))
@@ -102,7 +103,7 @@ async fn fetch_task(
                         t.name as task_name,
                         g.name  as group_name,
                         g.pub_id as group_pub_id ,
-                        t.priority as "priority: Priority",
+                        t.priority  ,
                         t.description,
                         t.completed,
                         t.due
@@ -121,7 +122,7 @@ async fn fetch_task(
                         row.task_pub_id,
                         Group::with_all_fields(row.group_pub_id, row.group_name),
                         row.task_name,
-                        row.priority,
+                        row.priority.try_into().expect("should not fail conversion"),
                         row.description,
                         row.completed,
                         row.due,

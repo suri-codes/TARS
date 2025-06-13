@@ -38,18 +38,19 @@ impl Task {
     }
     pub fn new(
         group: Group,
-        name: Name,
+        name: impl Into<Name>,
         priority: Priority,
-        description: String,
+        description: impl Into<String>,
+
         due: Option<NaiveDateTime>,
     ) -> Self {
         Self {
             id: Default::default(),
             group,
-            name,
+            name: name.into(),
             priority,
             completed: false,
-            description,
+            description: description.into(),
             due,
         }
     }

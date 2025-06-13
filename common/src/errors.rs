@@ -38,7 +38,7 @@ impl IntoResponse for TarsError {
             TarsError::UrlError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        tracing::error!("TarsError: {}, returning status code: {}", self, status);
+        tracing::error!("TarsError: {:?}, returning status code: {}", self, status);
 
         status.into_response()
     }

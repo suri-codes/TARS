@@ -13,10 +13,11 @@ use crate::DaemonState;
 /// Returns a router with all the group specific endpoints
 pub fn group_router() -> Router<DaemonState> {
     Router::new()
-        .route("/group", get(fetch_groups))
-        .route("/group/create", post(create_group))
-        .route("/group/update", post(update_group))
-        .route("/group/delete", post(delete_group))
+        //TODO: there have to be better ways to do these routes
+        .route("/", get(fetch_groups))
+        .route("/create", post(create_group))
+        .route("/update", post(update_group))
+        .route("/delete", post(delete_group))
 }
 
 /// Takes in a `Group` and then writes that group to the database.

@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
 use reqwest::{Client, ClientBuilder, Url};
+use tracing::error;
 
 use crate::{
     TarsError,
-    types::{Task, TaskFetchOptions},
+    types::{Group, Task, TaskFetchOptions},
 };
 
 #[derive(Debug)]
@@ -38,39 +39,50 @@ impl TarsClient {
     pub async fn get_tasks(&mut self, opts: TaskFetchOptions) -> Result<Vec<Task>, TarsError> {
         let url = self.base_path.join("/task/fetch")?;
 
-        println!("{:?}", url);
-
-        // let res: Vec<Task> = self
-        //     .client
-        //     .post(url)
-        //     .json(&opts) // This is the correct way to send JSON with reqwest
-        //     .send()
-        //     .await
-        //     .inspect_err(|e| println!("response {:?}", e))?
-        //     .json()
-        //     .await
-        //     .inspect_err(|e| println!("json {:?}", e))?;
-
-        let res = self
-            .client
-            .post(self.base_path.join("/task/test")?)
-            .send()
-            .await
-            .inspect_err(|e| println!("response {:?}", e))?;
-
-        println!("{:?}", res);
-
-        let res = self
+        let res: Vec<Task> = self
             .client
             .post(url)
             .json(&opts) // This is the correct way to send JSON with reqwest
             .send()
             .await
-            .inspect_err(|e| println!("response {:?}", e))?;
+            .inspect_err(|e| error!("response {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("json: {:?}", e))?;
 
-        println!("{:?}", res);
+        Ok(res)
+    }
 
-        todo!()
-        // Ok(res)
+    pub async fn create_task(&mut self, task: Task) -> Result<Task, TarsError> {
+        let url = self.base_path.join("/task/create")?;
+
+        let res: Task = self
+            .client
+            .post(url)
+            .json(&task)
+            .send()
+            .await
+            .inspect_err(|e| error!("response {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("json: {:?}", e))?;
+
+        Ok(res)
+    }
+
+    pub async fn create_group(&mut self, group: Group) -> Result<Group, TarsError> {
+        let url = self.base_path.join("/group/create")?;
+
+        let res: Group = self
+            .client
+            .post(url)
+            .json(&group)
+            .send()
+            .await
+            .inspect_err(|e| error!("response {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("json: {:?}", e))?;
+        Ok(res)
     }
 }
