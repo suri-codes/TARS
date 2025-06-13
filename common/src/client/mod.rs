@@ -10,8 +10,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct TarsClient {
-    client: Client,
-    base_path: Url,
+    pub conn: Client,
+    pub base_path: Url,
 }
 
 // fix the docs for these
@@ -26,63 +26,63 @@ impl TarsClient {
         let client = ClientBuilder::new().user_agent(app_agent).build()?;
 
         Ok(Self {
-            client,
+            conn: client,
             base_path: Url::from_str(&base_url).expect("should be a valid url"),
         })
     }
-    /// Returns ... from db of this [`TarsClient`].
-    ///
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    pub async fn get_tasks(&mut self, opts: TaskFetchOptions) -> Result<Vec<Task>, TarsError> {
-        let url = self.base_path.join("/task/fetch")?;
+    // / Returns ... from db of this [`TarsClient`].
+    // /
+    // /
+    // / # Errors
+    // /
+    // / This function will return an error if .
+    // pub async fn get_tasks(&mut self, opts: TaskFetchOptions) -> Result<Vec<Task>, TarsError> {
+    //     let url = self.base_path.join("/task/fetch")?;
 
-        let res: Vec<Task> = self
-            .client
-            .post(url)
-            .json(&opts) // This is the correct way to send JSON with reqwest
-            .send()
-            .await
-            .inspect_err(|e| error!("response {:?}", e))?
-            .json()
-            .await
-            .inspect_err(|e| error!("json: {:?}", e))?;
+    //     let res: Vec<Task> = self
+    //         .client
+    //         .post(url)
+    //         .json(&opts) // This is the correct way to send JSON with reqwest
+    //         .send()
+    //         .await
+    //         .inspect_err(|e| error!("response {:?}", e))?
+    //         .json()
+    //         .await
+    //         .inspect_err(|e| error!("json: {:?}", e))?;
 
-        Ok(res)
-    }
+    //     Ok(res)
+    // }
 
-    pub async fn create_task(&mut self, task: Task) -> Result<Task, TarsError> {
-        let url = self.base_path.join("/task/create")?;
+    // pub async fn create_task(&mut self, task: Task) -> Result<Task, TarsError> {
+    //     let url = self.base_path.join("/task/create")?;
 
-        let res: Task = self
-            .client
-            .post(url)
-            .json(&task)
-            .send()
-            .await
-            .inspect_err(|e| error!("response {:?}", e))?
-            .json()
-            .await
-            .inspect_err(|e| error!("json: {:?}", e))?;
+    //     let res: Task = self
+    //         .client
+    //         .post(url)
+    //         .json(&task)
+    //         .send()
+    //         .await
+    //         .inspect_err(|e| error!("response {:?}", e))?
+    //         .json()
+    //         .await
+    //         .inspect_err(|e| error!("json: {:?}", e))?;
 
-        Ok(res)
-    }
+    //     Ok(res)
+    // }
 
-    pub async fn create_group(&mut self, group: Group) -> Result<Group, TarsError> {
-        let url = self.base_path.join("/group/create")?;
+    // pub async fn create_group(&mut self, group: Group) -> Result<Group, TarsError> {
+    //     let url = self.base_path.join("/group/create")?;
 
-        let res: Group = self
-            .client
-            .post(url)
-            .json(&group)
-            .send()
-            .await
-            .inspect_err(|e| error!("response {:?}", e))?
-            .json()
-            .await
-            .inspect_err(|e| error!("json: {:?}", e))?;
-        Ok(res)
-    }
+    //     let res: Group = self
+    //         .client
+    //         .post(url)
+    //         .json(&group)
+    //         .send()
+    //         .await
+    //         .inspect_err(|e| error!("response {:?}", e))?
+    //         .json()
+    //         .await
+    //         .inspect_err(|e| error!("json: {:?}", e))?;
+    //     Ok(res)
+    // }
 }

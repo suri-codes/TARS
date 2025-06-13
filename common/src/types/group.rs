@@ -1,4 +1,7 @@
 use serde::{Deserialize, Serialize};
+use tracing::error;
+
+use crate::{TarsClient, TarsError};
 
 use super::{Id, Name};
 
@@ -14,5 +17,22 @@ impl Group {
             id: id.into(),
             name: name.into(),
         }
+    }
+
+    pub async fn new(client: &TarsClient, name: impl Into<Name>) -> Result<Self, TarsError> {
+        let group = Group::with_all_fields(Id::default(), name);
+
+        let res: Group = client
+            .conn
+            .post(client.base_path.join("/group/create")?)
+            .json(&group)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?;
+
+        Ok(res)
     }
 }

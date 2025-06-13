@@ -47,19 +47,19 @@ async fn main() -> Result<()> {
                 .unwrap();
             let group = Group::with_all_fields(Id::default(), "Default");
 
-            let group = client.create_group(group).await?;
+            let group = Group::new(&client, "Penis").await?;
 
-            let task = client
-                .create_task(Task::new(
-                    group,
-                    "Penis",
-                    Priority::Asap,
-                    "jork yo dih",
-                    None,
-                ))
-                .await?;
+            let task = Task::new(
+                &client,
+                group,
+                "Kill Albert",
+                Priority::Asap,
+                "Albert playing too much league, its time to js kill bro",
+                None,
+            )
+            .await?;
 
-            let tasks = client.get_tasks(TaskFetchOptions::All).await?;
+            let tasks = Task::fetch(&client, TaskFetchOptions::All).await?;
 
             println!("{:?}", tasks);
         }
