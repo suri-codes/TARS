@@ -8,6 +8,7 @@ use crate::{TarsClient, TarsError};
 
 use super::{Group, Id, Name, Priority};
 
+/// Task type that holds all information relavant to a task.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub id: Id,

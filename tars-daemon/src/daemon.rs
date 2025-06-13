@@ -8,11 +8,14 @@ use crate::{
     handlers::{group_router, task_router},
 };
 
+/// Daemon that exposes access to the database, as well as being responsible
+/// for sending notifications regarding task duedates.
 pub struct TarsDaemon {
     app: Router,
     state: DaemonState,
 }
 
+// State required for the `TarsDaemon` to function properly.
 #[derive(Clone)]
 pub struct DaemonState {
     pub pool: Pool<Sqlite>,
@@ -20,6 +23,7 @@ pub struct DaemonState {
 }
 
 impl DaemonState {
+    /// Returns a new instance of DaemonState
     pub fn new(db: Db, addr: &str) -> Self {
         DaemonState {
             pool: db.pool,
@@ -29,6 +33,7 @@ impl DaemonState {
 }
 
 impl TarsDaemon {
+    /// Initializes a new Daemon
     pub async fn init(state: DaemonState) -> Self {
         let app = Router::new()
             .route("/", get(root))
@@ -39,6 +44,7 @@ impl TarsDaemon {
         Self { app, state }
     }
 
+    /// Runs the daemon, will panic if something goes wrong.
     pub async fn run(self) {
         let listener = TcpListener::bind(&self.state.addr).await.unwrap();
 

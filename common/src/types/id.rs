@@ -6,6 +6,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+/// holds an Id used in all the types stored in the Database.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Id(String);
 
