@@ -1,6 +1,6 @@
 use tars_daemon::{DaemonState, Db, TarsDaemon};
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub async fn new_test_daemon() -> (TarsDaemon, String) {
     let db = Db::new(true).await;
     let availible_port = std::net::TcpListener::bind("127.0.0.1:0")
