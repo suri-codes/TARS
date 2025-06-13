@@ -5,7 +5,7 @@ use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use common::{
     TarsClient,
-    types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
+    types::{Group, Name, Priority, Task, TaskFetchOptions},
 };
 use sqlx::types::chrono::NaiveDateTime;
 mod args;
@@ -42,11 +42,10 @@ async fn main() -> Result<()> {
             let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
                 .await
                 .unwrap();
-            let group = Group::with_all_fields(Id::default(), "Default");
 
             let group = Group::new(&client, "Penis").await?;
 
-            let task = Task::new(
+            let _task = Task::new(
                 &client,
                 group,
                 "Kill Albert",
