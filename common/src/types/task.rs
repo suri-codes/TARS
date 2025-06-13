@@ -20,6 +20,7 @@ pub struct Task {
 }
 
 impl Task {
+    /// Initializes a `Task` with all fields.
     pub fn with_all_fields(
         id: impl Into<Id>,
         group: impl Into<Group>,
@@ -39,7 +40,13 @@ impl Task {
             due,
         }
     }
-    // when you create a new task here, it goes created in the database
+
+    /// Creates a new `Task` through the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
     pub async fn new(
         client: &TarsClient,
         group: Group,
@@ -73,6 +80,12 @@ impl Task {
         Ok(res)
     }
 
+    /// Fetches `Task`s that match the criteria specified by `TaskFetchOptions`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
     pub async fn fetch(
         client: &TarsClient,
         opts: TaskFetchOptions,
@@ -89,6 +102,54 @@ impl Task {
             .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
 
         Ok(res)
+    }
+
+    /// Sync's this `Task` with its representation in database, via the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// + Something goes wrong with the requests to the Daemon.
+    /// + Will panic at runtime if the sync'd task doesnt match with `self`
+    pub async fn sync(&self, client: TarsClient) -> Result<(), TarsError> {
+        let task: Task = client
+            .conn
+            .post(client.base_path.join("/task/update")?)
+            .json(&self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
+
+        // make sure that its actually sync'd
+        assert_eq!(*self, task);
+        Ok(())
+    }
+
+    /// Deletes this `Task` via the `TarsDaemon`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// + Something goes wrong with the requests to the Daemon.
+    /// + Will panic at runtime if deleted task doesnt match the task we wanted to delete.
+    pub async fn delete(self, client: TarsClient) -> Result<(), TarsError> {
+        let deleted_task: Task = client
+            .conn
+            .post(client.base_path.join("/task/delete")?)
+            .json(&self.id)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
+
+        assert_eq!(deleted_task, self);
+
+        Ok(())
     }
 }
 

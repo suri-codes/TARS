@@ -37,12 +37,9 @@ async fn main() -> Result<()> {
                     None
                 }
             };
-
-            // let _task = Task::new(group, name, priority, description, due);
-            // orm.insert_task(task).await?;
         }
         Commands::List(_l_args) => {
-            let mut client = TarsClient::new("http://127.0.0.1:42069".to_owned())
+            let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
                 .await
                 .unwrap();
             let group = Group::with_all_fields(Id::default(), "Default");
