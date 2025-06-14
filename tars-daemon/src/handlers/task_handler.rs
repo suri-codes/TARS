@@ -10,7 +10,6 @@ use crate::DaemonState;
 /// Returns a router with all the task specific endpoints
 pub fn task_router() -> Router<DaemonState> {
     Router::new()
-        //TODO: there have to be better ways to do these routes
         .route("/create", post(create_task))
         .route("/fetch", post(fetch_task))
         .route("/update", post(update_task))

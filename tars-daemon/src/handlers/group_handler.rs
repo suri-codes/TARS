@@ -13,8 +13,6 @@ use crate::DaemonState;
 /// Returns a router with all the group specific endpoints
 pub fn group_router() -> Router<DaemonState> {
     Router::new()
-        //TODO: there have to be better ways to do these routes
-        .route("/", get(fetch_groups))
         .route("/create", post(create_group))
         .route("/update", post(update_group))
         .route("/delete", post(delete_group))

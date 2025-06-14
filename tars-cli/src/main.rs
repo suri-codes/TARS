@@ -65,7 +65,6 @@ async fn main() -> Result<()> {
 }
 
 fn prompt_user(prompt: &str) -> Result<String> {
-    //TODO: priority not implemented correctly
     // look into rustlyline for saving things, might be super cool, or just not do that
     // let mut rl = Editor::with_config(
     //     Config::builder()
