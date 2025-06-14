@@ -6,6 +6,9 @@ edition = "2024"
 [dependencies]
 axum = "0.8.4"
 tracing = "0.1"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde"] }
+color-eyre = "0.6.3"
+tracing-error = "0.2.0"
 lazy_static = "1.5.0"
 thiserror = "2.0.12"
 directories = "6.0.0"

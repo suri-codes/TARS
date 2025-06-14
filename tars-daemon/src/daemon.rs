@@ -1,4 +1,5 @@
 use axum::{Router, routing::get};
+use color_eyre::eyre::{Result, eyre};
 use sqlx::{Pool, Sqlite};
 use tokio::net::TcpListener;
 use tracing::{error, info};
@@ -45,17 +46,15 @@ impl TarsDaemon {
     }
 
     /// Runs the daemon, will panic if something goes wrong.
-    pub async fn run(self) {
+    pub async fn run(self) -> Result<()> {
         let listener = TcpListener::bind(&self.state.addr).await.unwrap();
 
         info!("App lisening on {}", self.state.addr);
 
-        if let Err(e) = axum::serve(listener, self.app).await {
-            error!("{e}");
-            panic!("{e}")
-        };
-
-        // With this:
+        axum::serve(listener, self.app).await.map_err(|e| {
+            error!("{:?}", e);
+            eyre!(e)
+        })
     }
 }
 

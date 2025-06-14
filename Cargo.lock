@@ -566,6 +566,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "chrono",
+ "color-eyre",
  "directories 6.0.0",
  "lazy_static",
  "nanoid",
@@ -575,6 +576,8 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "tracing-error",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -3995,6 +3998,7 @@ name = "tars-daemon"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "color-eyre",
  "common",
  "serde",
  "sqlx",

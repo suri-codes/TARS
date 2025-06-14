@@ -1,14 +1,9 @@
-use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
-};
+use crate::DaemonState;
+use axum::{Json, Router, extract::State, routing::post};
 use common::{
     TarsError,
     types::{Group, Id, Name},
 };
-
-use crate::DaemonState;
 
 /// Returns a router with all the group specific endpoints
 pub fn group_router() -> Router<DaemonState> {
@@ -60,6 +55,7 @@ async fn create_group(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[allow(unused)]
 async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group>>, TarsError> {
     let groups = sqlx::query_as!(
         Group,
