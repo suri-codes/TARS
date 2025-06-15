@@ -1,9 +1,10 @@
 use crate::DaemonState;
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, debug_handler, extract::State, routing::post};
 use common::{
     TarsError,
     types::{Group, Id, Name},
 };
+use tracing::{info, instrument};
 
 /// Returns a router with all the group specific endpoints
 pub fn group_router() -> Router<DaemonState> {
@@ -21,6 +22,8 @@ pub fn group_router() -> Router<DaemonState> {
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn create_group(
     State(state): State<DaemonState>,
     Json(group): Json<Group>,
@@ -44,6 +47,7 @@ async fn create_group(
 
     assert_eq!(group, inserted);
 
+    info!("Created group: {:#?}", inserted);
     Ok(Json(group))
 }
 
@@ -56,6 +60,8 @@ async fn create_group(
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
 #[allow(unused)]
+#[instrument(skip(state))]
+#[debug_handler]
 async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group>>, TarsError> {
     let groups = sqlx::query_as!(
         Group,
@@ -69,6 +75,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
     .fetch_all(&state.pool)
     .await?;
 
+    info!("fetched groups: {:#?}", groups);
+
     Ok(Json::from(groups))
 }
 
@@ -80,6 +88,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn update_group(
     State(state): State<DaemonState>,
     Json(group): Json<Group>,
@@ -103,6 +113,7 @@ async fn update_group(
     .await?;
 
     assert_eq!(group, updated);
+    info!("Updated group: {:#?}", updated);
 
     Ok(Json::from(updated))
 }
@@ -115,6 +126,8 @@ async fn update_group(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn delete_group(
     State(state): State<DaemonState>,
     Json(group): Json<Group>,
@@ -134,6 +147,7 @@ async fn delete_group(
     .fetch_one(&state.pool)
     .await?;
 
+    info!("Deleted group: {:#?}", deleted);
     assert_eq!(group, deleted);
 
     Ok(Json::from(deleted))

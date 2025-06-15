@@ -1,9 +1,9 @@
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, debug_handler, extract::State, routing::post};
 use common::{
     TarsError,
     types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::DaemonState;
 
@@ -24,6 +24,8 @@ pub fn task_router() -> Router<DaemonState> {
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 pub async fn create_task(
     State(state): State<DaemonState>,
     Json(task): Json<Task>,
@@ -75,6 +77,7 @@ pub async fn create_task(
     );
 
     assert_eq!(task, created_task);
+    info!("Created task: {:#?}", created_task);
 
     Ok(Json::from(created_task))
 }
@@ -87,13 +90,13 @@ pub async fn create_task(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn fetch_task(
     State(state): State<DaemonState>,
-    Json(payload): Json<TaskFetchOptions>,
+    Json(task_fetch_opts): Json<TaskFetchOptions>,
 ) -> Result<Json<Vec<Task>>, TarsError> {
-    info!("Received fetch_task request with payload: {:?}", payload);
-
-    match payload {
+    match task_fetch_opts {
         TaskFetchOptions::All => {
             let records = sqlx::query!(
                 r#"
@@ -128,8 +131,7 @@ async fn fetch_task(
                     )
                 })
                 .collect();
-
-            info!("returning: {:?}", Json::from(tasks.clone()));
+            info!("Fetched: {:#?}", &tasks);
 
             Ok(Json::from(tasks))
         }
@@ -144,6 +146,8 @@ async fn fetch_task(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn update_task(
     State(state): State<DaemonState>,
     Json(task): Json<Task>,
@@ -193,6 +197,7 @@ async fn update_task(
     // if they dont match, we have a problem!
     assert_eq!(updated_task, task);
 
+    info!("Updated task: {:#?}", updated_task);
     Ok(Json::from(updated_task))
 }
 
@@ -204,9 +209,11 @@ async fn update_task(
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
+#[instrument(skip(state))]
+#[debug_handler]
 async fn delete_task(
     State(state): State<DaemonState>,
-    Json(payload): Json<Id>,
+    Json(deletion_id): Json<Id>,
 ) -> Result<Json<Task>, TarsError> {
     let mut tx = state.pool.begin().await?;
     let row = sqlx::query!(
@@ -225,7 +232,7 @@ async fn delete_task(
                 WHERE t.pub_id = ?
 
         "#,
-        *payload
+        *deletion_id
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -240,13 +247,14 @@ async fn delete_task(
         row.due,
     );
 
-    sqlx::query!("DELETE FROM Tasks WHERE pub_id = ?", *payload)
+    sqlx::query!("DELETE FROM Tasks WHERE pub_id = ?", *deletion_id)
         .execute(&mut *tx)
         .await?;
 
-    assert_eq!(payload, deleted_task.id);
+    assert_eq!(deletion_id, deleted_task.id);
 
     tx.commit().await?;
+    info!("Deleted task: {:#?}", deleted_task);
 
     Ok(Json::from(deleted_task))
 }

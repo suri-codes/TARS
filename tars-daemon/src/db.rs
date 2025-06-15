@@ -1,5 +1,6 @@
 use std::{path::PathBuf, str::FromStr};
 
+use color_eyre::Result;
 use common::{dirs::get_data_dir, types::Id};
 use sqlx::{
     Pool, Sqlite, SqlitePool,
@@ -25,7 +26,7 @@ impl Db {
     ///
     /// Can also create test databases.
     ///
-    pub async fn new(is_test: bool) -> Self {
+    pub async fn new(is_test: bool) -> Result<Self> {
         let path = {
             let mut dir = if is_test {
                 PathBuf::from(format!("/tmp/tars/{}/", *Id::default()))
@@ -78,9 +79,8 @@ impl Db {
                 error!("{e}");
                 Err(e)
             }
-        }
-        .expect("Failed to establish connection pool.");
+        }?;
 
-        Self { pool }
+        Ok(Self { pool })
     }
 }
