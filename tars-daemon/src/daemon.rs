@@ -47,7 +47,7 @@ impl TarsDaemon {
 
     /// Runs the daemon, will panic if something goes wrong.
     pub async fn run(self) -> Result<()> {
-        let listener = TcpListener::bind(&self.state.addr).await.unwrap();
+        let listener = TcpListener::bind(&self.state.addr).await?;
 
         info!("App lisening on {}", self.state.addr);
 

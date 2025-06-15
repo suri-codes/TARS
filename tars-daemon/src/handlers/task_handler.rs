@@ -24,7 +24,6 @@ pub fn task_router() -> Router<DaemonState> {
 /// This function will return an error if
 /// + Something goes wrong with sqlx.
 /// + Something goes wrong turning what sqlx returns into our wrapper types.
-
 #[instrument(skip(state))]
 #[debug_handler]
 pub async fn create_task(

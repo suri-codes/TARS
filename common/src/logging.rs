@@ -6,6 +6,7 @@ use crate::dirs::get_data_dir;
 // "/Users/suri/Library/Application Support/com.suri.common/tars-d.log"
 
 const LOG_ENV: &str = "TARS_LOG_LEVL";
+
 pub fn init(logfile_name: &str, term_out: bool) -> Result<()> {
     let directory = get_data_dir();
     std::fs::create_dir_all(directory.clone())?;
