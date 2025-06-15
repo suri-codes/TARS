@@ -17,7 +17,7 @@ pub struct TarsDaemon {
 }
 
 // State required for the `TarsDaemon` to function properly.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DaemonState {
     pub pool: Pool<Sqlite>,
     addr: String,
