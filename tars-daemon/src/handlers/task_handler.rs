@@ -131,7 +131,7 @@ async fn fetch_task(
                     )
                 })
                 .collect();
-            info!("Fetched: {:#?}", &tasks);
+            info!("Fetched tasks: {:#?}", &tasks);
 
             Ok(Json::from(tasks))
         }

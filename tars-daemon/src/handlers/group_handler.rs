@@ -75,7 +75,7 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
     .fetch_all(&state.pool)
     .await?;
 
-    info!("fetched groups: {:#?}", groups);
+    info!("Fetched groups: {:#?}", groups);
 
     Ok(Json::from(groups))
 }
