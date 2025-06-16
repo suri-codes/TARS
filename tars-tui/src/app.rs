@@ -35,16 +35,16 @@ pub struct App {
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
     #[default]
-    Home,
+    TodoExplorer,
+    TodoList,
     TaskView,
-    FpsCounter,
 }
 
 impl From<Mode> for u8 {
     fn from(value: Mode) -> Self {
         match value {
-            Mode::Home => 1,
-            Mode::FpsCounter => 2,
+            Mode::TodoExplorer => 1,
+            Mode::TodoList => 2,
             Mode::TaskView => 3,
         }
     }
@@ -65,7 +65,7 @@ impl App {
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::Home,
+            mode: Mode::TodoExplorer,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
@@ -169,6 +169,7 @@ impl App {
                 Action::ClearScreen => tui.terminal.clear()?,
                 Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
                 Action::Render => self.render(tui)?,
+                Action::SwitchTo(mode) => self.mode = mode,
                 _ => {}
             }
             for component in self.components.iter_mut() {

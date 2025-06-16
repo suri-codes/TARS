@@ -1,8 +1,21 @@
-[keybindings.Home]
+[keybindings.TodoExplorer]
 "<q>" = "Quit"  # Quit the application
 "<Ctrl-d>" = "Quit"  # Another way to quit
 "<Ctrl-c>" = "Quit"  # Yet another way to quit
 "<Ctrl-z>" = "Suspend"  # Suspend the application
-"<1>" = { SwitchTo = "Home" }
-"<2>" = { SwitchTo = "Home" }
+"<2>" = { SwitchTo = "TodoList" }
 "<3>" = { SwitchTo = "TaskView" }
+[keybindings.TodoList]
+"<q>" = "Quit"  # Quit the application
+"<Ctrl-d>" = "Quit"  # Another way to quit
+"<Ctrl-c>" = "Quit"  # Yet another way to quit
+"<Ctrl-z>" = "Suspend"  # Suspend the application
+"<1>" = { SwitchTo = "TodoExplorer" }
+"<3>" = { SwitchTo = "TaskView" }
+[keybindings.TaskView]
+"<q>" = "Quit"  # Quit the application
+"<Ctrl-d>" = "Quit"  # Another way to quit
+"<Ctrl-c>" = "Quit"  # Yet another way to quit
+"<Ctrl-z>" = "Suspend"  # Suspend the application
+"<1>" = { SwitchTo = "TodoExplorer" }
+"<2>" = { SwitchTo = "TodoList" }

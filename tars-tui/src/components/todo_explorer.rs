@@ -51,7 +51,7 @@ impl Component for TodoExplorer {
         mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
         frame.render_widget(
-            Paragraph::new("penis").block(frame_block(mode, Mode::TaskView)),
+            Paragraph::new("penis").block(frame_block(mode, Mode::TodoExplorer)),
             area,
         );
         Ok(())

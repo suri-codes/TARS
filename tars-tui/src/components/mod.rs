@@ -142,11 +142,9 @@ pub fn frame_block(active_mode: Mode, caller_mode: Mode) -> Block<'static> {
     } else {
         Style::new().fg(Color::Gray)
     };
-    let block = block.title(format!(
-        "[{}] {:?}",
-        Into::<u8>::into(caller_mode),
-        caller_mode
-    ));
+
+    let block = block.title(format!("[{}]", Into::<u8>::into(caller_mode)));
+    let block = block.title(format!("{:?}", caller_mode));
 
     block.style(style)
 }
