@@ -1,0 +1,8 @@
+[keybindings.Home]
+"<q>" = "Quit"  # Quit the application
+"<Ctrl-d>" = "Quit"  # Another way to quit
+"<Ctrl-c>" = "Quit"  # Yet another way to quit
+"<Ctrl-z>" = "Suspend"  # Suspend the application
+"<1>" = { SwitchTo = "Home" }
+"<2>" = { SwitchTo = "Home" }
+"<3>" = { SwitchTo = "TaskView" }

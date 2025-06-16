@@ -1,24 +1,29 @@
+use async_trait::async_trait;
 use color_eyre::Result;
+
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
     Frame,
-    layout::{Layout, Rect, Size},
+    layout::{Rect, Size},
     style::{Color, Style},
-    widgets::{Block, Borders, canvas::Line},
+    widgets::{Block, Borders},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, app::Mode, config::Config, tui::Event};
 
-pub mod fps;
-pub mod home;
-pub mod taskview;
+// pub mod fps;
+// pub mod home;
+pub mod task_view;
+pub mod todo_explorer;
+pub mod todo_list;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///
 /// Implementors of this trait can be registered with the main application loop and will be able to
 /// receive events, update state, and be rendered on the screen.
-pub trait Component {
+#[async_trait]
+pub trait Component: Send + Sync {
     /// Register an action handler that can send actions for processing if necessary.
     ///
     /// # Arguments
@@ -110,7 +115,7 @@ pub trait Component {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    async fn update(&mut self, action: Action) -> Result<Option<Action>> {
         let _ = action; // to appease clippy
         Ok(None)
     }

@@ -13,7 +13,7 @@ use tracing::error;
 
 use crate::{action::Action, app::Mode};
 
-const CONFIG: &str = include_str!("../.config/config.json5");
+const CONFIG: &str = include_str!("../.config/config.toml");
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
@@ -47,7 +47,7 @@ lazy_static! {
 
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
-        let default_config: Config = json5::from_str(CONFIG).unwrap();
+        let default_config: Config = toml::from_str(CONFIG).unwrap();
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
         let mut builder = config::Config::builder()
@@ -71,6 +71,7 @@ impl Config {
                 found_config = true
             }
         }
+        // TODO: if config file not found, just write default config
         if !found_config {
             error!("No configuration file found. Application may not behave as expected");
         }

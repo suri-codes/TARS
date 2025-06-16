@@ -12,7 +12,9 @@ use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{Component, fps::FpsCounter, home::Home, taskview::TaskView},
+    components::{
+        Component, task_view::TaskView, todo_explorer::TodoExplorer, todo_list::TodoList,
+    },
     config::Config,
     tui::{Event, Tui},
 };
@@ -55,9 +57,9 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Home::new()),
-                Box::new(TaskView::new()),
-                Box::new(FpsCounter::default()),
+                Box::new(TodoExplorer::new()),
+                Box::new(TodoList::new()),
+                Box::new(TaskView::default()),
                 // Box::new(TaskView::new()),
             ],
             should_quit: false,
@@ -90,7 +92,7 @@ impl App {
         let action_tx = self.action_tx.clone();
         loop {
             self.handle_events(&mut tui).await?;
-            self.handle_actions(&mut tui)?;
+            self.handle_actions(&mut tui).await?;
             if self.should_suspend {
                 tui.suspend()?;
                 action_tx.send(Action::Resume)?;
@@ -152,7 +154,7 @@ impl App {
         Ok(())
     }
 
-    fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
+    async fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
             if action != Action::Tick && action != Action::Render {
                 debug!("{action:?}");
@@ -170,7 +172,7 @@ impl App {
                 _ => {}
             }
             for component in self.components.iter_mut() {
-                if let Some(action) = component.update(action.clone())? {
+                if let Some(action) = component.update(action.clone()).await? {
                     self.action_tx.send(action)?
                 };
             }
