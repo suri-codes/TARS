@@ -1,9 +1,10 @@
 use color_eyre::Result;
 use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 
-use super::Component;
-use crate::{action::Action, config::Config};
+use super::{Component, frame_block};
+use crate::{action::Action, app::Mode, config::Config};
 
 #[derive(Default)]
 pub struct Home {
@@ -41,8 +42,12 @@ impl Component for Home {
         Ok(None)
     }
 
-    fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-        frame.render_widget(Paragraph::new("hello world"), area);
+    fn draw(&mut self, frame: &mut Frame, area: Rect, mode: Mode) -> Result<()> {
+        frame.render_widget(
+            Paragraph::new("hello world").block(frame_block(mode, Mode::Home)),
+            area,
+        );
+        // info!("{:#?}", frame);
         Ok(())
     }
 }

@@ -2,14 +2,17 @@ use color_eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
     Frame,
-    layout::{Rect, Size},
+    layout::{Layout, Rect, Size},
+    style::{Color, Style},
+    widgets::{Block, Borders, canvas::Line},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, config::Config, tui::Event};
+use crate::{action::Action, app::Mode, config::Config, tui::Event};
 
 pub mod fps;
 pub mod home;
+pub mod taskview;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///
@@ -121,5 +124,24 @@ pub trait Component {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()>;
+    fn draw(&mut self, frame: &mut Frame, area: Rect, mode: Mode) -> Result<()>;
+}
+
+/// returns a frame block given the active mode, and the caller mode. If both
+/// modes are the same, the frame will be colored green, otherwise gray.
+pub fn frame_block(active_mode: Mode, caller_mode: Mode) -> Block<'static> {
+    let block = Block::new().borders(Borders::all());
+
+    let style = if caller_mode == active_mode {
+        Style::new().fg(Color::Green)
+    } else {
+        Style::new().fg(Color::Gray)
+    };
+    let block = block.title(format!(
+        "[{}] {:?}",
+        Into::<u8>::into(caller_mode),
+        caller_mode
+    ));
+
+    block.style(style)
 }

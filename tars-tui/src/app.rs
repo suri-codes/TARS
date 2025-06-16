@@ -1,13 +1,18 @@
+use std::rc::Rc;
+
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
-use ratatui::prelude::Rect;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    prelude::Rect,
+};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{Component, fps::FpsCounter, home::Home},
+    components::{Component, fps::FpsCounter, home::Home, taskview::TaskView},
     config::Config,
     tui::{Event, Tui},
 };
@@ -29,6 +34,18 @@ pub struct App {
 pub enum Mode {
     #[default]
     Home,
+    TaskView,
+    FpsCounter,
+}
+
+impl From<Mode> for u8 {
+    fn from(value: Mode) -> Self {
+        match value {
+            Mode::Home => 1,
+            Mode::FpsCounter => 2,
+            Mode::TaskView => 3,
+        }
+    }
 }
 
 impl App {
@@ -37,7 +54,12 @@ impl App {
         Ok(Self {
             tick_rate,
             frame_rate,
-            components: vec![Box::new(Home::new()), Box::new(FpsCounter::default())],
+            components: vec![
+                Box::new(Home::new()),
+                Box::new(TaskView::new()),
+                Box::new(FpsCounter::default()),
+                // Box::new(TaskView::new()),
+            ],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -163,9 +185,23 @@ impl App {
     }
 
     fn render(&mut self, tui: &mut Tui) -> Result<()> {
+        let virt_split = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)]);
+
+        let two_right = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)]);
+
         tui.draw(|frame| {
-            for component in self.components.iter_mut() {
-                if let Err(err) = component.draw(frame, frame.area()) {
+            let virt_split = virt_split.split(frame.area());
+
+            let two_right = two_right.split(virt_split[1]);
+
+            let layout = [Rc::new([virt_split[0]]), two_right].concat();
+
+            for (component, rect) in self.components.iter_mut().zip(layout.iter()) {
+                if let Err(err) = component.draw(frame, *rect, self.mode) {
                     let _ = self
                         .action_tx
                         .send(Action::Error(format!("Failed to draw: {err:?}")));
