@@ -1,5 +1,9 @@
 use async_trait::async_trait;
-use common::{TarsClient, types::Task};
+use color_eyre::Result;
+use common::{
+    TarsClient,
+    types::{Task, TaskFetchOptions},
+};
 use ratatui::widgets::Paragraph;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -17,15 +21,19 @@ pub struct TaskView {
 }
 
 impl TaskView {
-    pub fn new(client: TarsClient) -> Self {
-        // Self::default()
-        Self {
+    pub async fn new(client: TarsClient) -> Result<Self> {
+        let task = Task::fetch(&client, TaskFetchOptions::All)
+            .await?
+            .first()
+            .cloned();
+
+        Ok(Self {
             command_tx: Default::default(),
             config: Default::default(),
-            task: None,
+            task,
             client,
             active: false,
-        }
+        })
     }
 
     fn mode(&self) -> Mode {
@@ -76,7 +84,8 @@ impl Component for TaskView {
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
         frame.render_widget(
-            Paragraph::new("penis").block(frame_block(self.active, self.mode())),
+            Paragraph::new(format!("{:#?}", self.task))
+                .block(frame_block(self.active, self.mode())),
             area,
         );
         Ok(())

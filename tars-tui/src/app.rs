@@ -52,7 +52,7 @@ impl From<Mode> for u8 {
 }
 
 impl App {
-    pub fn new(client: TarsClient, tick_rate: f64, frame_rate: f64) -> Result<Self> {
+    pub async fn new(client: TarsClient, tick_rate: f64, frame_rate: f64) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
@@ -61,7 +61,7 @@ impl App {
             components: vec![
                 Box::new(TodoExplorer::new()),
                 Box::new(TodoList::new()),
-                Box::new(TaskView::new(client)),
+                Box::new(TaskView::new(client).await?),
                 // Box::new(TaskView::new()),
             ],
             should_quit: false,

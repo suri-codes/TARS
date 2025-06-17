@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
         .await
         .unwrap();
 
-    let mut app = App::new(client, args.tick_rate, args.frame_rate)?;
+    let mut app = App::new(client, args.tick_rate, args.frame_rate).await?;
     app.run().await?;
     Ok(())
 }
