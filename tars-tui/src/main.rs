@@ -1,7 +1,7 @@
 use clap::Parser;
 use cli::Cli;
 use color_eyre::Result;
-use common::logging;
+use common::{TarsClient, logging};
 
 use crate::app::App;
 
@@ -19,7 +19,10 @@ async fn main() -> Result<()> {
     logging::init("tars-tui.log", false)?;
 
     let args = Cli::parse();
-    let mut app = App::new(args.tick_rate, args.frame_rate)?;
+    let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
+        .await
+        .unwrap();
+    let mut app = App::new(client, args.tick_rate, args.frame_rate)?;
     app.run().await?;
     Ok(())
 }

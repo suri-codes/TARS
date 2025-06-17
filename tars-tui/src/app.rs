@@ -1,13 +1,14 @@
 use std::rc::Rc;
 
 use color_eyre::Result;
+use common::TarsClient;
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::Rect,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::{sync::mpsc, task::spawn_blocking};
 use tracing::{debug, info};
 
 use crate::{
@@ -51,15 +52,16 @@ impl From<Mode> for u8 {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
+    pub fn new(client: TarsClient, tick_rate: f64, frame_rate: f64) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
+
         Ok(Self {
             tick_rate,
             frame_rate,
             components: vec![
                 Box::new(TodoExplorer::new()),
                 Box::new(TodoList::new()),
-                Box::new(TaskView::default()),
+                Box::new(TaskView::new(client)),
                 // Box::new(TaskView::new()),
             ],
             should_quit: false,
@@ -204,7 +206,7 @@ impl App {
             let layout = [Rc::new([virt_split[0]]), two_right].concat();
 
             for (component, rect) in self.components.iter_mut().zip(layout.iter()) {
-                if let Err(err) = component.draw(frame, *rect, self.mode) {
+                if let Err(err) = component.draw(frame, *rect) {
                     let _ = self
                         .action_tx
                         .send(Action::Error(format!("Failed to draw: {err:?}")));

@@ -129,15 +129,15 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn draw(&mut self, frame: &mut Frame, area: Rect, mode: Mode) -> Result<()>;
+    fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()>;
 }
 
 /// returns a frame block given the active mode, and the caller mode. If both
 /// modes are the same, the frame will be colored green, otherwise gray.
-pub fn frame_block(active_mode: Mode, caller_mode: Mode) -> Block<'static> {
+pub fn frame_block(active: bool, caller_mode: Mode) -> Block<'static> {
     let block = Block::new().borders(Borders::all());
 
-    let style = if caller_mode == active_mode {
+    let style = if active {
         Style::new().fg(Color::Green)
     } else {
         Style::new().fg(Color::Gray)

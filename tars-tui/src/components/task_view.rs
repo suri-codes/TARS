@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::types::Task;
+use common::{TarsClient, types::Task};
 use ratatui::widgets::Paragraph;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -7,16 +7,29 @@ use crate::{action::Action, app::Mode, config::Config};
 
 use super::{Component, frame_block};
 
-#[derive(Default)]
+// #[derive(Default)]
 pub struct TaskView {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     task: Option<Task>,
+    client: TarsClient,
+    active: bool,
 }
 
 impl TaskView {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(client: TarsClient) -> Self {
+        // Self::default()
+        Self {
+            command_tx: Default::default(),
+            config: Default::default(),
+            task: None,
+            client,
+            active: false,
+        }
+    }
+
+    fn mode(&self) -> Mode {
+        Mode::TaskView
     }
 }
 
@@ -39,6 +52,8 @@ impl Component for TaskView {
         match action {
             Action::Tick => {}
             Action::Render => {}
+            Action::SwitchTo(Mode::TaskView) => self.active = true,
+            Action::SwitchTo(_) => self.active = false,
             _ => {}
         }
         Ok(None)
@@ -48,10 +63,9 @@ impl Component for TaskView {
         &mut self,
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
-        mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
         frame.render_widget(
-            Paragraph::new("penis").block(frame_block(mode, Mode::TaskView)),
+            Paragraph::new("penis").block(frame_block(self.active, self.mode())),
             area,
         );
         Ok(())

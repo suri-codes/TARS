@@ -12,11 +12,16 @@ pub struct TodoExplorer {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     task: Option<Task>,
+    active: bool,
 }
 
 impl TodoExplorer {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn mode(&self) -> Mode {
+        Mode::TodoExplorer
     }
 }
 
@@ -39,6 +44,8 @@ impl Component for TodoExplorer {
         match action {
             Action::Tick => {}
             Action::Render => {}
+            Action::SwitchTo(Mode::TodoExplorer) => self.active = true,
+            Action::SwitchTo(_) => self.active = false,
             _ => {}
         }
         Ok(None)
@@ -48,10 +55,9 @@ impl Component for TodoExplorer {
         &mut self,
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
-        mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
         frame.render_widget(
-            Paragraph::new("penis").block(frame_block(mode, Mode::TodoExplorer)),
+            Paragraph::new("penis").block(frame_block(self.active, self.mode())),
             area,
         );
         Ok(())
