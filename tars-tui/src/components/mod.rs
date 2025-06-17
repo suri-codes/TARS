@@ -1,21 +1,29 @@
+use async_trait::async_trait;
 use color_eyre::Result;
+
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
     Frame,
     layout::{Rect, Size},
+    style::{Color, Style},
+    widgets::{Block, Borders},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, config::Config, tui::Event};
+use crate::{action::Action, app::Mode, config::Config, tui::Event};
 
-pub mod fps;
-pub mod home;
+// pub mod fps;
+// pub mod home;
+pub mod task_view;
+pub mod todo_explorer;
+pub mod todo_list;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.
 ///
 /// Implementors of this trait can be registered with the main application loop and will be able to
 /// receive events, update state, and be rendered on the screen.
-pub trait Component {
+#[async_trait]
+pub trait Component: Send + Sync {
     /// Register an action handler that can send actions for processing if necessary.
     ///
     /// # Arguments
@@ -42,7 +50,7 @@ pub trait Component {
         let _ = config; // to appease clippy
         Ok(())
     }
-    /// Initialize the component with a specified area if necessary.
+    /// Initialize the component with a specified area and default `Mode` (REQUIRED).
     ///
     /// # Arguments
     ///
@@ -51,10 +59,7 @@ pub trait Component {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn init(&mut self, area: Size) -> Result<()> {
-        let _ = area; // to appease clippy
-        Ok(())
-    }
+    fn init(&mut self, area: Size, default_mode: Mode) -> Result<()>;
     /// Handle incoming events and produce actions if necessary.
     ///
     /// # Arguments
@@ -107,7 +112,7 @@ pub trait Component {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    async fn update(&mut self, action: Action) -> Result<Option<Action>> {
         let _ = action; // to appease clippy
         Ok(None)
     }
@@ -122,4 +127,21 @@ pub trait Component {
     ///
     /// * `Result<()>` - An Ok result or an error.
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()>;
+}
+
+/// returns a frame block given the active mode, and the caller mode. If both
+/// modes are the same, the frame will be colored green, otherwise gray.
+pub fn frame_block(active: bool, caller_mode: Mode) -> Block<'static> {
+    let block = Block::new().borders(Borders::all());
+
+    let style = if active {
+        Style::new().fg(Color::Green)
+    } else {
+        Style::new().fg(Color::Gray)
+    };
+
+    let block = block.title(format!("[{}]", Into::<u8>::into(caller_mode)));
+    let block = block.title(format!("{:?}", caller_mode));
+
+    block.style(style)
 }

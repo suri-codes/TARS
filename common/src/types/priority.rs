@@ -61,3 +61,15 @@ impl TryFrom<&str> for Priority {
         }
     }
 }
+
+impl From<Priority> for String {
+    fn from(value: Priority) -> Self {
+        match value {
+            Priority::Low => "Low".to_owned(),
+            Priority::Medium => "Medium".to_owned(),
+            Priority::High => "High".to_owned(),
+            Priority::Asap => "ASAP".to_owned(),
+            Priority::Far => "Far".to_owned(),
+        }
+    }
+}

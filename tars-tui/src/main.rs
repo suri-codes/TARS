@@ -16,10 +16,11 @@ mod tui;
 #[tokio::main]
 async fn main() -> Result<()> {
     crate::errors::init()?;
-    logging::init("tars-tui.log", true)?;
+    logging::init("tars-tui.log", false)?;
 
     let args = Cli::parse();
-    let mut app = App::new(args.tick_rate, args.frame_rate)?;
+
+    let mut app = App::new(args.tick_rate, args.frame_rate).await?;
     app.run().await?;
     Ok(())
 }
