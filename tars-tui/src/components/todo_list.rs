@@ -11,7 +11,6 @@ use super::{Component, frame_block};
 pub struct TodoList {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    task: Option<Task>,
     active: bool,
 }
 

@@ -20,11 +20,7 @@ async fn main() -> Result<()> {
 
     let args = Cli::parse();
 
-    let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
-        .await
-        .unwrap();
-
-    let mut app = App::new(client, args.tick_rate, args.frame_rate).await?;
+    let mut app = App::new(args.tick_rate, args.frame_rate).await?;
     app.run().await?;
     Ok(())
 }

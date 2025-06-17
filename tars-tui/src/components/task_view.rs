@@ -1,10 +1,15 @@
+use std::alloc::LayoutError;
+
 use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
     TarsClient,
     types::{Task, TaskFetchOptions},
 };
-use ratatui::widgets::Paragraph;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    widgets::{Block, BorderType, Borders, Paragraph},
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, app::Mode, config::Config};
@@ -83,11 +88,87 @@ impl Component for TaskView {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
+        // draw frame
+        frame.render_widget(frame_block(self.active, self.mode()), area);
+        if self.task.is_none() {
+            // todo
+            frame.render_widget(Paragraph::new("Please select a Task!"), area);
+            return Ok(());
+        }
+
+        let task = self.task.as_ref().unwrap();
+
+        let task_layout = Layout::new(
+            Direction::Vertical,
+            [
+                Constraint::Percentage(12), // name
+                Constraint::Percentage(15), // group
+                Constraint::Percentage(15), // priority
+                Constraint::Percentage(38), // Description
+                Constraint::Percentage(15), // completion | Due
+            ],
+        )
+        .horizontal_margin(3)
+        .vertical_margin(2)
+        .split(area);
+
+        // Task name:
+
         frame.render_widget(
-            Paragraph::new(format!("{:#?}", self.task))
-                .block(frame_block(self.active, self.mode())),
-            area,
+            Paragraph::new(task.name.as_str())
+                .block(Block::new().title_top("Name").borders(Borders::all())),
+            task_layout[0],
         );
+
+        // Group name:
+        frame.render_widget(
+            Paragraph::new(task.group.name.as_str())
+                .block(Block::new().title_top("Group").borders(Borders::all())),
+            task_layout[1],
+        );
+
+        // Priority
+        frame.render_widget(
+            Paragraph::new(Into::<String>::into(task.priority))
+                .block(Block::new().title_top("Priority").borders(Borders::all())),
+            task_layout[2],
+        );
+
+        // Description
+        frame.render_widget(
+            Paragraph::new(task.description.clone()).block(
+                Block::new()
+                    .title_top("Description")
+                    .borders(Borders::all()),
+            ),
+            task_layout[3],
+        );
+
+        let completion_due = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(50), Constraint::Percentage(50)],
+        )
+        .split(task_layout[4]);
+
+        let completion_symbol = if task.completed {
+            "☑ Awesome"
+        } else {
+            "☐ Get to work cornball"
+        };
+        // Completion status
+        frame.render_widget(
+            Paragraph::new(completion_symbol)
+                .block(Block::new().title_top("Completed").borders(Borders::all())),
+            completion_due[0],
+        );
+
+        // Due Date
+        frame.render_widget(
+            Paragraph::new(format!("{:?}", task.due))
+                .block(Block::new().title_top("Due").borders(Borders::all())),
+            completion_due[1],
+        );
+
         Ok(())
     }
 }
