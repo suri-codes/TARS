@@ -50,7 +50,7 @@ pub trait Component: Send + Sync {
         let _ = config; // to appease clippy
         Ok(())
     }
-    /// Initialize the component with a specified area if necessary.
+    /// Initialize the component with a specified area and default `Mode` (REQUIRED).
     ///
     /// # Arguments
     ///
@@ -59,10 +59,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn init(&mut self, area: Size) -> Result<()> {
-        let _ = area; // to appease clippy
-        Ok(())
-    }
+    fn init(&mut self, area: Size, default_mode: Mode) -> Result<()>;
     /// Handle incoming events and produce actions if necessary.
     ///
     /// # Arguments

@@ -35,6 +35,17 @@ impl TaskView {
 
 #[async_trait]
 impl Component for TaskView {
+    fn init(
+        &mut self,
+        _area: ratatui::prelude::Size,
+        default_mode: Mode,
+    ) -> color_eyre::eyre::Result<()> {
+        if default_mode == self.mode() {
+            self.active = true
+        }
+
+        Ok(())
+    }
     fn register_action_handler(
         &mut self,
         tx: UnboundedSender<Action>,

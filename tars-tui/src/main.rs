@@ -19,9 +19,11 @@ async fn main() -> Result<()> {
     logging::init("tars-tui.log", false)?;
 
     let args = Cli::parse();
+
     let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
         .await
         .unwrap();
+
     let mut app = App::new(client, args.tick_rate, args.frame_rate)?;
     app.run().await?;
     Ok(())
