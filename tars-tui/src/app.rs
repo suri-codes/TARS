@@ -8,7 +8,7 @@ use ratatui::{
     prelude::Rect,
 };
 use serde::{Deserialize, Serialize};
-use tokio::{sync::mpsc, task::spawn_blocking};
+use tokio::sync::mpsc;
 use tracing::{debug, info};
 
 use crate::{

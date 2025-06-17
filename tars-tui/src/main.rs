@@ -1,7 +1,7 @@
 use clap::Parser;
 use cli::Cli;
 use color_eyre::Result;
-use common::{TarsClient, logging};
+use common::logging;
 
 use crate::app::App;
 

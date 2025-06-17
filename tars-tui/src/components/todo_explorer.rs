@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use common::types::Task;
 use ratatui::widgets::Paragraph;
 use tokio::sync::mpsc::UnboundedSender;
 

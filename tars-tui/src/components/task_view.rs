@@ -1,5 +1,3 @@
-use std::alloc::LayoutError;
-
 use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
@@ -8,7 +6,7 @@ use common::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -21,7 +19,7 @@ pub struct TaskView {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     task: Option<Task>,
-    client: TarsClient,
+    _client: TarsClient,
     active: bool,
 }
 
@@ -36,7 +34,7 @@ impl TaskView {
             command_tx: Default::default(),
             config: Default::default(),
             task,
-            client,
+            _client: client,
             active: false,
         })
     }
