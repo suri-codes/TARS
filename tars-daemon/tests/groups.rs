@@ -10,7 +10,7 @@ mod utils;
 async fn group_creation() {
     let (d, addr) = new_test_daemon().await;
 
-    let _x = tokio::spawn(async move {
+    let x = tokio::spawn(async move {
         timeout(Duration::from_secs(2), d.run())
             .await
             .unwrap_or_else(|_x| Ok(()))
@@ -24,9 +24,68 @@ async fn group_creation() {
 
     let group = Group::new(&client, "testing", None).await.unwrap();
 
-    let _child_group = Group::new(&client, "child", Some(group.id)).await.unwrap();
+    let child_group = Group::new(&client, "child", Some(group.id.clone()))
+        .await
+        .unwrap();
 
-    // let created = vec![group, child_group].sort();
+    let mut created = vec![group, child_group];
+    created.sort();
 
-    // let groups = Group::fetch_all(&client).await.unwrap().sort();
+    let mut fetched = Group::fetch_all(&client).await.unwrap();
+    fetched.sort();
+
+    assert_eq!(created, fetched);
+
+    x.await.unwrap();
+}
+
+#[tokio::test]
+async fn group_sync() {
+    let (d, addr) = new_test_daemon().await;
+
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let mut group = Group::new(&client, "testing", None).await.unwrap();
+    group.name = "testing_2".to_owned().into();
+
+    group.sync(&client).await.unwrap();
+
+    x.await.unwrap()
+}
+
+#[tokio::test]
+async fn group_delete() {
+    let (d, addr) = new_test_daemon().await;
+
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let group = Group::new(&client, "testing", None).await.unwrap();
+
+    group.delete(&client).await.unwrap();
+
+    let fetched = Group::fetch_all(&client).await.unwrap();
+
+    assert!(fetched.is_empty());
+
+    x.await.unwrap();
 }

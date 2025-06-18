@@ -8,7 +8,8 @@ use std::{
 
 /// Name type for Tasks and Groups, ensures that the string inside is a
 /// properly parsed name.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Name(String);
 
 impl Deref for Name {
