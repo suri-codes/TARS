@@ -34,9 +34,9 @@ impl Group {
     pub async fn new(
         client: &TarsClient,
         name: impl Into<Name>,
-        parent: Option<Group>,
+        parent_id: Option<Id>,
     ) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name, parent);
+        let group = Group::with_all_fields(Id::default(), name, parent_id);
 
         let res: Group = client
             .conn

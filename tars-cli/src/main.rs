@@ -43,11 +43,12 @@ async fn main() -> Result<()> {
                 .await
                 .unwrap();
 
-            let group = Group::new(&client, "Penis").await?;
+            let group = Group::new(&client, "Penis", None).await?;
+            let group_2 = Group::new(&client, "lol", Some(group.id)).await?;
 
             let _task = Task::new(
                 &client,
-                group,
+                group_2,
                 "Kill Albert",
                 Priority::Asap,
                 "Albert playing too much league, its time to js kill bro",
