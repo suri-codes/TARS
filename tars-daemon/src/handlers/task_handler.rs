@@ -59,7 +59,7 @@ pub async fn create_task(
     let group = sqlx::query_as!(
         Group,
         r#"
-        SELECT name as "name: Name", pub_id as "id: Id" FROM Groups WHERE pub_id = ?
+        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Option<Id>" FROM Groups WHERE pub_id = ?
         "#,
         inserted.group_id
     )
@@ -105,6 +105,7 @@ async fn fetch_task(
                         t.name as task_name,
                         g.name  as group_name,
                         g.pub_id as group_pub_id ,
+                        g.parent_id as "group_parent_id: Option<Id>",
                         t.priority  ,
                         t.description,
                         t.completed,
@@ -122,7 +123,11 @@ async fn fetch_task(
                 .map(|row| {
                     Task::with_all_fields(
                         row.task_pub_id,
-                        Group::with_all_fields(row.group_pub_id, row.group_name),
+                        Group::with_all_fields(
+                            row.group_pub_id,
+                            row.group_name,
+                            row.group_parent_id,
+                        ),
                         row.task_name,
                         row.priority.try_into().expect("should not fail conversion"),
                         row.description,
@@ -168,6 +173,7 @@ async fn update_task(
             name as task_name,
             group_id,
             (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
+            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Option<Id>",
             priority as "priority: Priority",
             description,
             completed,
@@ -186,7 +192,7 @@ async fn update_task(
 
     let updated_task = Task::with_all_fields(
         row.task_pub_id,
-        Group::with_all_fields(row.group_id, row.group_name),
+        Group::with_all_fields(row.group_id, row.group_name, row.group_parent_id),
         row.task_name,
         row.priority,
         row.description,
@@ -222,7 +228,9 @@ async fn delete_task(
                 t.pub_id as task_id,
                 t.name as task_name,
                 g.name as group_name,
+                g.parent_id as "group_parent_id: Option<Id>",
                 t.group_id,
+
                 t.priority ,
                 t.description,
                 t.completed,
@@ -239,7 +247,7 @@ async fn delete_task(
 
     let deleted_task = Task::with_all_fields(
         row.task_id,
-        Group::with_all_fields(row.group_id, row.group_name),
+        Group::with_all_fields(row.group_id, row.group_name, row.group_parent_id),
         row.task_name,
         row.priority.try_into()?,
         row.description,

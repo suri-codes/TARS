@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE Groups\n            SET\n            name = ?\n            WHERE pub_id = ?\n            RETURNING\n                name as \"name: Name\",\n                pub_id as \"id: Id\",\n                parent_id as \"parent_id: Option<Id>\"\n\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name: Name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "id: Id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id: Option<Id>",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5c8f9d022841cc3432140e7d11a216368f23519b71475ae84a1a84b95128500a"
+}

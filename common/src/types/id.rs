@@ -1,6 +1,6 @@
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use sqlx::{Database, Decode};
+use sqlx::{Database, Decode, Encode, Sqlite, Type};
 use std::{
     error::Error,
     ops::{Deref, DerefMut},
@@ -58,5 +58,30 @@ where
         // now you can parse this into your type (assuming there is a `FromStr`)
 
         Ok(Id(value.parse()?))
+    }
+}
+
+impl<'q> Encode<'q, Sqlite> for Id {
+    fn encode(
+        self,
+        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError>
+    where
+        Self: Sized,
+    {
+        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode(self.0, buf)
+    }
+
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode_by_ref(&self.0, buf)
+    }
+}
+
+impl Type<Sqlite> for Id {
+    fn type_info() -> <Sqlite as Database>::TypeInfo {
+        todo!()
     }
 }

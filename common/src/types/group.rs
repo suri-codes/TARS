@@ -9,13 +9,19 @@ use super::{Id, Name};
 pub struct Group {
     pub id: Id,
     pub name: Name,
+    pub parent_id: Option<Id>,
 }
 
 impl Group {
-    pub fn with_all_fields(id: impl Into<Id>, name: impl Into<Name>) -> Self {
+    pub fn with_all_fields(
+        id: impl Into<Id>,
+        name: impl Into<Name>,
+        parent_id: Option<Id>,
+    ) -> Self {
         Group {
             id: id.into(),
             name: name.into(),
+            parent_id,
         }
     }
 
@@ -25,8 +31,12 @@ impl Group {
     ///
     /// This function will return an error if
     /// Something goes wrong with the requests to the Daemon.
-    pub async fn new(client: &TarsClient, name: impl Into<Name>) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name);
+    pub async fn new(
+        client: &TarsClient,
+        name: impl Into<Name>,
+        parent_id: Option<Id>,
+    ) -> Result<Self, TarsError> {
+        let group = Group::with_all_fields(Id::default(), name, parent_id);
 
         let res: Group = client
             .conn

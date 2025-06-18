@@ -28,19 +28,22 @@ async fn create_group(
     State(state): State<DaemonState>,
     Json(group): Json<Group>,
 ) -> Result<Json<Group>, TarsError> {
+    // we want to recursively attach all of the parent groups
     // let new_id = Id::default();
     let inserted = sqlx::query_as!(
         Group,
         r#"
-            INSERT INTO Groups (pub_id, name)
+            INSERT INTO Groups (pub_id, name, parent_id)
             VALUES (
+                ?,
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id" 
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Option<Id>"
         "#,
         *group.id,
         *group.name,
+        group.parent_id
     )
     .fetch_one(&state.pool)
     .await?;
@@ -68,7 +71,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         r#"
         SELECT
         pub_id as "id: Id",
-        name as "name: Name"
+        name as "name: Name",
+        parent_id as "parent_id: Option<Id>"
         FROM Groups
         "#
     )
@@ -103,7 +107,8 @@ async fn update_group(
             WHERE pub_id = ?
             RETURNING
                 name as "name: Name",
-                pub_id as "id: Id"
+                pub_id as "id: Id",
+                parent_id as "parent_id: Option<Id>"
 
         "#,
         *group.name,
@@ -139,7 +144,8 @@ async fn delete_group(
             WHERE pub_id = ?
             RETURNING
                 pub_id as "id: Id",
-                name as "name: Name"
+                name as "name: Name",
+                parent_id as "parent_id: Option<Id>"
            
         "#,
         *group.id,
