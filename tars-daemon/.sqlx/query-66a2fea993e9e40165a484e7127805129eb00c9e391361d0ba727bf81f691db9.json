@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                t.group_id,\n                t.priority ,\n                t.description,\n                t.completed,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
+  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                g.parent_id as \"group_parent_id: Option<Id>\",\n                t.group_id,\n\n                t.priority ,\n                t.description,\n                t.completed,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
   "describe": {
     "columns": [
       {
@@ -19,28 +19,33 @@
         "type_info": "Text"
       },
       {
-        "name": "group_id",
+        "name": "group_parent_id: Option<Id>",
         "ordinal": 3,
         "type_info": "Text"
       },
       {
-        "name": "priority",
+        "name": "group_id",
         "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority",
+        "ordinal": 5,
         "type_info": "Integer"
       },
       {
         "name": "description",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Text"
       },
       {
         "name": "completed",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Bool"
       },
       {
         "name": "due",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Datetime"
       }
     ],
@@ -55,8 +60,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "83658c65af7c30b0e2872335e26d0964acd879fe0d03c519ba20102688235d65"
+  "hash": "66a2fea993e9e40165a484e7127805129eb00c9e391361d0ba727bf81f691db9"
 }

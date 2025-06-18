@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        t.priority  ,\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Option<Id>\",\n                        t.priority  ,\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
   "describe": {
     "columns": [
       {
@@ -24,23 +24,28 @@
         "type_info": "Text"
       },
       {
-        "name": "priority",
+        "name": "group_parent_id: Option<Id>",
         "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority",
+        "ordinal": 5,
         "type_info": "Integer"
       },
       {
         "name": "description",
-        "ordinal": 5,
+        "ordinal": 6,
         "type_info": "Text"
       },
       {
         "name": "completed",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Bool"
       },
       {
         "name": "due",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Datetime"
       }
     ],
@@ -55,8 +60,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "15cd981b77b6fd6bd12d481d7fde02dfa5aaa4a09370c7d5564e5bd5c066b26c"
+  "hash": "c165cb23910451b4e48998e3d6163d0acc8fa3546aee036fe7e84d486a4b3dfb"
 }

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO Groups (pub_id, name, parent_id)\n            VALUES (\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Groups.name as \"name: Name\", Groups.pub_id as \"id: Id\", Groups.parent_id as \"parent_id: Option<Id>\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name: Name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "id: Id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id: Option<Id>",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2549e6631799686702f6fc0ffee18449f21955e4712a71b7df1460b33b278ea1"
+}
