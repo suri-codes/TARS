@@ -6,6 +6,8 @@
 
 = TARS (Task Accumulation and Reminder Service)
 
+its so over
+
 == New shit!!
 
 - lazygit like ui that allows for fast and efficint management of tasks
