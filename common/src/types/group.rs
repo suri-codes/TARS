@@ -5,7 +5,7 @@ use crate::{TarsClient, TarsError};
 
 use super::{Id, Name};
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Group {
     pub id: Id,
     pub name: Name,
@@ -106,7 +106,7 @@ impl Group {
     pub async fn delete(self, client: &TarsClient) -> Result<(), TarsError> {
         let deleted: Group = client
             .conn
-            .post(client.base_path.join("/group/update")?)
+            .post(client.base_path.join("/group/delete")?)
             .json(&self)
             .send()
             .await

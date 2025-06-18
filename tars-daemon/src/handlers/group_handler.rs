@@ -1,5 +1,9 @@
 use crate::DaemonState;
-use axum::{Json, Router, debug_handler, extract::State, routing::post};
+use axum::{
+    Json, Router, debug_handler,
+    extract::State,
+    routing::{get, post},
+};
 use common::{
     TarsError,
     types::{Group, Id, Name},
@@ -9,6 +13,7 @@ use tracing::{info, instrument};
 /// Returns a router with all the group specific endpoints
 pub fn group_router() -> Router<DaemonState> {
     Router::new()
+        .route("/", get(fetch_groups))
         .route("/create", post(create_group))
         .route("/update", post(update_group))
         .route("/delete", post(delete_group))

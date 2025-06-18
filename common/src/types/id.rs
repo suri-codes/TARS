@@ -7,7 +7,7 @@ use std::{
 };
 
 /// holds an Id used in all the types stored in the Database.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Id(String);
 
 impl Deref for Id {
