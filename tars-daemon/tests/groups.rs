@@ -10,7 +10,7 @@ mod utils;
 async fn group_creation() {
     let (d, addr) = new_test_daemon().await;
 
-    let x = tokio::spawn(async move {
+    let _x = tokio::spawn(async move {
         timeout(Duration::from_secs(2), d.run())
             .await
             .unwrap_or_else(|_x| Ok(()))
@@ -24,7 +24,7 @@ async fn group_creation() {
 
     let group = Group::new(&client, "testing", None).await.unwrap();
 
-    let child_group = Group::new(&client, "child", Some(group.id)).await.unwrap();
+    let _child_group = Group::new(&client, "child", Some(group.id)).await.unwrap();
 
     // let created = vec![group, child_group].sort();
 
