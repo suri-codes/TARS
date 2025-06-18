@@ -1,19 +1,114 @@
-// use common::TarsClient;
-// use utils::new_test_daemon;
+use std::time::Duration;
+
+use common::{
+    TarsClient,
+    types::{Group, Priority, Task, TaskFetchOptions},
+};
+use tokio::time::{sleep, timeout};
+use utils::new_test_daemon;
 
 mod utils;
 
 #[tokio::test]
-async fn task_tests() {
-    // let (d, addr) = new_test_daemon().await;
-    // let _x = tokio::spawn(async move {
-    //     d.run().await;
-    // });
+async fn task_creation() {
+    let (d, addr) = new_test_daemon().await;
 
-    // // now we can start using the client to test?
-    // let _client = TarsClient::new(addr)
-    //     .await
-    //     .expect("failed to instantiate client");
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
 
-    //TODO: finish up the client implementation so we can actually write these tests
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let group = Group::new(&client, "testing", None).await.unwrap();
+
+    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+        .await
+        .unwrap();
+
+    let tasks = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
+
+    assert_eq!(task, *tasks.first().unwrap());
+
+    x.await.unwrap()
+}
+
+#[tokio::test]
+async fn task_sync() {
+    let (d, addr) = new_test_daemon().await;
+
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
+
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let group = Group::new(&client, "testing", None).await.unwrap();
+
+    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+        .await
+        .unwrap();
+
+    let mut tasks = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
+
+    let fetched_task = tasks.first_mut().unwrap();
+
+    assert_eq!(task, *fetched_task);
+
+    fetched_task.name = "dont matter".to_owned().into();
+
+    fetched_task.sync(&client).await.unwrap();
+
+    x.await.unwrap()
+}
+
+#[tokio::test]
+async fn task_delete() {
+    let (d, addr) = new_test_daemon().await;
+
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
+
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let group = Group::new(&client, "testing", None).await.unwrap();
+
+    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+        .await
+        .unwrap();
+
+    let mut tasks = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
+
+    // ensure it exists
+    let fetched_task = tasks.first_mut().unwrap();
+
+    assert_eq!(task, *fetched_task);
+
+    fetched_task.clone().delete(&client).await.unwrap();
+
+    let tasks = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
+    assert!(tasks.is_empty());
+
+    x.await.unwrap()
 }

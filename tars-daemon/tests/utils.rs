@@ -17,5 +17,5 @@ pub async fn new_test_daemon() -> (TarsDaemon, String) {
 
     let daemon = TarsDaemon::init(state).await;
 
-    (daemon, format!("127.0.0.1:{}", availible_port))
+    (daemon, format!("http://127.0.0.1:{}", availible_port))
 }

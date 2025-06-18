@@ -112,7 +112,7 @@ impl Task {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if the sync'd task doesnt match with `self`
-    pub async fn sync(&self, client: TarsClient) -> Result<(), TarsError> {
+    pub async fn sync(&self, client: &TarsClient) -> Result<(), TarsError> {
         let task: Task = client
             .conn
             .post(client.base_path.join("/task/update")?)
@@ -136,7 +136,7 @@ impl Task {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if deleted task doesnt match the task we wanted to delete.
-    pub async fn delete(self, client: TarsClient) -> Result<(), TarsError> {
+    pub async fn delete(self, client: &TarsClient) -> Result<(), TarsError> {
         let deleted_task: Task = client
             .conn
             .post(client.base_path.join("/task/delete")?)
