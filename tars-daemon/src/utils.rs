@@ -1,6 +1,5 @@
-use tars_daemon::{DaemonState, Db, TarsDaemon};
+use crate::{DaemonState, Db, TarsDaemon};
 
-#[allow(dead_code)]
 /// Returns a new `TarsDaemon`, with a temporary DB and a open port, perfect for testing.
 /// Ensure you use the returned String as the url to communicate with the daemon.
 pub async fn new_test_daemon() -> (TarsDaemon, String) {

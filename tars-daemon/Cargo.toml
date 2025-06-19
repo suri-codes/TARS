@@ -13,3 +13,13 @@ color-eyre = "0.6.3"
 sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs" ,"sqlite", "macros", "migrate", "chrono"] }
 
 common = {path = "../common"}
+criterion = { version = "0.6.0", features = ["async_tokio"] }
+
+
+[[bench]]
+name = "task"
+harness = false
+
+[[bench]]
+name = "group"
+harness = false

@@ -3,7 +3,7 @@ use common::{
     TarsError,
     types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use crate::DaemonState;
 
@@ -30,8 +30,6 @@ pub async fn create_task(
     State(state): State<DaemonState>,
     Json(task): Json<Task>,
 ) -> Result<Json<Task>, TarsError> {
-    let p = task.priority as i64;
-
     let inserted = sqlx::query!(
         r#"
             INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)
@@ -43,34 +41,34 @@ pub async fn create_task(
                 ?,
                 ?
             )
-            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: i64", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed
+            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: Priority", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed
             
         "#,
         *task.id,
         *task.group.id,
         *task.name,
-        p,
+        task.priority,
         task.description,
         task.due
     )
     .fetch_one(&state.pool)
-    .await?;
+    .await.inspect_err(|e|error!("{:?}", e))?;
 
     let group = sqlx::query_as!(
         Group,
         r#"
-        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Option<Id>" FROM Groups WHERE pub_id = ?
+        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id" FROM Groups WHERE pub_id = ?
         "#,
         inserted.group_id
     )
     .fetch_one(&state.pool)
-    .await?;
+    .await.inspect_err(|e|error!("{:?}", e))?;
 
     let created_task = Task::with_all_fields(
         inserted.pub_id,
         group,
         inserted.name,
-        inserted.priority.try_into()?,
+        inserted.priority,
         inserted.description,
         inserted.completed,
         inserted.due,
@@ -105,8 +103,8 @@ async fn fetch_task(
                         t.name as task_name,
                         g.name  as group_name,
                         g.pub_id as group_pub_id ,
-                        g.parent_id as "group_parent_id: Option<Id>",
-                        t.priority  ,
+                        g.parent_id as "group_parent_id: Id",
+                        t.priority as "priority: Priority",
                         t.description,
                         t.completed,
                         t.due
@@ -129,7 +127,7 @@ async fn fetch_task(
                             row.group_parent_id,
                         ),
                         row.task_name,
-                        row.priority.try_into().expect("should not fail conversion"),
+                        row.priority,
                         row.description,
                         row.completed,
                         row.due,
@@ -173,7 +171,7 @@ async fn update_task(
             name as task_name,
             group_id,
             (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
-            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Option<Id>",
+            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Id",
             priority as "priority: Priority",
             description,
             completed,
@@ -228,10 +226,10 @@ async fn delete_task(
                 t.pub_id as task_id,
                 t.name as task_name,
                 g.name as group_name,
-                g.parent_id as "group_parent_id: Option<Id>",
+                g.parent_id as "group_parent_id: Id",
                 t.group_id,
 
-                t.priority ,
+                t.priority as "priority: Priority",
                 t.description,
                 t.completed,
                 t.due
@@ -249,7 +247,7 @@ async fn delete_task(
         row.task_id,
         Group::with_all_fields(row.group_id, row.group_name, row.group_parent_id),
         row.task_name,
-        row.priority.try_into()?,
+        row.priority,
         row.description,
         row.completed,
         row.due,

@@ -4,10 +4,8 @@ use common::{
     TarsClient,
     types::{Group, Priority, Task, TaskFetchOptions},
 };
+use tars_daemon::utils::new_test_daemon;
 use tokio::time::{sleep, timeout};
-use utils::new_test_daemon;
-
-mod utils;
 
 #[tokio::test]
 async fn task_creation() {
@@ -28,7 +26,7 @@ async fn task_creation() {
 
     let group = Group::new(&client, "testing", None).await.unwrap();
 
-    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+    let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
         .unwrap();
 
@@ -58,7 +56,7 @@ async fn task_sync() {
 
     let group = Group::new(&client, "testing", None).await.unwrap();
 
-    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+    let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
         .unwrap();
 
@@ -80,6 +78,7 @@ async fn task_delete() {
     let (d, addr) = new_test_daemon().await;
 
     let x = tokio::spawn(async move {
+        tracing_subscriber::fmt::init();
         timeout(Duration::from_secs(2), d.run())
             .await
             .unwrap_or_else(|_x| Ok(()))
@@ -94,7 +93,7 @@ async fn task_delete() {
 
     let group = Group::new(&client, "testing", None).await.unwrap();
 
-    let task = Task::new(&client, group, "test", Priority::Low, "nothing", None)
+    let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
         .unwrap();
 

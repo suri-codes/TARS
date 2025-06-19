@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        UPDATE Tasks\n        SET\n            name = ?,\n            priority = ?,\n            description = ?,\n            completed = ?,\n            due = ?,\n            group_id = ?\n        WHERE pub_id = ?\n        RETURNING \n            pub_id as task_pub_id,\n            name as task_name,\n            group_id,\n            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,\n            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_parent_id: Option<Id>\",\n            priority as \"priority: Priority\",\n            description,\n            completed,\n            due\n        ",
+  "query": "\n        UPDATE Tasks\n        SET\n            name = ?,\n            priority = ?,\n            description = ?,\n            completed = ?,\n            due = ?,\n            group_id = ?\n        WHERE pub_id = ?\n        RETURNING \n            pub_id as task_pub_id,\n            name as task_name,\n            group_id,\n            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,\n            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_parent_id: Id\",\n            priority as \"priority: Priority\",\n            description,\n            completed,\n            due\n        ",
   "describe": {
     "columns": [
       {
@@ -24,7 +24,7 @@
         "type_info": "Text"
       },
       {
-        "name": "group_parent_id: Option<Id>",
+        "name": "group_parent_id: Id",
         "ordinal": 4,
         "type_info": "Text"
       },
@@ -57,12 +57,12 @@
       false,
       false,
       false,
-      false,
+      true,
       false,
       false,
       false,
       true
     ]
   },
-  "hash": "9f9f7ac28bae1fcdce96eb826af28f407b2b29c46df0535a49fbd2b0a8ec6360"
+  "hash": "db4ed3a5103d8ceed5a1d8924225ed95a1c8b84862db629bed801f9fb6ab2372"
 }

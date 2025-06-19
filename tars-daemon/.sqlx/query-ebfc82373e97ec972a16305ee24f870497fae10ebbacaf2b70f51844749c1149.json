@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                g.parent_id as \"group_parent_id: Option<Id>\",\n                t.group_id,\n\n                t.priority ,\n                t.description,\n                t.completed,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
+  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                g.parent_id as \"group_parent_id: Id\",\n                t.group_id,\n\n                t.priority as \"priority: Priority\",\n                t.description,\n                t.completed,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
   "describe": {
     "columns": [
       {
@@ -19,7 +19,7 @@
         "type_info": "Text"
       },
       {
-        "name": "group_parent_id: Option<Id>",
+        "name": "group_parent_id: Id",
         "ordinal": 3,
         "type_info": "Text"
       },
@@ -29,7 +29,7 @@
         "type_info": "Text"
       },
       {
-        "name": "priority",
+        "name": "priority: Priority",
         "ordinal": 5,
         "type_info": "Integer"
       },
@@ -56,7 +56,7 @@
       false,
       false,
       false,
-      false,
+      true,
       false,
       false,
       false,
@@ -64,5 +64,5 @@
       true
     ]
   },
-  "hash": "66a2fea993e9e40165a484e7127805129eb00c9e391361d0ba727bf81f691db9"
+  "hash": "ebfc82373e97ec972a16305ee24f870497fae10ebbacaf2b70f51844749c1149"
 }
