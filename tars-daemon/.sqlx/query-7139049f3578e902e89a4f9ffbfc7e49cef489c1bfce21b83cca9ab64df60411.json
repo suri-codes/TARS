@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            DELETE FROM Groups\n            WHERE pub_id = ?\n            RETURNING\n                pub_id as \"id: Id\",\n                name as \"name: Name\",\n                parent_id as \"parent_id: Option<Id>\"\n           \n        ",
+  "query": "\n            DELETE FROM Groups\n            WHERE pub_id = ?\n            RETURNING\n                pub_id as \"id: Id\",\n                name as \"name: Name\",\n                parent_id as \"parent_id: Id\"\n           \n        ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "parent_id: Option<Id>",
+        "name": "parent_id: Id",
         "ordinal": 2,
         "type_info": "Text"
       }
@@ -25,8 +25,8 @@
     "nullable": [
       false,
       false,
-      false
+      true
     ]
   },
-  "hash": "68097a5aaa75d59c184740a400a0ac46b8490a5758499ddf45e0400ee9c5cd69"
+  "hash": "7139049f3578e902e89a4f9ffbfc7e49cef489c1bfce21b83cca9ab64df60411"
 }

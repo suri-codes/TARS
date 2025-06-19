@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT\n        pub_id as \"id: Id\",\n        name as \"name: Name\",\n        parent_id as \"parent_id: Option<Id>\"\n        FROM Groups\n        ",
+  "query": "\n        SELECT\n        pub_id as \"id: Id\",\n        name as \"name: Name\",\n        parent_id as \"parent_id: Id\"\n        FROM Groups\n        ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "parent_id: Option<Id>",
+        "name": "parent_id: Id",
         "ordinal": 2,
         "type_info": "Text"
       }
@@ -25,8 +25,8 @@
     "nullable": [
       false,
       false,
-      false
+      true
     ]
   },
-  "hash": "effcad2333ed5165474ff8be38fcb82f1cf4a69b80e23d22e6c5e9a3464a88c7"
+  "hash": "184f9901ca20ba6f69e2f5097925c60efb29d06063744ca81d5d36013840ba1c"
 }

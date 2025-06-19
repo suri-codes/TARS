@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: i64\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed\n            \n        ",
+  "query": "\n            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: Priority\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed\n            \n        ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "priority: i64",
+        "name": "priority: Priority",
         "ordinal": 2,
         "type_info": "Integer"
       },
@@ -52,5 +52,5 @@
       false
     ]
   },
-  "hash": "c7bff54270ebf3d54160a9f362cfe69bfc891a6d153b50dd3b979e26881473e2"
+  "hash": "c17fdb10a162867db89171acf81f63f308a8f4192560205b1d7653eac5bfd9cb"
 }

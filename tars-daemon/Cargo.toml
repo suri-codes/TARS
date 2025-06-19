@@ -19,3 +19,7 @@ criterion = { version = "0.6.0", features = ["async_tokio"] }
 [[bench]]
 name = "task"
 harness = false
+
+[[bench]]
+name = "group"
+harness = false

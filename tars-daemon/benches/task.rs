@@ -1,12 +1,9 @@
-#![allow(unused)]
-
 use std::{thread, time::Duration};
 
 use common::{
     TarsClient,
     types::{Group, Priority, Task},
 };
-use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
 use tars_daemon::utils::new_test_daemon;
