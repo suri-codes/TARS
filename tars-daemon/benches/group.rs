@@ -6,7 +6,7 @@ use tars_daemon::utils::new_test_daemon;
 use tokio::{runtime::Runtime, time::timeout};
 
 async fn group_creation(client: &TarsClient) {
-    let g = Group::new(client, "lol", None).await.unwrap();
+    let _g = Group::new(client, "lol", None).await.unwrap();
 }
 
 async fn group_sync(client: &TarsClient, group: Group) {

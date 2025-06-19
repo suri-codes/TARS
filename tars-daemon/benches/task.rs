@@ -14,7 +14,7 @@ use tokio::runtime::Runtime;
 
 // Here we have an async function to benchmark
 async fn task_creation(client: &TarsClient, group: &Group) {
-    let x = Task::new(
+    let _x = Task::new(
         client,
         group,
         "bench",
@@ -38,10 +38,10 @@ fn bench_tasks(c: &mut Criterion) {
     let b_rt = Runtime::new().unwrap();
     let (d, addr) = b_rt.block_on(new_test_daemon());
 
-    let daemon_handle = thread::spawn(move || {
+    let _daemon_handle = thread::spawn(move || {
         let d_rt = Runtime::new().unwrap();
         tracing_subscriber::fmt::init();
-        d_rt.block_on(async { timeout(Duration::from_secs(40), d.run()).await });
+        let _ = d_rt.block_on(async { timeout(Duration::from_secs(40), d.run()).await });
 
         // d_rt.block_on(d.run()).unwrap();
     });
