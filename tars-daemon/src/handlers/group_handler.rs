@@ -44,7 +44,7 @@ async fn create_group(
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Option<Id>"
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id"
         "#,
         *group.id,
         *group.name,
@@ -77,7 +77,7 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         SELECT
         pub_id as "id: Id",
         name as "name: Name",
-        parent_id as "parent_id: Option<Id>"
+        parent_id as "parent_id: Id"
         FROM Groups
         "#
     )
@@ -113,7 +113,7 @@ async fn update_group(
             RETURNING
                 name as "name: Name",
                 pub_id as "id: Id",
-                parent_id as "parent_id: Option<Id>"
+                parent_id as "parent_id: Id"
 
         "#,
         *group.name,
@@ -150,7 +150,7 @@ async fn delete_group(
             RETURNING
                 pub_id as "id: Id",
                 name as "name: Name",
-                parent_id as "parent_id: Option<Id>"
+                parent_id as "parent_id: Id"
            
         "#,
         *group.id,

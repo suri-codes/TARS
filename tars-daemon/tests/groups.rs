@@ -1,10 +1,8 @@
 use std::time::Duration;
 
 use common::{TarsClient, types::Group};
+use tars_daemon::utils::new_test_daemon;
 use tokio::time::{sleep, timeout};
-use utils::new_test_daemon;
-
-mod utils;
 
 #[tokio::test]
 async fn group_creation() {

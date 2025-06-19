@@ -3,28 +3,13 @@ use serde::{Deserialize, Serialize};
 use crate::ParseError;
 /// The priority varying priority levels for a Task.
 #[derive(sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[repr(i32)]
 pub enum Priority {
-    Low,
-    Medium,
-    High,
-    Asap,
-    Far,
-}
-
-// Conversion from database i64 to Priority
-impl TryFrom<i64> for Priority {
-    type Error = ParseError;
-
-    fn try_from(value: i64) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Priority::Low),
-            1 => Ok(Priority::Medium),
-            2 => Ok(Priority::High),
-            3 => Ok(Priority::Asap),
-            4 => Ok(Priority::Far),
-            _ => Err(ParseError::FailedToParse),
-        }
-    }
+    Low = 1,
+    Medium = 2,
+    High = 3,
+    Asap = 4,
+    Far = 5,
 }
 
 impl TryFrom<&str> for Priority {

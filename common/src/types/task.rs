@@ -50,7 +50,7 @@ impl Task {
     /// Something goes wrong with the requests to the Daemon.
     pub async fn new(
         client: &TarsClient,
-        group: Group,
+        group: &Group,
         name: impl Into<Name>,
         priority: Priority,
         description: impl Into<String>,
@@ -59,7 +59,7 @@ impl Task {
     ) -> Result<Self, TarsError> {
         let task = Self {
             id: Default::default(),
-            group,
+            group: group.clone(),
             name: name.into(),
             priority,
             completed: false,

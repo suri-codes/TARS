@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
 
             let _task = Task::new(
                 &client,
-                group_2,
+                &group_2,
                 "Kill Albert",
                 Priority::Asap,
                 "Albert playing too much league, its time to js kill bro",
