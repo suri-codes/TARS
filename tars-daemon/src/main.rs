@@ -7,7 +7,7 @@ use tars_daemon::{DaemonState, Db, TarsDaemon};
 async fn main() -> Result<()> {
     logging::init("tars-d.log", true)?;
 
-    let db = Db::new(true).await?;
+    let db = Db::new(false).await?;
 
     let state = DaemonState::new(db, DAEMON_ADDR);
 

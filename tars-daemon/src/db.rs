@@ -7,7 +7,7 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode},
 };
 use tokio::fs::create_dir_all;
-use tracing::error;
+use tracing::{error, info};
 
 /// Holds the pool to a database.
 /// Mostly constructed as this type because it has logic to create a new db w migrations
@@ -29,7 +29,7 @@ impl Db {
     pub async fn new(is_test: bool) -> Result<Self> {
         let path = {
             let mut dir = if is_test {
-                PathBuf::from(format!("/tmp/tars/{}/", *Id::default()))
+                PathBuf::from(format!("/tmp/tars/test-db/{}/", *Id::default()))
             } else {
                 get_data_dir()
             };
@@ -43,6 +43,8 @@ impl Db {
                     .expect("Database Path should be a valid string.")
             )
         };
+
+        info!("Db Path: {}", path);
 
         let sqlite_opts = SqliteConnectOptions::from_str(&path)
             .inspect_err(|e| {
