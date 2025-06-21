@@ -29,14 +29,32 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
 
             println!("Added Task: {:#?}", task);
         }
-        TaskSubcommand::List(args) => {}
+        TaskSubcommand::List(_args) => {
+            todo!();
+        }
     }
     Ok(())
 }
 pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Result<()> {
     match g_sub {
-        GroupSubcommand::Add(args) => {}
-        GroupSubcommand::List(args) => {}
+        GroupSubcommand::Add(args) => {
+            let parent_id = if let Some(parent_name) = args.parent {
+                let all = Group::fetch_all(client).await?;
+                all.iter().find_map(|g| {
+                    if *g.name == *parent_name {
+                        Some(g.id.clone())
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                None
+            };
+
+            let g = Group::new(client, args.name, parent_id).await?;
+            println!("Added Group: {:#?}", g);
+        }
+        GroupSubcommand::List(_args) => {}
     }
-    todo!()
+    Ok(())
 }

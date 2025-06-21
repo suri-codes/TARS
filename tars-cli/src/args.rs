@@ -38,12 +38,12 @@ pub enum GroupSubcommand {
 pub struct GroupAddArgs {
     #[arg(short, long, value_parser=Name::parse_clap)]
     /// Name of group
-    pub name: String,
+    pub name: Name,
 
     #[arg(short, long, value_parser=Name::parse_clap)]
     /// Optional name of parent group.
     /// NOTE: Will be orphan if argument not provided or parent not found.
-    pub parent: Option<String>,
+    pub parent: Option<Name>,
 }
 
 #[derive(Debug, Args)]
