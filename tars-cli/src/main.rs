@@ -1,13 +1,14 @@
 use crate::args::{CliArgs, Commands};
-use args::AddType;
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use common::{
     TarsClient,
     types::{Group, Priority, Task, TaskFetchOptions},
 };
+use handlers::{group_handler, task_handler};
 use rustyline::{Config, Editor, history::FileHistory};
 mod args;
+mod handlers;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -15,60 +16,65 @@ async fn main() -> Result<()> {
     let args = CliArgs::parse();
 
     let client = TarsClient::default().await.unwrap();
+
     match args.command {
-        Commands::Add(AddType::Task(t)) => {
-            let all = Group::fetch_all(&client).await?;
-            let existing = all.iter().find(|e| **e.name == *t.group);
+        Commands::Group(g_sub) => group_handler(&client, g_sub).await,
 
-            let g = match existing {
-                Some(o) => o.clone(),
-                None => Group::new(&client, t.group, None).await?,
-            };
-
-            let task =
-                Task::new(&client, &g, t.name, t.priority.into(), t.description, t.due).await?;
-
-            println!("Added Task: {:#?}", task);
-        }
-        Commands::Add(AddType::Group(g)) => {
-            let parent_id = if let Some(parent_name) = g.parent {
-                let all = Group::fetch_all(&client).await?;
-                all.iter().find_map(|g| {
-                    if *g.name == parent_name {
-                        Some(g.id.clone())
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                None
-            };
-
-            let g = Group::new(&client, g.name, parent_id).await?;
-            println!("Added Group: {:#?}", g);
-        }
-
-        Commands::List(_l_args) => {
-            let group = Group::new(&client, "Penis", None).await?;
-            let group_2 = Group::new(&client, "lol", Some(group.id)).await?;
-
-            let _task = Task::new(
-                &client,
-                &group_2,
-                "Kill Albert",
-                Priority::Asap,
-                "Albert playing too much league, its time to js kill bro",
-                None,
-            )
-            .await?;
-
-            let tasks = Task::fetch(&client, TaskFetchOptions::All).await?;
-
-            println!("{:?}", tasks);
-        }
+        Commands::Task(t_sub) => task_handler(&client, t_sub).await,
     }
 
-    Ok(())
+    // match args.command {
+    //     Commands::Add(AddType::Task(t)) => {
+    //         let all = Group::fetch_all(&client).await?;
+    //         let existing = all.iter().find(|e| **e.name == *t.group);
+
+    //         let g = match existing {
+    //             Some(o) => o.clone(),
+    //             None => Group::new(&client, t.group, None).await?,
+    //         };
+
+    //         let task =
+    //             Task::new(&client, &g, t.name, t.priority.into(), t.description, t.due).await?;
+
+    //         println!("Added Task: {:#?}", task);
+    //     }
+    //     Commands::Add(AddType::Group(g)) => {
+    //         let parent_id = if let Some(parent_name) = g.parent {
+    //             let all = Group::fetch_all(&client).await?;
+    //             all.iter().find_map(|g| {
+    //                 if *g.name == parent_name {
+    //                     Some(g.id.clone())
+    //                 } else {
+    //                     None
+    //                 }
+    //             })
+    //         } else {
+    //             None
+    //         };
+
+    //         let g = Group::new(&client, g.name, parent_id).await?;
+    //         println!("Added Group: {:#?}", g);
+    //     }
+
+    //     Commands::List(_l_args) => {
+    //         let group = Group::new(&client, "Penis", None).await?;
+    //         let group_2 = Group::new(&client, "lol", Some(group.id)).await?;
+
+    //         let _task = Task::new(
+    //             &client,
+    //             &group_2,
+    //             "Kill Albert",
+    //             Priority::Asap,
+    //             "Albert playing too much league, its time to js kill bro",
+    //             None,
+    //         )
+    //         .await?;
+
+    //         let tasks = Task::fetch(&client, TaskFetchOptions::All).await?;
+
+    //         println!("{:?}", tasks);
+    //     }
+    // }
 }
 
 #[allow(dead_code)]

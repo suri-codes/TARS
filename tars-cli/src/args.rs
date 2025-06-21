@@ -15,29 +15,53 @@ pub struct CliArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Add a Group or Task.
+    /// Manage tars groups.
     #[command(subcommand)]
-    Add(AddType),
+    Group(GroupSubcommand),
 
-    /// List Groups or Tasks.
-    List(ListArgs),
-}
-
-#[derive(Debug, Args)]
-pub struct ListArgs {
-    #[arg(short, long)]
-    /// The specific group youd like to see the tasks for
-    group: Option<String>,
+    /// Manage tars tasks.
+    #[command(subcommand)]
+    Task(TaskSubcommand),
 }
 
 #[derive(Subcommand, Debug)]
-pub enum AddType {
-    Task(TaskAdd),
-    Group(GroupAdd),
+/// Subcommand to manage tars groups.
+pub enum GroupSubcommand {
+    /// Add a group.
+    Add(GroupAddArgs),
+    /// List groups.
+    List(GroupListArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct TaskAdd {
+/// Arguments for adding a group.
+pub struct GroupAddArgs {
+    #[arg(short, long, value_parser=Name::parse_clap)]
+    /// Name of group
+    pub name: String,
+
+    #[arg(short, long, value_parser=Name::parse_clap)]
+    /// Optional name of parent group.
+    /// NOTE: Will be orphan if argument not provided or parent not found.
+    pub parent: Option<String>,
+}
+
+#[derive(Debug, Args)]
+/// Arguments for listing groups.
+pub struct GroupListArgs {}
+
+#[derive(Subcommand, Debug)]
+/// Subcommand to mange tars tasks.
+pub enum TaskSubcommand {
+    /// Add a task.
+    Add(TaskAddArgs),
+    /// List tasks.
+    List(TaskListArgs),
+}
+
+#[derive(Debug, Args)]
+/// Arguments for adding a task.
+pub struct TaskAddArgs {
     #[arg(short, long, value_parser=Name::parse_clap)]
     /// The name of the task.
     pub name: Name,
@@ -51,12 +75,20 @@ pub struct TaskAdd {
     pub priority: PriorityInput,
 
     /// An optional Due Date.
-    #[arg(short, long, value_parser=parse_date_time)]
+    #[arg(short = 'D', long, value_parser=parse_date_time)]
     pub due: Option<NaiveDateTime>,
 
-    #[arg(short = 'D', long)]
+    #[arg(short, long)]
     /// A description of the task at hand.
     pub description: String,
+}
+
+#[derive(Debug, Args)]
+/// Arguments for listing tasks.
+pub struct TaskListArgs {
+    #[arg(short, long)]
+    /// The specific group youd like to see the tasks for
+    group: Option<String>,
 }
 
 fn parse_date_time(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {
@@ -88,13 +120,4 @@ impl From<PriorityInput> for Priority {
             PriorityInput::Far => Priority::Far,
         }
     }
-}
-
-#[derive(Debug, Args)]
-pub struct GroupAdd {
-    #[arg(short, long, value_parser=Name::parse_clap)]
-    pub name: String,
-
-    #[arg(short, long, value_parser=Name::parse_clap)]
-    pub parent: Option<String>,
 }
