@@ -54,9 +54,7 @@ impl From<Mode> for u8 {
 impl App {
     pub async fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
-        let client = TarsClient::new("http://127.0.0.1:42069".to_owned())
-            .await
-            .unwrap();
+        let client = TarsClient::default().await.unwrap();
 
         Ok(Self {
             tick_rate,
