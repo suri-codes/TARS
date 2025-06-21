@@ -1,4 +1,4 @@
-use std::{process::Command, thread, time::Duration};
+use std::{thread, time::Duration};
 
 use common::{
     TarsClient,
