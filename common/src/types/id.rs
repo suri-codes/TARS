@@ -1,5 +1,4 @@
 use chrono::ParseError;
-use lazy_static::lazy_static;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode, Encode, Sqlite, Type};

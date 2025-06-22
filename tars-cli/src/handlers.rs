@@ -1,4 +1,4 @@
-use color_eyre::{eyre::Result, owo_colors::colors::xterm::Feijoa};
+use color_eyre::eyre::Result;
 use common::{
     TarsClient,
     types::{Group, Task, TaskFetchOptions},
@@ -31,7 +31,7 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             )
             .await?;
 
-            println!("Added Task: {}", task);
+            println!("Added Task:\n {}", task);
         }
         TaskSubcommand::List(_args) => {
             // TODO: we need to filter on the arguments / debate whether we
@@ -88,7 +88,6 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
 
             for g in filtered {
                 println!("{}", g);
-
                 println!("=============================")
             }
         }

@@ -158,6 +158,7 @@ impl Task {
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Name: {}", (*self.name).green())?;
+        writeln!(f, "Id: {}", *self.id)?;
         writeln!(f, "Group: {}", (*self.group.name).green())?;
         match self.priority {
             Priority::Far => writeln!(f, "Priority: {}", "Far".blue()),
@@ -168,9 +169,9 @@ impl Display for Task {
         }?;
         writeln!(f, "Description:\n {}", self.description)?;
         if self.completed {
-            writeln!(f, "{}", "Completed!".green())?;
+            write!(f, "{}", "Completed!".green())?;
         } else {
-            writeln!(f, "{}", "Incomplete!".red())?;
+            write!(f, "{}", "Incomplete!".red())?;
         }
 
         if let Some(due_date) = self.due {

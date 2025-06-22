@@ -126,10 +126,9 @@ impl Group {
 impl Display for Group {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Name: {}", *self.name)?;
-        writeln!(f, "Id: {}", *self.id)?;
-
+        write!(f, "Id: {}", *self.id)?;
         if let Some(ref parent_id) = self.parent_id {
-            writeln!(f, "Parent Id: {}", **parent_id)?;
+            write!(f, "\nParent Id: {}", **parent_id)?;
         }
 
         Ok(())
