@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -116,6 +118,19 @@ impl Group {
             .inspect_err(|e| error!("Error Deleting Group: {:?}", e))?;
 
         assert_eq!(deleted, self);
+
+        Ok(())
+    }
+}
+
+impl Display for Group {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Name: {}", *self.name)?;
+        writeln!(f, "Id: {}", *self.id)?;
+
+        if let Some(ref parent_id) = self.parent_id {
+            writeln!(f, "Parent Id: {}", **parent_id)?;
+        }
 
         Ok(())
     }

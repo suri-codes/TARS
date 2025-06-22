@@ -1,4 +1,5 @@
 use chrono::ParseError;
+use lazy_static::lazy_static;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode, Encode, Sqlite, Type};
@@ -32,10 +33,16 @@ impl DerefMut for Id {
     }
 }
 
+const ALPHABET: [char; 52] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+];
+
 /// Returns a random Id
 impl Default for Id {
     fn default() -> Self {
-        Id(nanoid!())
+        Id(nanoid!(8, &ALPHABET))
     }
 }
 
