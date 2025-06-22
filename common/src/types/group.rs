@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -125,7 +126,7 @@ impl Group {
 
 impl Display for Group {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Name: {}", *self.name)?;
+        writeln!(f, "Name: {}", (*self.name).green())?;
         write!(f, "Id: {}", *self.id)?;
         if let Some(ref parent_id) = self.parent_id {
             write!(f, "\nParent Id: {}", **parent_id)?;
