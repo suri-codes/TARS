@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use color_eyre::owo_colors::OwoColorize;
 use common::{
     ParseError,
-    types::{Name, Priority},
+    types::{Id, Name, Priority},
 };
 use sqlx::types::chrono::NaiveDateTime;
 
@@ -48,7 +48,12 @@ pub struct GroupAddArgs {
 
 #[derive(Debug, Args)]
 /// Arguments for listing groups.
-pub struct GroupListArgs {}
+pub struct GroupListArgs {
+    #[arg(short, long, value_parser=Id::parse_clap)]
+    pub id: Option<Id>,
+    #[arg(short, long, value_parser=Name::parse_clap)]
+    pub name: Option<Name>,
+}
 
 #[derive(Subcommand, Debug)]
 /// Subcommand to mange tars tasks.
@@ -88,7 +93,14 @@ pub struct TaskAddArgs {
 pub struct TaskListArgs {
     #[arg(short, long)]
     /// The specific group youd like to see the tasks for
-    group: Option<String>,
+    #[arg(short='n', long, value_parser=Name::parse_clap)]
+    group_name: Option<Name>,
+
+    #[arg(short='i', long, value_parser=Id::parse_clap)]
+    group_id: Option<Id>,
+
+    #[arg(short, long)]
+    unfinished: Option<bool>,
 }
 
 fn parse_date_time(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {

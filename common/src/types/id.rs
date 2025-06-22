@@ -1,3 +1,4 @@
+use chrono::ParseError;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode, Encode, Sqlite, Type};
@@ -9,6 +10,14 @@ use std::{
 /// holds an Id used in all the types stored in the Database.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Id(String);
+
+impl Id {
+    pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
+        let x = arg.to_owned();
+
+        Ok(Self(x))
+    }
+}
 
 impl Deref for Id {
     type Target = String;

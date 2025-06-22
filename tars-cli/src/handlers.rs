@@ -1,7 +1,7 @@
-use color_eyre::eyre::Result;
+use color_eyre::{eyre::Result, owo_colors::colors::xterm::Feijoa};
 use common::{
     TarsClient,
-    types::{Group, Task},
+    types::{Group, Task, TaskFetchOptions},
 };
 
 use crate::args::{GroupSubcommand, TaskSubcommand};
@@ -27,10 +27,17 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             )
             .await?;
 
-            println!("Added Task: {:#?}", task);
+            println!("Added Task: {}", task);
         }
         TaskSubcommand::List(_args) => {
-            todo!();
+            // TODO: we need to filter on the arguments / debate whether we
+            // want to do this filtering on the serverf side through taskfetchoptions.
+            let all_tasks = Task::fetch(client, TaskFetchOptions::All).await?;
+
+            for t in all_tasks.iter() {
+                println!("{}", t);
+                println!("===========================================");
+            }
         }
     }
     Ok(())
@@ -54,7 +61,31 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
             let g = Group::new(client, args.name, parent_id).await?;
             println!("Added Group: {:#?}", g);
         }
-        GroupSubcommand::List(_args) => {}
+        GroupSubcommand::List(args) => {
+            let groups = Group::fetch_all(client).await?;
+
+            let filtered: Vec<Group> = groups
+                .into_iter()
+                .filter(|e| {
+                    // fall into here if provided some id
+                    if let Some(target_id) = &args.id {
+                        return *target_id == e.id;
+                    }
+
+                    // fall into here if provided some name
+                    if let Some(target_name) = &args.name {
+                        return *target_name == e.name;
+                    }
+
+                    // default case
+                    true
+                })
+                .collect();
+
+            println!("{:#?}", filtered);
+
+            // groups.into_iter().filter(|e| {})
+        }
     }
     Ok(())
 }
