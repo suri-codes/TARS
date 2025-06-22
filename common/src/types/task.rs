@@ -169,9 +169,9 @@ impl Display for Task {
         }?;
         writeln!(f, "Description:\n {}", self.description)?;
         if self.completed {
-            write!(f, "{}", "Completed!".green())?;
+            write!(f, "{}", "Completed! ✅".green())?;
         } else {
-            write!(f, "{}", "Incomplete!".red())?;
+            write!(f, "{}", "Incomplete! ❌".red())?;
         }
 
         if let Some(due_date) = self.due {
