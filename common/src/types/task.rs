@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use chrono::NaiveDateTime;
+use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -12,8 +13,8 @@ use super::{Group, Id, Name, Priority};
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub id: Id,
-    pub group: Group,
     pub name: Name,
+    pub group: Group,
     pub priority: Priority,
     pub description: String,
     pub completed: bool,
@@ -155,8 +156,28 @@ impl Task {
 }
 
 impl Display for Task {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unimplemented!()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Name: {}", (*self.name).green())?;
+        writeln!(f, "Id: {}", *self.id)?;
+        writeln!(f, "Group: {}", (*self.group.name).green())?;
+        match self.priority {
+            Priority::Far => writeln!(f, "Priority: {}", "Far".blue()),
+            Priority::Low => writeln!(f, "Priority: {}", "Low".green()),
+            Priority::Medium => writeln!(f, "Priority: {}", "Medium".yellow()),
+            Priority::High => writeln!(f, "Priority: {}", "High".red()),
+            Priority::Asap => writeln!(f, "Priority: {}", "ASAP".red()),
+        }?;
+        writeln!(f, "Description:\n {}", self.description)?;
+        if self.completed {
+            write!(f, "{}", "Completed! ✅".green())?;
+        } else {
+            write!(f, "{}", "Incomplete! ❌".red())?;
+        }
+
+        if let Some(due_date) = self.due {
+            writeln!(f, "{}", due_date)?;
+        }
+        Ok(())
     }
 }
 

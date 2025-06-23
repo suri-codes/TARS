@@ -26,4 +26,8 @@ impl TarsClient {
             base_path: Url::from_str(&base_url).expect("should be a valid url"),
         })
     }
+
+    pub async fn default() -> Result<Self, TarsError> {
+        TarsClient::new("http://127.0.0.1:42069".to_owned()).await
+    }
 }

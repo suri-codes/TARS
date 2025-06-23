@@ -1,3 +1,4 @@
+use chrono::ParseError;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Decode, Encode, Sqlite, Type};
@@ -9,6 +10,14 @@ use std::{
 /// holds an Id used in all the types stored in the Database.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Id(String);
+
+impl Id {
+    pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
+        let x = arg.to_owned();
+
+        Ok(Self(x))
+    }
+}
 
 impl Deref for Id {
     type Target = String;
@@ -23,10 +32,16 @@ impl DerefMut for Id {
     }
 }
 
+const ALPHABET: [char; 52] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+    'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+];
+
 /// Returns a random Id
 impl Default for Id {
     fn default() -> Self {
-        Id(nanoid!())
+        Id(nanoid!(8, &ALPHABET))
     }
 }
 

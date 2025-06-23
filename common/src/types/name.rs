@@ -6,11 +6,22 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use crate::ParseError;
+
 /// Name type for Tasks and Groups, ensures that the string inside is a
 /// properly parsed name.
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Name(String);
+
+impl Name {
+    pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
+        let x = arg.to_owned();
+
+        //TODO: figure out the parsing
+        Ok(Self(x))
+    }
+}
 
 impl Deref for Name {
     type Target = String;
