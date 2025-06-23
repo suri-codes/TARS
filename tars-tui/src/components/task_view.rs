@@ -2,11 +2,12 @@ use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
     TarsClient,
-    types::{Task, TaskFetchOptions},
+    types::{Priority, Task, TaskFetchOptions},
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Paragraph},
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -99,10 +100,9 @@ impl Component for TaskView {
         let task_layout = Layout::new(
             Direction::Vertical,
             [
-                Constraint::Percentage(12), // name
-                Constraint::Percentage(15), // group
-                Constraint::Percentage(15), // priority
-                Constraint::Percentage(38), // Description
+                Constraint::Percentage(15), // name
+                Constraint::Percentage(15), // group | Priority
+                Constraint::Percentage(50), // Description
                 Constraint::Percentage(15), // completion | Due
             ],
         )
@@ -113,23 +113,51 @@ impl Component for TaskView {
         // Task name:
 
         frame.render_widget(
-            Paragraph::new(task.name.as_str())
-                .block(Block::new().title_top("Name").borders(Borders::all())),
+            Paragraph::new(task.name.as_str()).block(
+                Block::new()
+                    .title_top("Name")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
+            ),
             task_layout[0],
         );
 
+        // group | priority
+        let group_priority = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(50), Constraint::Percentage(50)],
+        )
+        .split(task_layout[1]);
+
         // Group name:
         frame.render_widget(
-            Paragraph::new(task.group.name.as_str())
-                .block(Block::new().title_top("Group").borders(Borders::all())),
-            task_layout[1],
+            Paragraph::new(task.group.name.as_str()).block(
+                Block::new()
+                    .title_top("Group")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
+            ),
+            group_priority[0],
         );
 
         // Priority
         frame.render_widget(
-            Paragraph::new(Into::<String>::into(task.priority))
-                .block(Block::new().title_top("Priority").borders(Borders::all())),
-            task_layout[2],
+            Paragraph::new(Into::<String>::into(task.priority)).block(
+                Block::new()
+                    .title_top("Priority")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded)
+                    .style({
+                        match task.priority {
+                            Priority::Far => Style::new().fg(ratatui::style::Color::LightBlue),
+                            Priority::Low => Style::new().fg(ratatui::style::Color::Blue),
+                            Priority::Medium => Style::new().fg(ratatui::style::Color::Yellow),
+                            Priority::High => Style::new().fg(ratatui::style::Color::LightRed),
+                            Priority::Asap => Style::new().fg(ratatui::style::Color::Red),
+                        }
+                    }),
+            ),
+            group_priority[1],
         );
 
         // Description
@@ -137,33 +165,50 @@ impl Component for TaskView {
             Paragraph::new(task.description.clone()).block(
                 Block::new()
                     .title_top("Description")
-                    .borders(Borders::all()),
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
             ),
-            task_layout[3],
+            task_layout[2],
         );
 
         let completion_due = Layout::new(
             Direction::Horizontal,
             [Constraint::Percentage(50), Constraint::Percentage(50)],
         )
-        .split(task_layout[4]);
+        .split(task_layout[3]);
 
         let completion_symbol = if task.completed {
-            "☑ Awesome"
+            " ✅ Awesome"
         } else {
-            "☐ Get to work cornball"
+            " ❌ Get to work cornball"
         };
         // Completion status
         frame.render_widget(
-            Paragraph::new(completion_symbol)
-                .block(Block::new().title_top("Completed").borders(Borders::all())),
+            Paragraph::new(completion_symbol).block({
+                let block = Block::new()
+                    .title_top("Completed")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded);
+
+                let style = if task.completed {
+                    Style::new().fg(Color::Green)
+                } else {
+                    Style::new().fg(Color::Red)
+                };
+
+                block.style(style)
+            }),
             completion_due[0],
         );
 
         // Due Date
         frame.render_widget(
-            Paragraph::new(format!("{:?}", task.due))
-                .block(Block::new().title_top("Due").borders(Borders::all())),
+            Paragraph::new(format!("{:?}", task.due)).block(
+                Block::new()
+                    .title_top("Due")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
+            ),
             completion_due[1],
         );
 

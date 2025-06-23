@@ -143,5 +143,5 @@ pub fn frame_block(active: bool, caller_mode: Mode) -> Block<'static> {
     let block = block.title(format!("[{}]", Into::<u8>::into(caller_mode)));
     let block = block.title(format!("{:?}", caller_mode));
 
-    block.style(style)
+    block.border_style(style)
 }

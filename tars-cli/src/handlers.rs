@@ -40,7 +40,7 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
 
             for t in all_tasks.iter() {
                 println!("{}", t);
-                println!("===========================================");
+                println!("====================================================")
             }
         }
     }
@@ -88,7 +88,7 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
 
             for g in filtered {
                 println!("{}", g);
-                println!("=============================")
+                println!("====================================================")
             }
         }
     }
