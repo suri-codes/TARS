@@ -3,6 +3,7 @@ use common::{
     TarsClient,
     types::{Task, TaskFetchOptions},
 };
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -10,7 +11,11 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, app::Mode, config::Config};
+use crate::{
+    action::{Action, Selection},
+    app::Mode,
+    config::Config,
+};
 use color_eyre::Result;
 
 use super::{Component, frame_block};
@@ -121,5 +126,43 @@ impl Component for TodoList {
             );
         }
         Ok(())
+    }
+
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        // vim bindings
+        // j would move selection down
+        // k would move selection up
+        // l would move into a new scope
+        // h would move into the outer scope
+
+        match key.code {
+            KeyCode::Char('j') => {
+                // would increment by one
+
+                if let Some(next) = self.tasks.get(self.selection as usize + 1) {
+                    self.selection += 1;
+                    return Ok(Some(Action::Select(Selection::Task(next.clone()))));
+                }
+
+                Ok(None)
+            }
+            KeyCode::Char('k') => {
+                if let Some(prev) = self.tasks.get({
+                    if let Some(i) = (self.selection as usize).checked_sub(1) {
+                        i
+                    } else {
+                        return Ok(None);
+                    }
+                }) {
+                    self.selection -= 1;
+                    return Ok(Some(Action::Select(Selection::Task(prev.clone()))));
+                }
+
+                Ok(None)
+            }
+            KeyCode::Char('l') => Ok(None),
+            KeyCode::Char('h') => Ok(None),
+            _ => Ok(None),
+        }
     }
 }
