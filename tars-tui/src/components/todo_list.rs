@@ -3,7 +3,11 @@ use common::{
     TarsClient,
     types::{Task, TaskFetchOptions},
 };
-use ratatui::widgets::Paragraph;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::Paragraph,
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, app::Mode, config::Config};
@@ -18,6 +22,7 @@ pub struct TodoList {
     config: Config,
     active: bool,
     tasks: Vec<Task>,
+    selection: u16,
 }
 
 impl TodoList {
@@ -31,6 +36,7 @@ impl TodoList {
             client: client.clone(),
             active: false,
             tasks,
+            selection: 0,
         })
     }
 
@@ -92,10 +98,28 @@ impl Component for TodoList {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(
-            Paragraph::new("penis").block(frame_block(self.active, self.mode())),
-            area,
-        );
+        frame.render_widget(frame_block(self.active, self.mode()), area);
+
+        let area = Layout::new(Direction::Vertical, [Constraint::Percentage(100)])
+            .horizontal_margin(2)
+            .vertical_margin(1)
+            .split(area)[0];
+
+        let constraints: Vec<Constraint> = self.tasks.iter().map(|_| Constraint::Max(1)).collect();
+
+        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
+        for (i, (task, area)) in self.tasks.iter().zip(task_layouts.into_iter()).enumerate() {
+            frame.render_widget(
+                Paragraph::new((*task.name).to_string()).style({
+                    if i as u16 == self.selection {
+                        Style::new().bg(Color::Blue)
+                    } else {
+                        Style::new().bg(Color::Reset)
+                    }
+                }),
+                *area,
+            );
+        }
         Ok(())
     }
 }

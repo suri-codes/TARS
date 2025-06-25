@@ -76,6 +76,7 @@ async fn task_fetch() {
         .await
         .unwrap();
     assert_eq!(g_2_tasks, vec![task2]);
+    x.await.unwrap()
 }
 
 #[tokio::test]
