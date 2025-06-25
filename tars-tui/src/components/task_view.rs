@@ -14,19 +14,18 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::{action::Action, app::Mode, config::Config};
 
 use super::{Component, frame_block};
-
-// #[derive(Default)]
+#[derive(Debug)]
 pub struct TaskView {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     task: Option<Task>,
-    _client: TarsClient,
+    client: TarsClient,
     active: bool,
 }
 
 impl TaskView {
-    pub async fn new(client: TarsClient) -> Result<Self> {
-        let task = Task::fetch(&client, TaskFetchOptions::All)
+    pub async fn new(client: &TarsClient) -> Result<Self> {
+        let task = Task::fetch(client, TaskFetchOptions::All)
             .await?
             .first()
             .cloned();
@@ -35,7 +34,7 @@ impl TaskView {
             command_tx: Default::default(),
             config: Default::default(),
             task,
-            _client: client,
+            client: client.clone(),
             active: false,
         })
     }

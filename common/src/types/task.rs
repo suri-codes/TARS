@@ -185,6 +185,6 @@ impl Display for Task {
 pub enum TaskFetchOptions {
     // NOTE: only add those we deem necessary, dont have to add shit just to add them
     // ById { id: Id },
-    // ByGroup { group: Group },
+    ByGroup { group: Group },
     All,
 }

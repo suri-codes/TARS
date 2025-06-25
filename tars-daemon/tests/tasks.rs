@@ -38,6 +38,47 @@ async fn task_creation() {
 }
 
 #[tokio::test]
+async fn task_fetch() {
+    let (d, addr) = new_test_daemon().await;
+
+    let x = tokio::spawn(async move {
+        timeout(Duration::from_secs(2), d.run())
+            .await
+            .unwrap_or_else(|_x| Ok(()))
+            .unwrap();
+    });
+
+    sleep(Duration::from_secs(1)).await;
+
+    let client = TarsClient::new(addr)
+        .await
+        .expect("failed to instantiate client");
+
+    let g_1 = Group::new(&client, "testing", None).await.unwrap();
+    let g_2 = Group::new(&client, "testing2", None).await.unwrap();
+
+    let task1 = Task::new(&client, &g_1, "test", Priority::Low, "nothing", None)
+        .await
+        .unwrap();
+    let task2 = Task::new(&client, &g_2, "test", Priority::Low, "nothing", None)
+        .await
+        .unwrap();
+
+    let all = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
+    assert_eq!(all, vec![task1.clone(), task2.clone()]);
+
+    let g_1_tasks = Task::fetch(&client, TaskFetchOptions::ByGroup { group: g_1 })
+        .await
+        .unwrap();
+    assert_eq!(g_1_tasks, vec![task1]);
+
+    let g_2_tasks = Task::fetch(&client, TaskFetchOptions::ByGroup { group: g_2 })
+        .await
+        .unwrap();
+    assert_eq!(g_2_tasks, vec![task2]);
+}
+
+#[tokio::test]
 async fn task_sync() {
     let (d, addr) = new_test_daemon().await;
 

@@ -1,5 +1,15 @@
 use async_trait::async_trait;
-use ratatui::widgets::Paragraph;
+use color_eyre::Result;
+use common::{
+    TarsClient,
+    types::{Group, Task, TaskFetchOptions},
+};
+use crossterm::event::KeyEvent;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::Paragraph,
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, app::Mode, config::Config};
@@ -11,15 +21,45 @@ pub struct TodoExplorer {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     active: bool,
+    groups: Vec<Group>,
+    tasks: Vec<Task>,
+    widgets: Vec<TodoWidget>,
+}
+
+struct TodoWidget {
+    w_type: TodoWidgetType,
+}
+
+enum TodoWidgetType {
+    Task(Task),
+    Group(Group),
 }
 
 impl TodoExplorer {
-    pub fn new() -> Self {
-        Self::default()
+    pub async fn new(client: &TarsClient) -> Result<Self> {
+        // need some sort of datastructure i assume?
+        let groups = Group::fetch_all(client).await?;
+        let tasks = Task::fetch(client, TaskFetchOptions::All).await?;
+        Ok(Self {
+            command_tx: Default::default(),
+            config: Default::default(),
+            active: false,
+            groups,
+            tasks,
+            widgets: Vec::new(),
+        })
     }
 
     fn mode(&self) -> Mode {
         Mode::TodoExplorer
+    }
+
+    fn process(&mut self) {
+        let root_groups: Vec<&Group> = self
+            .groups
+            .iter()
+            .filter(|e| e.parent_id.is_none())
+            .collect();
     }
 }
 
@@ -65,10 +105,42 @@ impl Component for TodoExplorer {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(
-            Paragraph::new("penis").block(frame_block(self.active, self.mode())),
-            area,
-        );
+        frame.render_widget(frame_block(self.active, self.mode()), area);
+
+        let area = Layout::new(Direction::Vertical, [Constraint::Percentage(100)])
+            .horizontal_margin(2)
+            .vertical_margin(1)
+            .split(area)[0];
+
+        let constraints: Vec<Constraint> = self.tasks.iter().map(|e| Constraint::Max(1)).collect();
+
+        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
+        // how am i supposed to render this shit dawg
+
+        // need to divide up the area. algorithmically.
+
+        // ideally top 4 tasks per group + a line that says more coming after
+
+        // groups organized by parents
+
+        for (task, area) in self.tasks.iter().zip(task_layouts.into_iter()) {
+            frame.render_widget(
+                Paragraph::new((*task.name).to_string()).style(Style::new().bg(Color::Blue)),
+                *area,
+            );
+        }
+
         Ok(())
+    }
+
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        // vim bindings
+        // j would move selection down
+        // k would move selection up
+        // l would move into a new scope
+        // h would move into the outer scope
+
+        let _ = key; // to appease clippy
+        Ok(None)
     }
 }

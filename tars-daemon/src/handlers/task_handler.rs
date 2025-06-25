@@ -138,6 +138,51 @@ async fn fetch_task(
 
             Ok(Json::from(tasks))
         }
+        TaskFetchOptions::ByGroup { group } => {
+            let records = sqlx::query!(
+                r#"
+                    SELECT
+                        t.pub_id as task_pub_id,
+                        t.name as task_name,
+                        g.name  as group_name,
+                        g.pub_id as group_pub_id ,
+                        g.parent_id as "group_parent_id: Id",
+                        t.priority as "priority: Priority",
+                        t.description,
+                        t.completed,
+                        t.due
+                    FROM Tasks t
+                    JOIN Groups g ON t.group_id = g.pub_id
+                    WHERE g.pub_id = ?
+                        
+                "#,
+                group.id
+            )
+            .fetch_all(&state.pool)
+            .await?;
+
+            let tasks: Vec<Task> = records
+                .into_iter()
+                .map(|row| {
+                    Task::with_all_fields(
+                        row.task_pub_id,
+                        Group::with_all_fields(
+                            row.group_pub_id,
+                            row.group_name,
+                            row.group_parent_id,
+                        ),
+                        row.task_name,
+                        row.priority,
+                        row.description,
+                        row.completed,
+                        row.due,
+                    )
+                })
+                .collect();
+            info!("Fetched tasks: {:#?}", &tasks);
+
+            Ok(Json::from(tasks))
+        }
     }
 }
 

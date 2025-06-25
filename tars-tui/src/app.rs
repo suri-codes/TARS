@@ -60,10 +60,9 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(TodoExplorer::new()),
-                Box::new(TodoList::new()),
-                Box::new(TaskView::new(client).await?),
-                // Box::new(TaskView::new()),
+                Box::new(TodoExplorer::new(&client).await?),
+                Box::new(TodoList::new(&client).await?),
+                Box::new(TaskView::new(&client).await?),
             ],
             should_quit: false,
             should_suspend: false,

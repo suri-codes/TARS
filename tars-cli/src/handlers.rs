@@ -31,7 +31,7 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             )
             .await?;
 
-            println!("Added Task:\n {}", task);
+            println!("Added Task:\n{}", task);
         }
         TaskSubcommand::List(_args) => {
             // TODO: we need to filter on the arguments / debate whether we

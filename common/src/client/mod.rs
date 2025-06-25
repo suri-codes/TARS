@@ -4,7 +4,7 @@ use reqwest::{Client, ClientBuilder, Url};
 
 use crate::TarsError;
 /// Holds the reqwest `Client` and the base path for accessing the `TarsDaemon`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TarsClient {
     pub base_path: Url,
     pub conn: Client,

@@ -1,21 +1,37 @@
 use async_trait::async_trait;
+use common::{
+    TarsClient,
+    types::{Task, TaskFetchOptions},
+};
 use ratatui::widgets::Paragraph;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::Action, app::Mode, config::Config};
+use color_eyre::Result;
 
 use super::{Component, frame_block};
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct TodoList {
     command_tx: Option<UnboundedSender<Action>>,
+    client: TarsClient,
     config: Config,
     active: bool,
+    tasks: Vec<Task>,
 }
 
 impl TodoList {
-    pub fn new() -> Self {
-        Self::default()
+    pub async fn new(client: &TarsClient) -> Result<Self> {
+        // new todo list will start at root scope
+        let tasks = Task::fetch(client, TaskFetchOptions::All).await?;
+
+        Ok(Self {
+            command_tx: Default::default(),
+            config: Default::default(),
+            client: client.clone(),
+            active: false,
+            tasks,
+        })
     }
 
     fn mode(&self) -> Mode {
@@ -55,6 +71,17 @@ impl Component for TodoList {
             Action::Render => {}
             Action::SwitchTo(Mode::TodoList) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
+            Action::ScopeUpdate(scope) => {
+                if let Some(g) = scope {
+                    self.tasks =
+                        Task::fetch(&self.client, TaskFetchOptions::ByGroup { group: g }).await?;
+                } else {
+                    self.tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
+                }
+
+                // TODO: run priority sorting algorithmn
+            }
+
             _ => {}
         }
         Ok(None)
