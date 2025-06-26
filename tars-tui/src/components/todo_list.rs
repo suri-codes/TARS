@@ -184,7 +184,7 @@ impl Component for TodoList {
 
         for (i, (task, (task_area, group_area))) in self.tasks.iter().zip(splits.iter()).enumerate()
         {
-            let mut text_style = Style::new().fg((&task.group.color).into()).bg({
+            let text_style = Style::new().fg((&task.group.color).into()).bg({
                 if i as u16 == self.selection {
                     if self.active {
                         Color::Rgb(70, 70, 70)

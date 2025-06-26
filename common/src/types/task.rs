@@ -175,7 +175,7 @@ impl Display for Task {
         }
 
         if let Some(due_date) = self.due {
-            writeln!(f, "{}", due_date)?;
+            writeln!(f, "{due_date}")?;
         }
         Ok(())
     }
