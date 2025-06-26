@@ -78,10 +78,22 @@ impl Component for TodoList {
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
         match action {
-            Action::Tick => {}
-            Action::Render => {}
-            Action::SwitchTo(Mode::TodoList) => self.active = true,
-            Action::SwitchTo(_) => self.active = false,
+            Action::Tick => Ok(None),
+            Action::Render => Ok(None),
+            Action::SwitchTo(Mode::TodoList) => {
+                self.active = true;
+
+                let action = self
+                    .tasks
+                    .get(self.selection as usize)
+                    .map(|t| Action::Select(Selection::Task(t.clone())));
+
+                Ok(action)
+            }
+            Action::SwitchTo(_) => {
+                self.active = false;
+                Ok(None)
+            }
             Action::ScopeUpdate(scope) => {
                 if let Some(g) = scope {
                     self.tasks =
@@ -90,44 +102,14 @@ impl Component for TodoList {
                     self.tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
                 }
 
+                Ok(None)
+
                 // TODO: run priority sorting algorithmn
             }
 
-            _ => {}
+            _ => Ok(None),
         }
-        Ok(None)
     }
-
-    fn draw(
-        &mut self,
-        frame: &mut ratatui::Frame,
-        area: ratatui::prelude::Rect,
-    ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(frame_block(self.active, self.mode()), area);
-
-        let area = Layout::new(Direction::Vertical, [Constraint::Percentage(100)])
-            .horizontal_margin(2)
-            .vertical_margin(1)
-            .split(area)[0];
-
-        let constraints: Vec<Constraint> = self.tasks.iter().map(|_| Constraint::Max(1)).collect();
-
-        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
-        for (i, (task, area)) in self.tasks.iter().zip(task_layouts.into_iter()).enumerate() {
-            frame.render_widget(
-                Paragraph::new((*task.name).to_string()).style({
-                    if i as u16 == self.selection {
-                        Style::new().bg(Color::Blue)
-                    } else {
-                        Style::new().bg(Color::Reset)
-                    }
-                }),
-                *area,
-            );
-        }
-        Ok(())
-    }
-
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         if !self.active {
             return Ok(None);
@@ -166,5 +148,39 @@ impl Component for TodoList {
             KeyCode::Char('h') => Ok(None),
             _ => Ok(None),
         }
+    }
+
+    fn draw(
+        &mut self,
+        frame: &mut ratatui::Frame,
+        area: ratatui::prelude::Rect,
+    ) -> color_eyre::eyre::Result<()> {
+        frame.render_widget(frame_block(self.active, self.mode()), area);
+
+        let area = Layout::new(Direction::Vertical, [Constraint::Percentage(100)])
+            .horizontal_margin(2)
+            .vertical_margin(1)
+            .split(area)[0];
+
+        let constraints: Vec<Constraint> = self.tasks.iter().map(|_| Constraint::Max(1)).collect();
+
+        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
+        for (i, (task, area)) in self.tasks.iter().zip(task_layouts.iter()).enumerate() {
+            frame.render_widget(
+                Paragraph::new((*task.name).to_string()).style({
+                    if i as u16 == self.selection {
+                        if self.active {
+                            Style::new().bg(Color::Blue)
+                        } else {
+                            Style::new().bg(Color::DarkGray)
+                        }
+                    } else {
+                        Style::new().bg(Color::Reset)
+                    }
+                }),
+                *area,
+            );
+        }
+        Ok(())
     }
 }

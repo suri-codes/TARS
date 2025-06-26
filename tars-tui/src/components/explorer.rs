@@ -23,13 +23,16 @@ pub struct Explorer {
     active: bool,
     groups: Vec<Group>,
     tasks: Vec<Task>,
+    #[expect(dead_code)]
     widgets: Vec<TodoWidget>,
 }
 
+#[expect(dead_code)]
 struct TodoWidget {
     w_type: TodoWidgetType,
 }
 
+#[expect(dead_code)]
 enum TodoWidgetType {
     Task(Task),
     Group(Group),
@@ -54,12 +57,17 @@ impl Explorer {
         Mode::Explorer
     }
 
+    #[expect(dead_code)]
     fn process(&mut self) {
-        let root_groups: Vec<&Group> = self
+        let _root_groups: Vec<&Group> = self
             .groups
             .iter()
             .filter(|e| e.parent_id.is_none())
             .collect();
+
+        todo!(
+            "need to figure out how to process the current 'scope' into a renderable datastructure"
+        )
     }
 }
 
@@ -112,7 +120,7 @@ impl Component for Explorer {
             .vertical_margin(1)
             .split(area)[0];
 
-        let constraints: Vec<Constraint> = self.tasks.iter().map(|e| Constraint::Max(1)).collect();
+        let constraints: Vec<Constraint> = self.tasks.iter().map(|_| Constraint::Max(1)).collect();
 
         let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
         // how am i supposed to render this shit dawg
@@ -123,7 +131,7 @@ impl Component for Explorer {
 
         // groups organized by parents
 
-        for (task, area) in self.tasks.iter().zip(task_layouts.into_iter()) {
+        for (task, area) in self.tasks.iter().zip(task_layouts.iter()) {
             frame.render_widget(
                 Paragraph::new((*task.name).to_string()).style(Style::new().bg(Color::Blue)),
                 *area,

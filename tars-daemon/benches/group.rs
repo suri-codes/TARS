@@ -6,7 +6,9 @@ use tars_daemon::utils::new_test_daemon;
 use tokio::{runtime::Runtime, time::timeout};
 
 async fn group_creation(client: &TarsClient) {
-    let _g = Group::new(client, "lol", None).await.unwrap();
+    let _g = Group::new(client, "lol", None, Default::default())
+        .await
+        .unwrap();
 }
 
 async fn group_sync(client: &TarsClient, group: Group) {
@@ -33,7 +35,9 @@ fn bench_groups(c: &mut Criterion) {
         b.to_async(rt).iter(|| group_creation(&client));
     });
 
-    let g = b_rt.block_on(Group::new(&client, "sync", None)).unwrap();
+    let g = b_rt
+        .block_on(Group::new(&client, "sync", None, Default::default()))
+        .unwrap();
 
     c.bench_function("group sync", |b| {
         let rt = Runtime::new().unwrap();
@@ -43,7 +47,9 @@ fn bench_groups(c: &mut Criterion) {
     c.bench_function("group creation + delete", |b| {
         let rt = Runtime::new().unwrap();
         b.to_async(rt).iter(|| async {
-            let g = Group::new(&client, "delete", None).await.unwrap();
+            let g = Group::new(&client, "delete", None, Default::default())
+                .await
+                .unwrap();
             group_delete(&client, g).await;
         });
     });

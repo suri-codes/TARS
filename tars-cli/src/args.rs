@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use color_eyre::owo_colors::OwoColorize;
 use common::{
     ParseError,
-    types::{Id, Name, Priority},
+    types::{Color, Id, Name, Priority},
 };
 use sqlx::types::chrono::NaiveDateTime;
 
@@ -44,6 +44,9 @@ pub struct GroupAddArgs {
     /// Optional name of parent group.
     /// NOTE: Will be orphan if argument not provided or parent not found.
     pub parent: Option<Name>,
+
+    #[arg(short, long,  value_parser=Color::parse_clap)]
+    pub color: Option<Color>,
 }
 
 #[derive(Debug, Args)]

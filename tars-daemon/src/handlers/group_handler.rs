@@ -6,7 +6,7 @@ use axum::{
 };
 use common::{
     TarsError,
-    types::{Group, Id, Name},
+    types::{Color, Group, Id, Name},
 };
 use tracing::{info, instrument};
 
@@ -38,17 +38,19 @@ async fn create_group(
     let inserted = sqlx::query_as!(
         Group,
         r#"
-            INSERT INTO Groups (pub_id, name, parent_id)
+            INSERT INTO Groups (pub_id, name, parent_id, color)
             VALUES (
+                ?,
                 ?,
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id"
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color"
         "#,
         *group.id,
         *group.name,
-        group.parent_id
+        group.parent_id,
+        group.color
     )
     .fetch_one(&state.pool)
     .await?;
@@ -77,7 +79,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         SELECT
         pub_id as "id: Id",
         name as "name: Name",
-        parent_id as "parent_id: Id"
+        parent_id as "parent_id: Id",
+        color as "color: Color"
         FROM Groups
         "#
     )
@@ -113,7 +116,8 @@ async fn update_group(
             RETURNING
                 name as "name: Name",
                 pub_id as "id: Id",
-                parent_id as "parent_id: Id"
+                parent_id as "parent_id: Id",
+                color as "color: Color"
 
         "#,
         *group.name,
@@ -150,7 +154,8 @@ async fn delete_group(
             RETURNING
                 pub_id as "id: Id",
                 name as "name: Name",
-                parent_id as "parent_id: Id"
+                parent_id as "parent_id: Id",
+                color as "color: Color"
            
         "#,
         *group.id,

@@ -24,7 +24,9 @@ async fn task_creation() {
         .await
         .expect("failed to instantiate client");
 
-    let group = Group::new(&client, "testing", None).await.unwrap();
+    let group = Group::new(&client, "testing", None, Default::default())
+        .await
+        .unwrap();
 
     let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
@@ -54,8 +56,12 @@ async fn task_fetch() {
         .await
         .expect("failed to instantiate client");
 
-    let g_1 = Group::new(&client, "testing", None).await.unwrap();
-    let g_2 = Group::new(&client, "testing2", None).await.unwrap();
+    let g_1 = Group::new(&client, "testing", None, Default::default())
+        .await
+        .unwrap();
+    let g_2 = Group::new(&client, "testing2", None, Default::default())
+        .await
+        .unwrap();
 
     let task1 = Task::new(&client, &g_1, "test", Priority::Low, "nothing", None)
         .await
@@ -96,7 +102,9 @@ async fn task_sync() {
         .await
         .expect("failed to instantiate client");
 
-    let group = Group::new(&client, "testing", None).await.unwrap();
+    let group = Group::new(&client, "testing", None, Default::default())
+        .await
+        .unwrap();
 
     let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
@@ -133,7 +141,9 @@ async fn task_delete() {
         .await
         .expect("failed to instantiate client");
 
-    let group = Group::new(&client, "testing", None).await.unwrap();
+    let group = Group::new(&client, "testing", None, Default::default())
+        .await
+        .unwrap();
 
     let task = Task::new(&client, &group, "test", Priority::Low, "nothing", None)
         .await
