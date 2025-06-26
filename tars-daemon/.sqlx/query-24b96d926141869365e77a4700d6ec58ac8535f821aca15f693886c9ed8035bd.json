@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        g.color as \"group_color: Color\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
   "describe": {
     "columns": [
       {
@@ -29,23 +29,28 @@
         "type_info": "Text"
       },
       {
-        "name": "priority: Priority",
+        "name": "group_color: Color",
         "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 6,
         "type_info": "Integer"
       },
       {
         "name": "description",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Text"
       },
       {
         "name": "completed",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Bool"
       },
       {
         "name": "due",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Datetime"
       }
     ],
@@ -61,8 +66,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "9849f5c83f8b8cd9c03697dc5f32c7888f7584f0100b65a37298f6370c7be822"
+  "hash": "24b96d926141869365e77a4700d6ec58ac8535f821aca15f693886c9ed8035bd"
 }

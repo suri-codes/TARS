@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        g.color as \"group_color: Color\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.completed,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                    WHERE g.pub_id = ?\n                        \n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "task_pub_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_pub_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_parent_id: Id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_color: Color",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "completed",
+        "ordinal": 8,
+        "type_info": "Bool"
+      },
+      {
+        "name": "due",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "f00a5d1c60ed91830de06c665c09a4ae94c7d2515580dc68e11b1466d9dc22e0"
+}
