@@ -11,11 +11,15 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, app::Mode, config::Config};
+use crate::{
+    action::{Action, Selection},
+    app::Mode,
+    config::Config,
+};
 
 use super::{Component, frame_block};
 #[derive(Debug)]
-pub struct TaskView {
+pub struct Inspector {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     task: Option<Task>,
@@ -23,7 +27,7 @@ pub struct TaskView {
     active: bool,
 }
 
-impl TaskView {
+impl Inspector {
     pub async fn new(client: &TarsClient) -> Result<Self> {
         let task = Task::fetch(client, TaskFetchOptions::All)
             .await?
@@ -40,12 +44,12 @@ impl TaskView {
     }
 
     fn mode(&self) -> Mode {
-        Mode::TaskView
+        Mode::Inspector
     }
 }
 
 #[async_trait]
-impl Component for TaskView {
+impl Component for Inspector {
     fn init(
         &mut self,
         _area: ratatui::prelude::Size,
@@ -74,8 +78,9 @@ impl Component for TaskView {
         match action {
             Action::Tick => {}
             Action::Render => {}
-            Action::SwitchTo(Mode::TaskView) => self.active = true,
+            Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
+            Action::Select(Selection::Task(t)) => self.task = Some(t),
             _ => {}
         }
         Ok(None)

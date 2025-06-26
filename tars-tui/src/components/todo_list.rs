@@ -129,16 +129,18 @@ impl Component for TodoList {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        if !self.active {
+            return Ok(None);
+        }
+
         // vim bindings
         // j would move selection down
         // k would move selection up
         // l would move into a new scope
         // h would move into the outer scope
-
         match key.code {
             KeyCode::Char('j') => {
                 // would increment by one
-
                 if let Some(next) = self.tasks.get(self.selection as usize + 1) {
                     self.selection += 1;
                     return Ok(Some(Action::Select(Selection::Task(next.clone()))));

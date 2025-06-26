@@ -17,7 +17,7 @@ use crate::{action::Action, app::Mode, config::Config};
 use super::{Component, frame_block};
 
 #[derive(Default)]
-pub struct TodoExplorer {
+pub struct Explorer {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     active: bool,
@@ -35,7 +35,7 @@ enum TodoWidgetType {
     Group(Group),
 }
 
-impl TodoExplorer {
+impl Explorer {
     pub async fn new(client: &TarsClient) -> Result<Self> {
         // need some sort of datastructure i assume?
         let groups = Group::fetch_all(client).await?;
@@ -51,7 +51,7 @@ impl TodoExplorer {
     }
 
     fn mode(&self) -> Mode {
-        Mode::TodoExplorer
+        Mode::Explorer
     }
 
     fn process(&mut self) {
@@ -64,7 +64,7 @@ impl TodoExplorer {
 }
 
 #[async_trait]
-impl Component for TodoExplorer {
+impl Component for Explorer {
     fn init(
         &mut self,
         _area: ratatui::prelude::Size,
@@ -93,7 +93,7 @@ impl Component for TodoExplorer {
         match action {
             Action::Tick => {}
             Action::Render => {}
-            Action::SwitchTo(Mode::TodoExplorer) => self.active = true,
+            Action::SwitchTo(Mode::Explorer) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
             _ => {}
         }

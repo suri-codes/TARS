@@ -14,8 +14,8 @@ use crate::{action::Action, app::Mode, config::Config, tui::Event};
 
 // pub mod fps;
 // pub mod home;
-pub mod task_view;
-pub mod todo_explorer;
+pub mod explorer;
+pub mod inspector;
 pub mod todo_list;
 
 /// `Component` is a trait that represents a visual and interactive element of the user interface.

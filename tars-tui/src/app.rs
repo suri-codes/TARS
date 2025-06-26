@@ -13,9 +13,7 @@ use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{
-        Component, task_view::TaskView, todo_explorer::TodoExplorer, todo_list::TodoList,
-    },
+    components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
     config::Config,
     tui::{Event, Tui},
 };
@@ -36,17 +34,17 @@ pub struct App {
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
     #[default]
-    TodoExplorer,
+    Explorer,
     TodoList,
-    TaskView,
+    Inspector,
 }
 
 impl From<Mode> for u8 {
     fn from(value: Mode) -> Self {
         match value {
-            Mode::TodoExplorer => 1,
+            Mode::Explorer => 1,
             Mode::TodoList => 2,
-            Mode::TaskView => 3,
+            Mode::Inspector => 3,
         }
     }
 }
@@ -60,14 +58,14 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(TodoExplorer::new(&client).await?),
+                Box::new(Explorer::new(&client).await?),
                 Box::new(TodoList::new(&client).await?),
-                Box::new(TaskView::new(&client).await?),
+                Box::new(Inspector::new(&client).await?),
             ],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::TodoExplorer,
+            mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
