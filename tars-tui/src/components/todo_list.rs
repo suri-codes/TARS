@@ -5,7 +5,7 @@ use common::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::Paragraph,
 };
@@ -164,21 +164,45 @@ impl Component for TodoList {
 
         let constraints: Vec<Constraint> = self.tasks.iter().map(|_| Constraint::Max(1)).collect();
 
-        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
-        for (i, (task, area)) in self.tasks.iter().zip(task_layouts.iter()).enumerate() {
-            frame.render_widget(
-                Paragraph::new((*task.name).to_string()).style({
-                    if i as u16 == self.selection {
-                        if self.active {
-                            Style::new().bg(Color::Blue)
-                        } else {
-                            Style::new().bg(Color::DarkGray)
-                        }
+        let task_group_layouts = Layout::new(Direction::Vertical, constraints).split(area);
+
+        let split = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(60), Constraint::Percentage(40)],
+        );
+
+        let splits: Vec<(Rect, Rect)> = task_group_layouts
+            .iter()
+            .map(|rect| {
+                let virt_split = split.clone();
+
+                let x = virt_split.split(*rect);
+
+                (x[0], x[1])
+            })
+            .collect();
+
+        for (i, (task, (task_area, group_area))) in self.tasks.iter().zip(splits.iter()).enumerate()
+        {
+            let mut text_style = Style::new().fg((&task.group.color).into()).bg({
+                if i as u16 == self.selection {
+                    if self.active {
+                        Color::Rgb(70, 70, 70)
                     } else {
-                        Style::new().bg(Color::Reset)
+                        Color::Rgb(35, 35, 35)
                     }
-                }),
-                *area,
+                } else {
+                    Color::Reset
+                }
+            });
+
+            frame.render_widget(
+                Paragraph::new((*task.name).to_string()).style(text_style),
+                *task_area,
+            );
+            frame.render_widget(
+                Paragraph::new((*task.group.name).to_string()).style(text_style),
+                *group_area,
             );
         }
         Ok(())
