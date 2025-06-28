@@ -1,3 +1,4 @@
+use common::types::{Group, Task};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
@@ -15,4 +16,12 @@ pub enum Action {
     Error(String),
     Help,
     SwitchTo(Mode),
+    Select(Selection),
+    ScopeUpdate(Option<Group>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+pub enum Selection {
+    Task(Task),
+    Group(Group),
 }

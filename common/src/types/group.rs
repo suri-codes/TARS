@@ -1,30 +1,73 @@
+use serde::{Deserialize, Serialize};
+use sqlx::Decode;
+use sqlx::{Database, Encode, Sqlite, Type};
 use std::fmt::Display;
 
 use color_eyre::owo_colors::OwoColorize;
-use serde::{Deserialize, Serialize};
+use ratatui::style::Color as RatColor;
 use tracing::error;
 
-use crate::{TarsClient, TarsError};
+use std::error::Error;
+
+use crate::{ParseError, TarsClient, TarsError};
 
 use super::{Id, Name};
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
+/// A group is what represents a collection of tasks or other groups that share some property.
 pub struct Group {
     pub id: Id,
     pub name: Name,
     pub parent_id: Option<Id>,
+    pub color: Color,
 }
 
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
+/// A wrapper type for colors that can directly be converted to ratatui colors.
+pub struct Color(String);
+
+impl TryFrom<String> for Color {
+    type Error = ParseError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let _col: RatColor = value.parse().map_err(|_| ParseError::FailedToParse)?;
+
+        Ok(Self(value))
+    }
+}
+
+impl From<&Color> for RatColor {
+    fn from(value: &Color) -> Self {
+        let col: RatColor = value.0.parse().unwrap();
+        col
+    }
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Self("white".to_owned())
+    }
+}
+
+impl Color {
+    /// Parser for clap to form this type from a string.
+    pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
+        let x: Color = arg.to_owned().try_into()?;
+
+        Ok(x)
+    }
+}
 impl Group {
     pub fn with_all_fields(
         id: impl Into<Id>,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        color: Color,
     ) -> Self {
         Group {
             id: id.into(),
             name: name.into(),
             parent_id,
+            color,
         }
     }
 
@@ -38,8 +81,9 @@ impl Group {
         client: &TarsClient,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        color: Color,
     ) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name, parent_id);
+        let group = Group::with_all_fields(Id::default(), name, parent_id, color);
 
         let res: Group = client
             .conn
@@ -133,5 +177,55 @@ impl Display for Group {
         }
 
         Ok(())
+    }
+}
+
+// DB is the database driver
+// `'r` is the lifetime of the `Row` being decoded
+impl<'r, DB: Database> Decode<'r, DB> for Color
+where
+    // we want to delegate some of the work to string decoding so let's make sure strings
+    // are supported by the database
+    &'r str: Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as Database>::ValueRef<'r>,
+    ) -> Result<Color, Box<dyn Error + 'static + Send + Sync>> {
+        // the interface of ValueRef is largely unstable at the moment
+        // so this is not directly implementable
+
+        // however, you can delegate to a type that matches the format of the type you want
+        // to decode (such as a UTF-8 string)
+
+        let value = <&str as Decode<DB>>::decode(value)?;
+
+        // now you can parse this into your type (assuming there is a `FromStr`)
+
+        Ok(Color(value.parse()?))
+    }
+}
+
+impl<'q> Encode<'q, Sqlite> for Color {
+    fn encode(
+        self,
+        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError>
+    where
+        Self: Sized,
+    {
+        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode(self.0, buf)
+    }
+
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode_by_ref(&self.0, buf)
+    }
+}
+
+impl Type<Sqlite> for Color {
+    fn type_info() -> <Sqlite as Database>::TypeInfo {
+        todo!()
     }
 }

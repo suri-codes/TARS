@@ -621,6 +621,7 @@ dependencies = [
  "directories 6.0.0",
  "lazy_static",
  "nanoid",
+ "ratatui",
  "reqwest",
  "serde",
  "sqlx",

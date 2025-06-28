@@ -175,7 +175,7 @@ impl Display for Task {
         }
 
         if let Some(due_date) = self.due {
-            writeln!(f, "{}", due_date)?;
+            writeln!(f, "{due_date}")?;
         }
         Ok(())
     }
@@ -185,6 +185,6 @@ impl Display for Task {
 pub enum TaskFetchOptions {
     // NOTE: only add those we deem necessary, dont have to add shit just to add them
     // ById { id: Id },
-    // ByGroup { group: Group },
+    ByGroup { group: Group },
     All,
 }

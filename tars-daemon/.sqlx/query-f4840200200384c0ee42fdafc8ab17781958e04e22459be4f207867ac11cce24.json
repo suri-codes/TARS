@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO Groups (pub_id, name, parent_id)\n            VALUES (\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Groups.name as \"name: Name\", Groups.pub_id as \"id: Id\", Groups.parent_id as \"parent_id: Id\"\n        ",
+  "query": "\n        SELECT name as \"name: Name\", pub_id as \"id: Id\", parent_id as \"parent_id: Id\", color as \"color: Color\" FROM Groups WHERE pub_id = ?\n        ",
   "describe": {
     "columns": [
       {
@@ -17,16 +17,22 @@
         "name": "parent_id: Id",
         "ordinal": 2,
         "type_info": "Text"
+      },
+      {
+        "name": "color: Color",
+        "ordinal": 3,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 1
     },
     "nullable": [
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "ceed3accbed52c6ff783500c9110d8684270d12daa7594394817aba2dd570a65"
+  "hash": "f4840200200384c0ee42fdafc8ab17781958e04e22459be4f207867ac11cce24"
 }

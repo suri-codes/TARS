@@ -74,6 +74,7 @@ impl Db {
                     .await
                     .inspect_err(|e| error!("{e}"))
                     .unwrap();
+                info!("Applied Migrations to db!");
 
                 Ok(pool)
             }

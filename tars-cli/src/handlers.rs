@@ -1,7 +1,7 @@
 use color_eyre::eyre::Result;
 use common::{
     TarsClient,
-    types::{Group, Task, TaskFetchOptions},
+    types::{Color, Group, Task, TaskFetchOptions},
 };
 
 use crate::args::{GroupSubcommand, TaskSubcommand};
@@ -15,8 +15,8 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             let g = match existing {
                 Some(g) => g.to_owned(),
                 None => {
-                    let g = Group::new(client, args.group, None).await?;
-                    eprintln!("Created new group: {}", g);
+                    let g = Group::new(client, args.group, None, Color::default()).await?;
+                    eprintln!("Created new group: {g}");
                     g
                 }
             };
@@ -31,7 +31,7 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             )
             .await?;
 
-            println!("Added Task:\n {}", task);
+            println!("Added Task:\n{task}");
         }
         TaskSubcommand::List(_args) => {
             // TODO: we need to filter on the arguments / debate whether we
@@ -39,8 +39,8 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             let all_tasks = Task::fetch(client, TaskFetchOptions::All).await?;
 
             for t in all_tasks.iter() {
-                println!("{}", t);
-                println!("===========================================");
+                println!("{t}");
+                println!("====================================================")
             }
         }
     }
@@ -62,8 +62,9 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
                 None
             };
 
-            let g = Group::new(client, args.name, parent_id).await?;
-            println!("Added Group: {}", g);
+            let g =
+                Group::new(client, args.name, parent_id, args.color.unwrap_or_default()).await?;
+            println!("Added Group: {g}");
         }
         GroupSubcommand::List(args) => {
             let groups = Group::fetch_all(client).await?;
@@ -87,8 +88,8 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
                 .collect();
 
             for g in filtered {
-                println!("{}", g);
-                println!("=============================")
+                println!("{g}");
+                println!("====================================================")
             }
         }
     }

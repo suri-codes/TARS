@@ -51,7 +51,9 @@ fn bench_tasks(c: &mut Criterion) {
 
     let client = b_rt.block_on(TarsClient::new(addr)).unwrap();
 
-    let group = b_rt.block_on(Group::new(&client, "bench", None)).unwrap();
+    let group = b_rt
+        .block_on(Group::new(&client, "bench", None, Default::default()))
+        .unwrap();
 
     c.bench_function("task creation", |b| {
         let rt = Runtime::new().unwrap();

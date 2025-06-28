@@ -1,7 +1,8 @@
 use axum::{Json, Router, debug_handler, extract::State, routing::post};
+
 use common::{
     TarsError,
-    types::{Group, Id, Name, Priority, Task, TaskFetchOptions},
+    types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
 use tracing::{error, info, instrument};
 
@@ -57,7 +58,7 @@ pub async fn create_task(
     let group = sqlx::query_as!(
         Group,
         r#"
-        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id" FROM Groups WHERE pub_id = ?
+        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id", color as "color: Color" FROM Groups WHERE pub_id = ?
         "#,
         inserted.group_id
     )
@@ -104,6 +105,7 @@ async fn fetch_task(
                         g.name  as group_name,
                         g.pub_id as group_pub_id ,
                         g.parent_id as "group_parent_id: Id",
+                        g.color as "group_color: Color",
                         t.priority as "priority: Priority",
                         t.description,
                         t.completed,
@@ -125,6 +127,54 @@ async fn fetch_task(
                             row.group_pub_id,
                             row.group_name,
                             row.group_parent_id,
+                            row.group_color,
+                        ),
+                        row.task_name,
+                        row.priority,
+                        row.description,
+                        row.completed,
+                        row.due,
+                    )
+                })
+                .collect();
+            info!("Fetched tasks: {:#?}", &tasks);
+
+            Ok(Json::from(tasks))
+        }
+        TaskFetchOptions::ByGroup { group } => {
+            let records = sqlx::query!(
+                r#"
+                    SELECT
+                        t.pub_id as task_pub_id,
+                        t.name as task_name,
+                        g.name  as group_name,
+                        g.pub_id as group_pub_id ,
+                        g.parent_id as "group_parent_id: Id",
+                        g.color as "group_color: Color",
+                        t.priority as "priority: Priority",
+                        t.description,
+                        t.completed,
+                        t.due
+                    FROM Tasks t
+                    JOIN Groups g ON t.group_id = g.pub_id
+                    WHERE g.pub_id = ?
+                        
+                "#,
+                group.id
+            )
+            .fetch_all(&state.pool)
+            .await?;
+
+            let tasks: Vec<Task> = records
+                .into_iter()
+                .map(|row| {
+                    Task::with_all_fields(
+                        row.task_pub_id,
+                        Group::with_all_fields(
+                            row.group_pub_id,
+                            row.group_name,
+                            row.group_parent_id,
+                            row.group_color,
                         ),
                         row.task_name,
                         row.priority,
@@ -172,6 +222,7 @@ async fn update_task(
             group_id,
             (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
             (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Id",
+            (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_color: Color",
             priority as "priority: Priority",
             description,
             completed,
@@ -190,7 +241,12 @@ async fn update_task(
 
     let updated_task = Task::with_all_fields(
         row.task_pub_id,
-        Group::with_all_fields(row.group_id, row.group_name, row.group_parent_id),
+        Group::with_all_fields(
+            row.group_id,
+            row.group_name,
+            row.group_parent_id,
+            row.group_color,
+        ),
         row.task_name,
         row.priority,
         row.description,
@@ -227,8 +283,9 @@ async fn delete_task(
                 t.name as task_name,
                 g.name as group_name,
                 g.parent_id as "group_parent_id: Id",
-                t.group_id,
+                g.color as "group_color: Color",
 
+                t.group_id,
                 t.priority as "priority: Priority",
                 t.description,
                 t.completed,
@@ -245,7 +302,12 @@ async fn delete_task(
 
     let deleted_task = Task::with_all_fields(
         row.task_id,
-        Group::with_all_fields(row.group_id, row.group_name, row.group_parent_id),
+        Group::with_all_fields(
+            row.group_id,
+            row.group_name,
+            row.group_parent_id,
+            row.group_color,
+        ),
         row.task_name,
         row.priority,
         row.description,
