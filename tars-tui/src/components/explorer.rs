@@ -17,6 +17,7 @@ use crate::{action::Action, app::Mode, config::Config};
 use super::{Component, frame_block};
 
 #[derive(Default)]
+/// Explorer component that allows you to navigate between different groups (scopes).
 pub struct Explorer {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,

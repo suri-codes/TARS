@@ -16,6 +16,8 @@ use crate::{
 
 use super::{Component, frame_block};
 #[derive(Debug)]
+/// Inspector component that shows detailed information about groups and tasks,
+/// and allows them to be modified.
 pub struct Inspector {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,

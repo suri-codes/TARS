@@ -14,6 +14,7 @@ use crate::{ParseError, TarsClient, TarsError};
 use super::{Id, Name};
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
+/// A group is what represents a collection of tasks or other groups that share some property.
 pub struct Group {
     pub id: Id,
     pub name: Name,
@@ -22,6 +23,7 @@ pub struct Group {
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
+/// A wrapper type for colors that can directly be converted to ratatui colors.
 pub struct Color(String);
 
 impl TryFrom<String> for Color {
@@ -47,6 +49,7 @@ impl Default for Color {
 }
 
 impl Color {
+    /// Parser for clap to form this type from a string.
     pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
         let x: Color = arg.to_owned().try_into()?;
 

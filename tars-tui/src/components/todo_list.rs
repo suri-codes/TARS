@@ -21,6 +21,7 @@ use color_eyre::Result;
 use super::{Component, frame_block};
 
 #[derive(Debug)]
+/// Component that shows all the tasks within the current scope, ordered by priority.
 pub struct TodoList {
     command_tx: Option<UnboundedSender<Action>>,
     client: TarsClient,
