@@ -73,12 +73,6 @@ impl Explorer {
     }
 
     async fn process(&mut self) -> Result<()> {
-        let root_groups: Vec<&Group> = self
-            .groups
-            .iter()
-            .filter(|e| e.parent_id == self.root)
-            .collect();
-
         let g_to_g = {
             let mut map: HashMap<Id, Vec<Group>> = HashMap::new();
 
@@ -121,14 +115,42 @@ impl Explorer {
 
         let mut new_widgets: Vec<TodoWidget> = vec![];
 
-        for group in root_groups {
-            let mut depth = 0;
+        let mut depth = 0;
+        match self.root {
+            Some(ref root_id) => {
+                let root = self.groups.iter().find(|g| g.id == *root_id).unwrap();
 
-            Explorer::add_children_of_group(&mut new_widgets, group, &g_to_g, &g_to_t, &mut depth);
+                Explorer::add_children_of_group(
+                    &mut new_widgets,
+                    root,
+                    &g_to_g,
+                    &g_to_t,
+                    &mut depth,
+                );
+            }
+
+            None => {
+                let root_groups: Vec<&Group> = self
+                    .groups
+                    .iter()
+                    .filter(|e| e.parent_id == self.root)
+                    .collect();
+
+                for group in root_groups {
+                    let mut depth = 0;
+
+                    Explorer::add_children_of_group(
+                        &mut new_widgets,
+                        group,
+                        &g_to_g,
+                        &g_to_t,
+                        &mut depth,
+                    );
+                }
+            }
         }
 
         self.entries = new_widgets;
-
         Ok(())
     }
 
