@@ -9,8 +9,8 @@ use common::{
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, Paragraph},
+    style::{Color, Modifier, Style, Stylize},
+    widgets::{Block, BorderType, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
@@ -34,7 +34,7 @@ pub struct Explorer {
     tasks: Vec<Task>,
     entries: Vec<TodoWidget>,
     root: Option<Id>,
-    selection: u16,
+    selection: Vec<u16>,
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +64,7 @@ impl Explorer {
             tasks,
             entries: Vec::new(),
             root: None,
-            selection: 0,
+            selection: vec![0],
         })
     }
 
@@ -218,8 +218,11 @@ impl Component for Explorer {
         match key.code {
             KeyCode::Char('j') => {
                 info!("J pressed");
-                if let Some(next) = self.entries.get(self.selection as usize + 1) {
-                    self.selection += 1;
+                if let Some(next) = self
+                    .entries
+                    .get(*self.selection.last().unwrap() as usize + 1)
+                {
+                    *self.selection.last_mut().unwrap() += 1;
 
                     match &next.kind {
                         TodoWidgetKind::Task(t) => {
@@ -240,13 +243,15 @@ impl Component for Explorer {
 
             KeyCode::Char('k') => {
                 if let Some(prev) = self.entries.get({
-                    if let Some(i) = (self.selection as usize).checked_sub(1) {
+                    if let Some(i) = (*self.selection.last().unwrap_or(&0) as usize).checked_sub(1)
+                    {
                         i
                     } else {
                         return Ok(None);
                     }
                 }) {
-                    self.selection -= 1;
+                    *self.selection.last_mut().unwrap() -= 1;
+
                     match &prev.kind {
                         TodoWidgetKind::Task(t) => {
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
@@ -261,10 +266,14 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('l') => {
-                if let TodoWidgetKind::Group(ref g) =
-                    self.entries.get(self.selection as usize).unwrap().kind
+                if let TodoWidgetKind::Group(ref g) = self
+                    .entries
+                    .get(*self.selection.last().unwrap() as usize)
+                    .unwrap()
+                    .kind
                 {
                     self.root = Some(g.id.clone());
+                    self.selection.push(0);
 
                     return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
                 };
@@ -278,6 +287,7 @@ impl Component for Explorer {
 
                     let Some(ref parent_id) = root.parent_id else {
                         self.root = None;
+                        let _ = self.selection.pop();
                         return Ok(Some(Action::ScopeUpdate(None)));
                     };
 
@@ -287,6 +297,7 @@ impl Component for Explorer {
                         .expect("this group should exist");
 
                     self.root = Some(parent.id.clone());
+                    self.selection.push(0);
                     return Ok(Some(Action::ScopeUpdate(Some(parent.clone()))));
                 } else {
                     return Ok(None);
@@ -322,18 +333,21 @@ impl Component for Explorer {
         // groups organized by parents
 
         for (i, (entry, area)) in self.entries.iter().zip(task_layouts.iter()).enumerate() {
-            let widget = match entry.kind {
-                TodoWidgetKind::Task(ref t) => Paragraph::new(t.name.to_string())
-                    .style(Style::new().fg(t.group.color.as_ref().into())),
-
-                TodoWidgetKind::Group(ref g) => Paragraph::new(g.name.to_string())
-                    .style(Style::new().fg(Color::Black).bg(g.color.as_ref().into())),
-            };
-
-            let widget = if i as u16 == self.selection {
-                widget.block(Block::bordered().border_type(ratatui::widgets::BorderType::Plain))
+            let (style, postfix) = if *self.selection.last().unwrap() == i as u16 {
+                (Style::new().bold().italic(), "*")
+                // .underlined()
+                // .underline_color(Color::Black)
+                // .slow_blink()
+                // .rapid_blink()
             } else {
-                widget
+                (Style::new(), "")
+            };
+            let widget = match entry.kind {
+                TodoWidgetKind::Task(ref t) => Paragraph::new(format!("{}    {postfix}", *t.name))
+                    .style(style.fg(t.group.color.as_ref().into())),
+
+                TodoWidgetKind::Group(ref g) => Paragraph::new(format!("{}    {postfix}", *g.name))
+                    .style(style.fg(Color::Black).bg(g.color.as_ref().into())),
             };
 
             // pad with the depth we want

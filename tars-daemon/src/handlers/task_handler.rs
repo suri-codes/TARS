@@ -1,9 +1,12 @@
+use async_recursion::async_recursion;
 use axum::{Json, Router, debug_handler, extract::State, routing::post};
 
 use common::{
     TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
+use criterion::async_executor;
+use sqlx::{Pool, Sqlite};
 use tracing::{error, info, instrument};
 
 use crate::DaemonState;
@@ -142,8 +145,27 @@ async fn fetch_task(
             Ok(Json::from(tasks))
         }
         TaskFetchOptions::ByGroup { group } => {
-            let records = sqlx::query!(
-                r#"
+            let mut tasks: Vec<Task> = Vec::new();
+
+            recurse_group_fetch(&mut tasks, group, &state.pool).await?;
+
+            info!("Fetched tasks: {:#?}", &state.pool);
+
+            Ok(Json::from(tasks))
+        }
+    }
+}
+
+#[async_recursion]
+async fn recurse_group_fetch(
+    tasks: &mut Vec<Task>,
+    group: Group,
+    pool: &Pool<Sqlite>,
+) -> Result<(), TarsError> {
+    // first we add the tasks pertinent to the passed in group
+
+    let records = sqlx::query!(
+        r#"
                     SELECT
                         t.pub_id as task_pub_id,
                         t.name as task_name,
@@ -160,37 +182,52 @@ async fn fetch_task(
                     WHERE g.pub_id = ?
                         
                 "#,
-                group.id
-            )
-            .fetch_all(&state.pool)
-            .await?;
+        group.id
+    )
+    .fetch_all(pool)
+    .await?;
 
-            let tasks: Vec<Task> = records
-                .into_iter()
-                .map(|row| {
-                    Task::with_all_fields(
-                        row.task_pub_id,
-                        Group::with_all_fields(
-                            row.group_pub_id,
-                            row.group_name,
-                            row.group_parent_id,
-                            row.group_color,
-                        ),
-                        row.task_name,
-                        row.priority,
-                        row.description,
-                        row.completed,
-                        row.due,
-                    )
-                })
-                .collect();
-            info!("Fetched tasks: {:#?}", &tasks);
+    for row in records {
+        let task = Task::with_all_fields(
+            row.task_pub_id,
+            Group::with_all_fields(
+                row.group_pub_id,
+                row.group_name,
+                row.group_parent_id,
+                row.group_color,
+            ),
+            row.task_name,
+            row.priority,
+            row.description,
+            row.completed,
+            row.due,
+        );
 
-            Ok(Json::from(tasks))
-        }
+        tasks.push(task)
     }
-}
 
+    // now lets look at children groups
+    let children = sqlx::query_as!(
+        Group,
+        r#"
+        SELECT pub_id as "id: Id", name as "name: Name", color as "color: Color" , parent_id as "parent_id: Id"
+        FROM Groups
+        WHERE parent_id = ?
+        "#,
+        group.id
+    ).fetch_all(pool).await?;
+
+    for child in children {
+        recurse_group_fetch(tasks, child, pool).await?;
+    }
+
+    Ok(())
+
+    //
+    //
+    //
+    // then we take whatever groups are the children of this one, and add those.
+}
 /// Takes in a task, uses the id to find the old one and updates it with the new information.
 ///
 /// # Errors
