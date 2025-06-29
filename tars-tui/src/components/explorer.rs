@@ -41,6 +41,7 @@ pub struct Explorer {
 struct TodoWidget {
     kind: TodoWidgetKind,
     depth: u16,
+    parent_group: Option<Group>,
 }
 
 #[expect(dead_code)]
@@ -119,6 +120,11 @@ impl Explorer {
         match self.root {
             Some(ref root_id) => {
                 let root = self.groups.iter().find(|g| g.id == *root_id).unwrap();
+                let parent = if let Some(ref parent_id) = root.parent_id {
+                    Some(self.groups.iter().find(|g| g.id == *parent_id).unwrap())
+                } else {
+                    None
+                };
 
                 Explorer::add_children_of_group(
                     &mut new_widgets,
@@ -126,6 +132,7 @@ impl Explorer {
                     &g_to_g,
                     &g_to_t,
                     &mut depth,
+                    parent.cloned(),
                 );
             }
 
@@ -145,6 +152,7 @@ impl Explorer {
                         &g_to_g,
                         &g_to_t,
                         &mut depth,
+                        None,
                     );
                 }
             }
@@ -160,20 +168,24 @@ impl Explorer {
         g_to_g: &HashMap<Id, Vec<Group>>,
         g_to_t: &HashMap<Id, Vec<Task>>,
         depth: &mut u16,
+        parent_group: Option<Group>,
     ) {
         // add the group first
         widgets.push(TodoWidget {
             kind: TodoWidgetKind::Group(group.clone()),
             depth: *depth,
+            parent_group: parent_group.clone(),
         });
 
         *depth += 1;
+        let parent_group = Some(group);
 
         if let Some(tasks) = g_to_t.get(&group.id) {
             for task in tasks {
                 widgets.push(TodoWidget {
                     kind: TodoWidgetKind::Task(task.clone()),
                     depth: *depth,
+                    parent_group: parent_group.cloned(),
                 });
             }
         }
@@ -181,7 +193,14 @@ impl Explorer {
         if let Some(groups) = g_to_g.get(&group.id) {
             *depth += 1;
             for group in groups {
-                Explorer::add_children_of_group(widgets, group, g_to_g, g_to_t, depth);
+                Explorer::add_children_of_group(
+                    widgets,
+                    group,
+                    g_to_g,
+                    g_to_t,
+                    depth,
+                    parent_group.cloned(),
+                );
             }
         }
     }
@@ -357,10 +376,6 @@ impl Component for Explorer {
         for (i, (entry, area)) in self.entries.iter().zip(task_layouts.iter()).enumerate() {
             let (style, postfix) = if *self.selection.last().unwrap() == i as u16 {
                 (Style::new().bold().italic(), "*")
-                // .underlined()
-                // .underline_color(Color::Black)
-                // .slow_blink()
-                // .rapid_blink()
             } else {
                 (Style::new(), "")
             };
