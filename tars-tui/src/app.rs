@@ -122,7 +122,7 @@ impl App {
             _ => {}
         }
         for component in self.components.iter_mut() {
-            if let Some(action) = component.handle_events(Some(event.clone()))? {
+            if let Some(action) = component.handle_events(Some(event.clone())).await? {
                 action_tx.send(action)?;
             }
         }

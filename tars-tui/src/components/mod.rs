@@ -69,9 +69,9 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
+    async fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
         let action = match event {
-            Some(Event::Key(key_event)) => self.handle_key_event(key_event)?,
+            Some(Event::Key(key_event)) => self.handle_key_event(key_event).await?,
             Some(Event::Mouse(mouse_event)) => self.handle_mouse_event(mouse_event)?,
             _ => None,
         };
@@ -86,7 +86,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         let _ = key; // to appease clippy
         Ok(None)
     }

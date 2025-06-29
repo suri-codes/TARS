@@ -10,6 +10,7 @@ use ratatui::{
     widgets::Paragraph,
 };
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 
 use crate::{
     action::{Action, Selection},
@@ -111,7 +112,7 @@ impl Component for TodoList {
             _ => Ok(None),
         }
     }
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         if !self.active {
             return Ok(None);
         }
