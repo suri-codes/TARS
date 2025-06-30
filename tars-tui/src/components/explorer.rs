@@ -8,7 +8,6 @@ use common::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
-use libc::EXDEV;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style, Stylize},
@@ -32,36 +31,20 @@ pub struct Explorer {
     config: Config,
     client: TarsClient,
     active: bool,
-    groups: Vec<Group>,
-    tasks: Vec<Task>,
-    entries: Vec<TodoWidget>,
-    root: Option<Id>,
+    scope: NodeId,
     selection: Vec<u16>,
     tree: Tree<TarsNode>,
+    // pot: Vec<&Node TarsNode>>,
 }
 
-#[derive(Debug, Clone)]
-struct TodoWidget {
-    kind: TarsKind,
-    depth: u16,
-    parent_group: Option<NodeId>,
-}
-
-#[expect(dead_code)]
-#[derive(Debug, Clone)]
-enum TodoWidgetKind {
-    Task(Task),
-    Group(Group),
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum TarsKind {
     Root,
     Task(Task),
     Group(Group),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct TarsNode {
     kind: TarsKind,
     parent: Option<NodeId>,
@@ -70,24 +53,19 @@ struct TarsNode {
 
 impl Explorer {
     pub async fn new(client: &TarsClient) -> Result<Self> {
-        // need some sort of datastructure i assume?
-        let groups = Group::fetch_all(client).await?;
-        let tasks = Task::fetch(client, TaskFetchOptions::All).await?;
+        let tree = Self::generate_tree(client).await?;
+        let root = tree.root_node_id().unwrap();
 
-        let mut explorer = Self {
+        let explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
             active: false,
-            groups,
-            tasks,
-            entries: Vec::new(),
-            root: None,
+            scope: tree.root_node_id().unwrap().clone(),
             selection: vec![0],
-            tree: TreeBuilder::new().build(),
+            tree,
+            // pot,
         };
-
-        explorer.generate_tree().await?;
 
         Ok(explorer)
     }
@@ -96,11 +74,11 @@ impl Explorer {
         Mode::Explorer
     }
 
-    async fn generate_tree(&mut self) -> Result<()> {
+    async fn generate_tree(client: &TarsClient) -> Result<Tree<TarsNode>> {
         let g_to_g = {
             let mut map: HashMap<Id, Vec<Group>> = HashMap::new();
 
-            for group in Group::fetch_all(&self.client).await? {
+            for group in Group::fetch_all(&client).await? {
                 let Some(ref parent_id) = group.parent_id else {
                     continue;
                 };
@@ -122,7 +100,7 @@ impl Explorer {
         let g_to_t = {
             let mut map: HashMap<Id, Vec<Task>> = HashMap::new();
 
-            for task in Task::fetch(&self.client, TaskFetchOptions::All).await? {
+            for task in Task::fetch(&client, TaskFetchOptions::All).await? {
                 let children = match map.get_mut(&task.group.id) {
                     Some(e) => e,
                     None => {
@@ -148,10 +126,10 @@ impl Explorer {
             InsertBehavior::AsRoot,
         )?;
 
-        let root_groups: Vec<&Group> = self
-            .groups
+        let all_groups = Group::fetch_all(client).await?;
+        let root_groups: Vec<&Group> = all_groups
             .iter()
-            .filter(|e| e.parent_id == self.root)
+            .filter(|e| e.parent_id.is_none())
             .collect();
 
         for group in root_groups {
@@ -167,9 +145,9 @@ impl Explorer {
             )?;
         }
 
-        self.tree = tree;
+        info!("{tree:#?}");
 
-        Ok(())
+        Ok(tree)
     }
 
     fn tree_children_of_group(
@@ -221,28 +199,31 @@ impl Explorer {
         Ok(())
     }
 
-    async fn process(&mut self) -> Result<()> {
-        //TODO: take tree and turns it into renderable widgets
-        //
-        // self.tree.ancestors(node_id)
+    // async fn process(&mut self) -> Result<()> {
+    //     //TODO: take tree and turns it into renderable widgets
+    //     //
+    //     // self.tree.ancestors(node_id)
 
-        let root = self.tree.root_node_id().expect("root should exist by now");
-        let mut widgets: Vec<TodoWidget> = Vec::new();
-        for node in self.tree.traverse_pre_order(root)? {
-            let node = node.data();
-            widgets.push(TodoWidget {
-                kind: node.kind.clone(),
-                depth: node.depth,
-                parent_group: node.parent.clone(),
-            });
+    //     let root = self.tree.root_node_id().expect("root should exist by now");
+    //     let mut widgets: Vec<TodoWidget> = Vec::new();
+    //     for node in self.tree.traverse_pre_order(root)? {
+    //         let node = node.data();
+    //         if node.kind == TarsKind::Root {
+    //             continue;
+    //         }
+    //         widgets.push(TodoWidget {
+    //             kind: node.kind.clone(),
+    //             depth: node.depth,
+    //             parent_group: node.parent.clone(),
+    //         });
 
-            info!("{node:#?}")
-        }
+    //         info!("{node:#?}")
+    //     }
 
-        self.entries = widgets;
+    //     self.entries = widgets;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }
 
 #[async_trait]
@@ -274,9 +255,8 @@ impl Component for Explorer {
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
         match action {
             Action::Tick => {
-                self.process().await?;
-
-                self.generate_tree().await?;
+                // let updated_tree = Self::generate_tree(&self.client).await?;
+                // self.tree = updated_tree;
             }
             Action::Render => {}
             Action::SwitchTo(Mode::Explorer) => self.active = true,
@@ -297,16 +277,22 @@ impl Component for Explorer {
             return Ok(None);
         }
 
+        let pot: Vec<(NodeId, &Node<TarsNode>)> = self
+            .tree
+            .traverse_pre_order_ids(&self.scope)
+            .unwrap()
+            .zip(self.tree.traverse_pre_order(&self.scope).unwrap())
+            .collect();
+
         match key.code {
             KeyCode::Char('j') => {
                 info!("J pressed");
-                if let Some(next) = self
-                    .entries
-                    .get(*self.selection.last().unwrap() as usize + 1)
+                if let Some((next_id, next_node)) =
+                    pot.get(*self.selection.last().unwrap() as usize + 1)
                 {
                     *self.selection.last_mut().unwrap() += 1;
 
-                    match &next.kind {
+                    match &next_node.data().kind {
                         TarsKind::Root => {}
                         TarsKind::Task(t) => {
                             info!("selected: {t:#?}!");
@@ -325,7 +311,7 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('k') => {
-                if let Some(prev) = self.entries.get({
+                if let Some((prev_id, prev_node)) = pot.get({
                     if let Some(i) = (*self.selection.last().unwrap_or(&0) as usize).checked_sub(1)
                     {
                         i
@@ -335,7 +321,7 @@ impl Component for Explorer {
                 }) {
                     *self.selection.last_mut().unwrap() -= 1;
 
-                    match &prev.kind {
+                    match &prev_node.data().kind {
                         TarsKind::Root => {}
                         TarsKind::Task(t) => {
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
@@ -350,13 +336,12 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('l') => {
-                if let TarsKind::Group(ref g) = self
-                    .entries
-                    .get(*self.selection.last().unwrap() as usize)
-                    .unwrap()
-                    .kind
-                {
-                    self.root = Some(g.id.clone());
+                // all we do here is change the scope to be this new one
+                let (curr_id, curr_node) =
+                    pot.get(*self.selection.last().unwrap() as usize).unwrap();
+
+                if let TarsKind::Group(ref g) = curr_node.data().kind {
+                    self.scope = curr_id.clone();
                     self.selection.push(0);
 
                     return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
@@ -365,27 +350,36 @@ impl Component for Explorer {
                 Ok(None)
             }
             KeyCode::Char('h') => {
-                if let Some(ref root) = self.root {
-                    let all_groups = Group::fetch_all(&self.client).await?;
-                    let root = all_groups.iter().find(|g| g.id == *root).unwrap();
+                // let nod j = self.tree.get(&self.scope)?;
 
-                    let Some(ref parent_id) = root.parent_id else {
-                        self.root = None;
-                        let _ = self.selection.pop();
-                        return Ok(Some(Action::ScopeUpdate(None)));
-                    };
+                // now we need the ancestors of this guy
+                let ids: Vec<&NodeId> = self.tree.ancestor_ids(&self.scope)?.collect();
+                info!("ancestors: {ids:#?}");
 
-                    let parent = all_groups
-                        .iter()
-                        .find(|g| g.id == *parent_id)
-                        .expect("this group should exist");
+                if let Some(parent) = ids.first() {
+                    let node = self.tree.get(parent)?;
+                    self.scope = (*parent).clone();
+                };
 
-                    self.root = Some(parent.id.clone());
-                    self.selection.push(0);
-                    return Ok(Some(Action::ScopeUpdate(Some(parent.clone()))));
-                } else {
-                    return Ok(None);
-                }
+                Ok(None)
+
+                // let all_groups = Group::fetch_all(&self.client).await?;
+                // let root = all_groups.iter().find(|g| g.id == *root).unwrap();
+
+                // let Some(ref parent_id) = root.parent_id else {
+                //     self.root = None;
+                //     let _ = self.selection.pop();
+                //     return Ok(Some(Action::ScopeUpdate(None)));
+                // };
+
+                // let parent = all_groups
+                //     .iter()
+                //     .find(|g| g.id == *parent_id)
+                //     .expect("this group should exist");
+
+                // self.root = Some(parent.id.clone());
+                // self.selection.push(0);
+                // return Ok(Some(Action::ScopeUpdate(Some(parent.clone()))));
             }
 
             _ => Ok(None),
@@ -404,8 +398,18 @@ impl Component for Explorer {
             .vertical_margin(1)
             .split(area)[0];
 
-        let constraints: Vec<Constraint> =
-            self.entries.iter().map(|_| Constraint::Max(1)).collect();
+        let root_node_id = self.tree.root_node_id().expect("root node id should exist");
+
+        let pot: Vec<TarsNode> = self
+            .tree
+            .traverse_pre_order(&self.scope)?
+            .enumerate()
+            // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
+            .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
+            .map(|(_, n)| n.data().clone())
+            .collect();
+
+        let constraints: Vec<Constraint> = pot.iter().map(|_| Constraint::Max(1)).collect();
 
         let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
         // how am i supposed to render this shit dawg
@@ -416,7 +420,7 @@ impl Component for Explorer {
 
         // groups organized by parents
 
-        for (i, (entry, area)) in self.entries.iter().zip(task_layouts.iter()).enumerate() {
+        for (i, (entry, area)) in pot.iter().zip(task_layouts.iter()).enumerate() {
             let (style, postfix) = if *self.selection.last().unwrap() == i as u16 {
                 (Style::new().bold().italic(), "*")
             } else {
