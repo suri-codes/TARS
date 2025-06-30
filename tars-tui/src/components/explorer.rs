@@ -8,6 +8,7 @@ use common::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
+use libc::EXDEV;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style, Stylize},
@@ -41,9 +42,9 @@ pub struct Explorer {
 
 #[derive(Debug, Clone)]
 struct TodoWidget {
-    kind: TodoWidgetKind,
+    kind: TarsKind,
     depth: u16,
-    parent_group: Option<Group>,
+    parent_group: Option<NodeId>,
 }
 
 #[expect(dead_code)]
@@ -53,7 +54,7 @@ enum TodoWidgetKind {
     Group(Group),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum TarsKind {
     Root,
     Task(Task),
@@ -64,6 +65,7 @@ enum TarsKind {
 struct TarsNode {
     kind: TarsKind,
     parent: Option<NodeId>,
+    depth: u16,
 }
 
 impl Explorer {
@@ -71,7 +73,8 @@ impl Explorer {
         // need some sort of datastructure i assume?
         let groups = Group::fetch_all(client).await?;
         let tasks = Task::fetch(client, TaskFetchOptions::All).await?;
-        Ok(Self {
+
+        let mut explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
@@ -82,7 +85,11 @@ impl Explorer {
             root: None,
             selection: vec![0],
             tree: TreeBuilder::new().build(),
-        })
+        };
+
+        explorer.generate_tree().await?;
+
+        Ok(explorer)
     }
 
     fn mode(&self) -> Mode {
@@ -136,6 +143,7 @@ impl Explorer {
             Node::new(TarsNode {
                 kind: TarsKind::Root,
                 parent: None,
+                depth: 0,
             }),
             InsertBehavior::AsRoot,
         )?;
@@ -159,7 +167,6 @@ impl Explorer {
             )?;
         }
 
-        info!("{tree:#?}");
         self.tree = tree;
 
         Ok(())
@@ -178,6 +185,7 @@ impl Explorer {
             Node::new(TarsNode {
                 kind: TarsKind::Group(group.clone()),
                 parent: Some(parent_id.clone()),
+                depth: *depth,
             }),
             InsertBehavior::UnderNode(&parent_id),
         )?;
@@ -190,6 +198,7 @@ impl Explorer {
                     Node::new(TarsNode {
                         kind: TarsKind::Task(task.clone()),
                         parent: Some(group_id.clone()),
+                        depth: *depth,
                     }),
                     InsertBehavior::UnderNode(&group_id),
                 );
@@ -214,136 +223,25 @@ impl Explorer {
 
     async fn process(&mut self) -> Result<()> {
         //TODO: take tree and turns it into renderable widgets
+        //
+        // self.tree.ancestors(node_id)
 
-        let g_to_g = {
-            let mut map: HashMap<Id, Vec<Group>> = HashMap::new();
+        let root = self.tree.root_node_id().expect("root should exist by now");
+        let mut widgets: Vec<TodoWidget> = Vec::new();
+        for node in self.tree.traverse_pre_order(root)? {
+            let node = node.data();
+            widgets.push(TodoWidget {
+                kind: node.kind.clone(),
+                depth: node.depth,
+                parent_group: node.parent.clone(),
+            });
 
-            for group in Group::fetch_all(&self.client).await? {
-                let Some(ref parent_id) = group.parent_id else {
-                    continue;
-                };
-
-                let children = match map.get_mut(parent_id) {
-                    Some(e) => e,
-                    None => {
-                        map.insert(parent_id.clone(), Vec::new());
-                        map.get_mut(parent_id).unwrap()
-                    }
-                };
-
-                children.push(group)
-            }
-
-            map
-        };
-
-        let g_to_t = {
-            let mut map: HashMap<Id, Vec<Task>> = HashMap::new();
-
-            for task in Task::fetch(&self.client, TaskFetchOptions::All).await? {
-                let children = match map.get_mut(&task.group.id) {
-                    Some(e) => e,
-                    None => {
-                        map.insert(task.group.id.clone(), Vec::new());
-                        map.get_mut(&task.group.id).unwrap()
-                    }
-                };
-
-                children.push(task)
-            }
-
-            map
-        };
-
-        let mut new_widgets: Vec<TodoWidget> = vec![];
-
-        let mut depth = 0;
-        match self.root {
-            Some(ref root_id) => {
-                let root = self.groups.iter().find(|g| g.id == *root_id).unwrap();
-                let parent = if let Some(ref parent_id) = root.parent_id {
-                    Some(self.groups.iter().find(|g| g.id == *parent_id).unwrap())
-                } else {
-                    None
-                };
-
-                Explorer::add_children_of_group(
-                    &mut new_widgets,
-                    root,
-                    &g_to_g,
-                    &g_to_t,
-                    &mut depth,
-                    parent.cloned(),
-                );
-            }
-
-            None => {
-                let root_groups: Vec<&Group> = self
-                    .groups
-                    .iter()
-                    .filter(|e| e.parent_id == self.root)
-                    .collect();
-
-                for group in root_groups {
-                    let mut depth = 0;
-
-                    Explorer::add_children_of_group(
-                        &mut new_widgets,
-                        group,
-                        &g_to_g,
-                        &g_to_t,
-                        &mut depth,
-                        None,
-                    );
-                }
-            }
+            info!("{node:#?}")
         }
 
-        self.entries = new_widgets;
+        self.entries = widgets;
+
         Ok(())
-    }
-
-    fn add_children_of_group(
-        widgets: &mut Vec<TodoWidget>,
-        group: &Group,
-        g_to_g: &HashMap<Id, Vec<Group>>,
-        g_to_t: &HashMap<Id, Vec<Task>>,
-        depth: &mut u16,
-        parent_group: Option<Group>,
-    ) {
-        // add the group first
-        widgets.push(TodoWidget {
-            kind: TodoWidgetKind::Group(group.clone()),
-            depth: *depth,
-            parent_group: parent_group.clone(),
-        });
-
-        *depth += 1;
-        let parent_group = Some(group);
-
-        if let Some(tasks) = g_to_t.get(&group.id) {
-            for task in tasks {
-                widgets.push(TodoWidget {
-                    kind: TodoWidgetKind::Task(task.clone()),
-                    depth: *depth,
-                    parent_group: parent_group.cloned(),
-                });
-            }
-        }
-
-        if let Some(groups) = g_to_g.get(&group.id) {
-            *depth += 1;
-            for group in groups {
-                Explorer::add_children_of_group(
-                    widgets,
-                    group,
-                    g_to_g,
-                    g_to_t,
-                    depth,
-                    parent_group.cloned(),
-                );
-            }
-        }
     }
 }
 
@@ -409,11 +307,12 @@ impl Component for Explorer {
                     *self.selection.last_mut().unwrap() += 1;
 
                     match &next.kind {
-                        TodoWidgetKind::Task(t) => {
+                        TarsKind::Root => {}
+                        TarsKind::Task(t) => {
                             info!("selected: {t:#?}!");
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
                         }
-                        TodoWidgetKind::Group(g) => {
+                        TarsKind::Group(g) => {
                             info!("selected: {g:#?}!");
                             return Ok(Some(Action::Select(Selection::Group(g.clone()))));
                         }
@@ -437,10 +336,11 @@ impl Component for Explorer {
                     *self.selection.last_mut().unwrap() -= 1;
 
                     match &prev.kind {
-                        TodoWidgetKind::Task(t) => {
+                        TarsKind::Root => {}
+                        TarsKind::Task(t) => {
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
                         }
-                        TodoWidgetKind::Group(g) => {
+                        TarsKind::Group(g) => {
                             return Ok(Some(Action::Select(Selection::Group(g.clone()))));
                         }
                     };
@@ -450,7 +350,7 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('l') => {
-                if let TodoWidgetKind::Group(ref g) = self
+                if let TarsKind::Group(ref g) = self
                     .entries
                     .get(*self.selection.last().unwrap() as usize)
                     .unwrap()
@@ -523,10 +423,11 @@ impl Component for Explorer {
                 (Style::new(), "")
             };
             let widget = match entry.kind {
-                TodoWidgetKind::Task(ref t) => Paragraph::new(format!("{}    {postfix}", *t.name))
+                TarsKind::Root => Paragraph::new("SHOULDNTBEPOSSIBLE"),
+                TarsKind::Task(ref t) => Paragraph::new(format!("{}    {postfix}", *t.name))
                     .style(style.fg(t.group.color.as_ref().into())),
 
-                TodoWidgetKind::Group(ref g) => Paragraph::new(format!("{}    {postfix}", *g.name))
+                TarsKind::Group(ref g) => Paragraph::new(format!("{}    {postfix}", *g.name))
                     .style(style.fg(Color::Black).bg(g.color.as_ref().into())),
             };
 
