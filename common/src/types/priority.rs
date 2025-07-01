@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::ParseError;
 /// The priority varying priority levels for a Task.
-#[derive(sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(
+    sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord,
+)]
 #[repr(i32)]
 pub enum Priority {
     Low = 1,

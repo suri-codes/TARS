@@ -111,7 +111,7 @@ impl Component for TodoList {
             _ => Ok(None),
         }
     }
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         if !self.active {
             return Ok(None);
         }

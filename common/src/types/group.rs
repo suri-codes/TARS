@@ -42,9 +42,21 @@ impl From<&Color> for RatColor {
     }
 }
 
+impl From<Color> for RatColor {
+    fn from(value: Color) -> Self {
+        let col: RatColor = value.0.parse().unwrap();
+        col
+    }
+}
 impl Default for Color {
     fn default() -> Self {
         Self("white".to_owned())
+    }
+}
+
+impl AsRef<Color> for Color {
+    fn as_ref(&self) -> &Color {
+        self
     }
 }
 

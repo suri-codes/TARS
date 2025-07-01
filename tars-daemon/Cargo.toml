@@ -14,6 +14,7 @@ sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs" ,
 
 common = {path = "../common"}
 criterion = { version = "0.6.0", features = ["async_tokio"] }
+async-recursion = "1.1.1"
 
 
 [[bench]]
