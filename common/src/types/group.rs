@@ -67,6 +67,10 @@ impl Color {
 
         Ok(x)
     }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
 impl Group {
     pub fn with_all_fields(
