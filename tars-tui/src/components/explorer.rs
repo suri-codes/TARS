@@ -10,8 +10,8 @@ use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style, Stylize},
-    widgets::{Block, BorderType, Paragraph},
+    style::{Color, Style, Stylize},
+    widgets::Paragraph,
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
@@ -32,8 +32,9 @@ pub struct Explorer {
     client: TarsClient,
     active: bool,
     scope: NodeId,
-    selection: Vec<u16>,
+    selection: NodeId,
     tree: Tree<TarsNode>,
+    rel_depth: u16,
     // pot: Vec<&Node TarsNode>>,
 }
 
@@ -47,6 +48,8 @@ enum TarsKind {
 #[derive(Debug, Clone)]
 struct TarsNode {
     kind: TarsKind,
+    // might need it when creating a new task but even then i think that
+    // should just cause a node refresh so this should ultimately be removed
     parent: Option<NodeId>,
     depth: u16,
 }
@@ -56,14 +59,17 @@ impl Explorer {
         let tree = Self::generate_tree(client).await?;
         let root = tree.root_node_id().unwrap();
 
+        let pot: Vec<NodeId> = tree.traverse_pre_order_ids(root).unwrap().collect();
+
         let explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
             active: false,
             scope: tree.root_node_id().unwrap().clone(),
-            selection: vec![0],
+            selection: pot.get(1).unwrap().clone(),
             tree,
+            rel_depth: 0,
             // pot,
         };
 
@@ -78,7 +84,7 @@ impl Explorer {
         let g_to_g = {
             let mut map: HashMap<Id, Vec<Group>> = HashMap::new();
 
-            for group in Group::fetch_all(&client).await? {
+            for group in Group::fetch_all(client).await? {
                 let Some(ref parent_id) = group.parent_id else {
                     continue;
                 };
@@ -100,7 +106,7 @@ impl Explorer {
         let g_to_t = {
             let mut map: HashMap<Id, Vec<Task>> = HashMap::new();
 
-            for task in Task::fetch(&client, TaskFetchOptions::All).await? {
+            for task in Task::fetch(client, TaskFetchOptions::All).await? {
                 let children = match map.get_mut(&task.group.id) {
                     Some(e) => e,
                     None => {
@@ -198,32 +204,6 @@ impl Explorer {
         }
         Ok(())
     }
-
-    // async fn process(&mut self) -> Result<()> {
-    //     //TODO: take tree and turns it into renderable widgets
-    //     //
-    //     // self.tree.ancestors(node_id)
-
-    //     let root = self.tree.root_node_id().expect("root should exist by now");
-    //     let mut widgets: Vec<TodoWidget> = Vec::new();
-    //     for node in self.tree.traverse_pre_order(root)? {
-    //         let node = node.data();
-    //         if node.kind == TarsKind::Root {
-    //             continue;
-    //         }
-    //         widgets.push(TodoWidget {
-    //             kind: node.kind.clone(),
-    //             depth: node.depth,
-    //             parent_group: node.parent.clone(),
-    //         });
-
-    //         info!("{node:#?}")
-    //     }
-
-    //     self.entries = widgets;
-
-    //     Ok(())
-    // }
 }
 
 #[async_trait]
@@ -267,7 +247,6 @@ impl Component for Explorer {
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        info!("received key event: {key:#?}");
         // vim bindings
         // j would move selection down
         // k would move selection up
@@ -284,13 +263,19 @@ impl Component for Explorer {
             .zip(self.tree.traverse_pre_order(&self.scope).unwrap())
             .collect();
 
+        let (curr_idx, (node_id, node)) = pot
+            .iter()
+            .enumerate()
+            .find(|(_, (id, _))| self.selection == *id)
+            .expect("Should exist");
+
+        info!("key handler curr_node: {node:#?}");
+
         match key.code {
             KeyCode::Char('j') => {
                 info!("J pressed");
-                if let Some((next_id, next_node)) =
-                    pot.get(*self.selection.last().unwrap() as usize + 1)
-                {
-                    *self.selection.last_mut().unwrap() += 1;
+                if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
+                    self.selection = next_id.clone();
 
                     match &next_node.data().kind {
                         TarsKind::Root => {}
@@ -311,15 +296,8 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('k') => {
-                if let Some((prev_id, prev_node)) = pot.get({
-                    if let Some(i) = (*self.selection.last().unwrap_or(&0) as usize).checked_sub(1)
-                    {
-                        i
-                    } else {
-                        return Ok(None);
-                    }
-                }) {
-                    *self.selection.last_mut().unwrap() -= 1;
+                if let Some((prev_id, prev_node)) = pot.get(curr_idx - 1) {
+                    self.selection = prev_id.clone();
 
                     match &prev_node.data().kind {
                         TarsKind::Root => {}
@@ -337,49 +315,26 @@ impl Component for Explorer {
 
             KeyCode::Char('l') => {
                 // all we do here is change the scope to be this new one
-                let (curr_id, curr_node) =
-                    pot.get(*self.selection.last().unwrap() as usize).unwrap();
+                let (curr_id, curr_node) = pot.get(curr_idx).unwrap();
 
                 if let TarsKind::Group(ref g) = curr_node.data().kind {
+                    self.rel_depth = curr_node.data().depth;
                     self.scope = curr_id.clone();
-                    self.selection.push(0);
-
+                    self.selection = curr_id.clone();
                     return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
                 };
 
                 Ok(None)
             }
             KeyCode::Char('h') => {
-                // let nod j = self.tree.get(&self.scope)?;
-
                 // now we need the ancestors of this guy
-                let ids: Vec<&NodeId> = self.tree.ancestor_ids(&self.scope)?.collect();
-                info!("ancestors: {ids:#?}");
-
-                if let Some(parent) = ids.first() {
-                    let node = self.tree.get(parent)?;
+                let ancestors: Vec<&NodeId> = self.tree.ancestor_ids(&self.scope)?.collect();
+                if let Some(parent) = ancestors.first() {
+                    let parent_node = self.tree.get(parent)?;
+                    self.rel_depth = parent_node.data().depth;
                     self.scope = (*parent).clone();
                 };
-
                 Ok(None)
-
-                // let all_groups = Group::fetch_all(&self.client).await?;
-                // let root = all_groups.iter().find(|g| g.id == *root).unwrap();
-
-                // let Some(ref parent_id) = root.parent_id else {
-                //     self.root = None;
-                //     let _ = self.selection.pop();
-                //     return Ok(Some(Action::ScopeUpdate(None)));
-                // };
-
-                // let parent = all_groups
-                //     .iter()
-                //     .find(|g| g.id == *parent_id)
-                //     .expect("this group should exist");
-
-                // self.root = Some(parent.id.clone());
-                // self.selection.push(0);
-                // return Ok(Some(Action::ScopeUpdate(Some(parent.clone()))));
             }
 
             _ => Ok(None),
@@ -400,13 +355,14 @@ impl Component for Explorer {
 
         let root_node_id = self.tree.root_node_id().expect("root node id should exist");
 
-        let pot: Vec<TarsNode> = self
+        let pot: Vec<(NodeId, TarsNode)> = self
             .tree
-            .traverse_pre_order(&self.scope)?
+            .traverse_pre_order_ids(&self.scope)?
+            .zip(self.tree.traverse_pre_order(&self.scope)?)
             .enumerate()
             // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
             .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
-            .map(|(_, n)| n.data().clone())
+            .map(|(_, (node_id, node))| (node_id, node.data().clone()))
             .collect();
 
         let constraints: Vec<Constraint> = pot.iter().map(|_| Constraint::Max(1)).collect();
@@ -419,9 +375,8 @@ impl Component for Explorer {
         // ideally top 4 tasks per group + a line that says more coming after
 
         // groups organized by parents
-
-        for (i, (entry, area)) in pot.iter().zip(task_layouts.iter()).enumerate() {
-            let (style, postfix) = if *self.selection.last().unwrap() == i as u16 {
+        for ((entry_id, entry), area) in pot.iter().zip(task_layouts.iter()) {
+            let (style, postfix) = if self.selection == *entry_id {
                 (Style::new().bold().italic(), "*")
             } else {
                 (Style::new(), "")
@@ -438,7 +393,10 @@ impl Component for Explorer {
             // pad with the depth we want
             let area = Layout::new(
                 Direction::Horizontal,
-                [Constraint::Min(entry.depth), Constraint::Percentage(100)],
+                [
+                    Constraint::Min(entry.depth - self.rel_depth),
+                    Constraint::Percentage(100),
+                ],
             )
             .split(*area)[1];
 

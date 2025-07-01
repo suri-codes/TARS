@@ -5,7 +5,6 @@ use common::{
     TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use criterion::async_executor;
 use sqlx::{Pool, Sqlite};
 use tracing::{error, info, instrument};
 
