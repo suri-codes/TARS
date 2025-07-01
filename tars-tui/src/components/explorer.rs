@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use async_trait::async_trait;
-use color_eyre::{Result, eyre::eyre};
+use color_eyre::Result;
 use common::{
     TarsClient,
     types::{Color, Group, Id, Task, TaskFetchOptions},
@@ -12,7 +12,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color as RatColor, Style, Stylize},
     text::Text,
-    widgets::{Paragraph, canvas::Line},
+    widgets::Paragraph,
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
@@ -387,11 +387,20 @@ impl Component for Explorer {
                 if let Some(parent) = ancestors.first() {
                     self.scope = (*parent).clone();
                     let parent_node = self.tree.get(parent)?;
-                    let TarsKind::Group(ref g) = parent_node.data().kind else {
-                        return Ok(None);
-                    };
-                    self.rel_depth = parent_node.data().depth;
-                    return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
+
+                    match parent_node.data().kind {
+                        TarsKind::Root => {
+                            self.rel_depth = parent_node.data().depth;
+                            return Ok(Some(Action::ScopeUpdate(None)));
+                        }
+                        TarsKind::Group(ref g) => {
+                            self.rel_depth = parent_node.data().depth;
+                            return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
+                        }
+                        _ => {
+                            return Ok(None);
+                        }
+                    }
                 };
                 Ok(None)
             }
@@ -420,7 +429,7 @@ impl Component for Explorer {
         let breadcrumbs = areas[1];
 
         //TODO: actually have to split the breadcrumbs area into the shi.
-        let ancestors: Vec<Text> = self
+        let mut ancestors: Vec<(Text, Constraint)> = self
             .tree
             .ancestors(&self.scope)
             .expect("ancestors should be valid")
@@ -428,11 +437,11 @@ impl Component for Explorer {
                 let (name, color) = {
                     match ancestor.data().kind {
                         TarsKind::Root => (
-                            "home".into(),
-                            TryInto::<Color>::try_into("cyan".to_owned()).unwrap(),
+                            " Home ".into(),
+                            TryInto::<Color>::try_into("red".to_owned()).unwrap(),
                         ),
 
-                        TarsKind::Group(ref g) => (g.name.clone(), g.color.clone()),
+                        TarsKind::Group(ref g) => (format!(" {} ", *g.name), g.color.clone()),
 
                         _ => {
                             panic!()
@@ -440,24 +449,24 @@ impl Component for Explorer {
                     }
                 };
 
-                Text::styled((*name).clone(), Style::new().bg(color.into()))
+                (
+                    Text::styled(
+                        name.clone(),
+                        Style::new().bg(color.into()).fg(RatColor::Black),
+                    ),
+                    Constraint::Length(name.len() as u16),
+                )
             })
             .collect();
+        ancestors.reverse();
 
-        // frame.render_widget(Paragraph::new(ancestors), area);
+        let constraints: Vec<Constraint> = ancestors.iter().map(|(_, c)| *c).collect();
 
-        // Breadcrumbs rendering
-        // for ancestor in ancestors {
-        //     let (name, color) = {
-        //         let TarsKind::Group(ref g) = ancestor.data().kind else {
-        //             panic!()
-        //         };
+        let crumb_layout = Layout::new(Direction::Horizontal, constraints).split(breadcrumbs);
 
-        //         (g.name.clone(), g.color.clone())
-        //     };
-
-        //     Text::styled(name.as_str(), Style::new().bg(color.into()));
-        // }
+        for ((ancestor, _), area) in ancestors.iter().zip(crumb_layout.iter()) {
+            frame.render_widget(ancestor, *area);
+        }
 
         let root_node_id = self.tree.root_node_id().expect("root node id should exist");
 
