@@ -10,7 +10,6 @@ use ratatui::{
     widgets::Paragraph,
 };
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 
 use crate::{
     action::{Action, Selection},

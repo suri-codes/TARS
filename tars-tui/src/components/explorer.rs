@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use async_trait::async_trait;
-use color_eyre::Result;
+use color_eyre::{Result, eyre::eyre};
 use common::{
     TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
@@ -11,10 +11,11 @@ use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style, Stylize},
-    widgets::Paragraph,
+    text::Text,
+    widgets::{Paragraph, canvas::Line},
 };
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{
     action::{Action, Selection},
@@ -38,14 +39,14 @@ pub struct Explorer {
     // pot: Vec<&Node TarsNode>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum TarsKind {
     Root,
     Task(Task),
     Group(Group),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct TarsNode {
     kind: TarsKind,
     // might need it when creating a new task but even then i think that
@@ -67,7 +68,9 @@ impl Explorer {
             client: client.clone(),
             active: false,
             scope: tree.root_node_id().unwrap().clone(),
-            selection: pot.get(1).unwrap().clone(),
+
+            // if selection == 0 then its cookked
+            selection: pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone(),
             tree,
             rel_depth: 0,
             // pot,
@@ -234,13 +237,59 @@ impl Component for Explorer {
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
         match action {
-            Action::Tick => {
-                // let updated_tree = Self::generate_tree(&self.client).await?;
-                // self.tree = updated_tree;
-            }
+            Action::Tick => {}
             Action::Render => {}
             Action::SwitchTo(Mode::Explorer) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
+            Action::Refresh => {
+                let updated_tree = Self::generate_tree(&self.client).await?;
+
+                let scope = self.tree.get(&self.scope)?.data();
+
+                if let Some((_, new_scope_id)) = updated_tree
+                    .traverse_pre_order(updated_tree.root_node_id().unwrap())?
+                    .zip(
+                        updated_tree
+                            .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
+                    )
+                    .find(|(e, _)| {
+                        if let TarsKind::Group(ref g1) = e.data().kind
+                            && let TarsKind::Group(ref g2) = scope.kind
+                        {
+                            return g1.id == g2.id;
+                        }
+
+                        false
+                    })
+                {
+                    self.scope = new_scope_id;
+                } else {
+                    warn!("Scope not found on tree refresh, setting to root node.");
+                    self.scope = updated_tree.root_node_id().unwrap().clone();
+                }
+
+                let selection = self.tree.get(&self.selection)?.data().clone();
+
+                if let Some((_, new_selection_id)) = updated_tree
+                    .traverse_pre_order(updated_tree.root_node_id().unwrap())?
+                    .zip(
+                        updated_tree
+                            .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
+                    )
+                    .find(|(e, _)| match (&e.data().kind, &selection.kind) {
+                        (TarsKind::Task(t1), TarsKind::Task(t2)) => t1.id == t2.id,
+                        (TarsKind::Group(g1), TarsKind::Group(g2)) => g1.id == g2.id,
+                        _ => false,
+                    })
+                {
+                    self.selection = new_selection_id;
+                } else {
+                    warn!("Selection not found on tree refresh, setting to root node.");
+                    self.selection = updated_tree.root_node_id().unwrap().clone();
+                }
+
+                self.tree = updated_tree;
+            }
             _ => {}
         }
         Ok(None)
@@ -263,11 +312,13 @@ impl Component for Explorer {
             .zip(self.tree.traverse_pre_order(&self.scope).unwrap())
             .collect();
 
-        let (curr_idx, (node_id, node)) = pot
+        let Some((curr_idx, (_, node))) = pot
             .iter()
             .enumerate()
             .find(|(_, (id, _))| self.selection == *id)
-            .expect("Should exist");
+        else {
+            return Ok(None);
+        };
 
         info!("key handler curr_node: {node:#?}");
 
@@ -297,6 +348,10 @@ impl Component for Explorer {
 
             KeyCode::Char('k') => {
                 if let Some((prev_id, prev_node)) = pot.get(curr_idx - 1) {
+                    if self.tree.root_node_id().unwrap() == prev_id {
+                        return Ok(None);
+                    }
+
                     self.selection = prev_id.clone();
 
                     match &prev_node.data().kind {
@@ -330,9 +385,13 @@ impl Component for Explorer {
                 // now we need the ancestors of this guy
                 let ancestors: Vec<&NodeId> = self.tree.ancestor_ids(&self.scope)?.collect();
                 if let Some(parent) = ancestors.first() {
-                    let parent_node = self.tree.get(parent)?;
-                    self.rel_depth = parent_node.data().depth;
                     self.scope = (*parent).clone();
+                    let parent_node = self.tree.get(parent)?;
+                    let TarsKind::Group(ref g) = parent_node.data().kind else {
+                        return Ok(None);
+                    };
+                    self.rel_depth = parent_node.data().depth;
+                    return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
                 };
                 Ok(None)
             }
@@ -348,10 +407,50 @@ impl Component for Explorer {
     ) -> color_eyre::eyre::Result<()> {
         frame.render_widget(frame_block(self.active, self.mode()), area);
 
-        let area = Layout::new(Direction::Vertical, [Constraint::Percentage(100)])
-            .horizontal_margin(2)
-            .vertical_margin(1)
-            .split(area)[0];
+        let areas = Layout::new(
+            Direction::Vertical,
+            [Constraint::Percentage(100), Constraint::Min(1)],
+        )
+        .horizontal_margin(2)
+        .vertical_margin(1)
+        .split(area);
+
+        let area = areas[0];
+
+        let breadcrumbs = areas[1];
+
+        //TODO: actually have to split the breadcrumbs area into the shi.
+        let ancestors: Vec<Text> = self
+            .tree
+            .ancestors(&self.scope)
+            .expect("ancestors should be valid")
+            .map(|ancestor| {
+                let (name, color) = {
+                    let TarsKind::Group(ref g) = ancestor.data().kind else {
+                        panic!()
+                    };
+
+                    (g.name.clone(), g.color.clone())
+                };
+
+                Text::styled((*name).clone(), Style::new().bg(color.into()))
+            })
+            .collect();
+
+        // frame.render_widget(Paragraph::new(ancestors), area);
+
+        // Breadcrumbs rendering
+        // for ancestor in ancestors {
+        //     let (name, color) = {
+        //         let TarsKind::Group(ref g) = ancestor.data().kind else {
+        //             panic!()
+        //         };
+
+        //         (g.name.clone(), g.color.clone())
+        //     };
+
+        //     Text::styled(name.as_str(), Style::new().bg(color.into()));
+        // }
 
         let root_node_id = self.tree.root_node_id().expect("root node id should exist");
 
