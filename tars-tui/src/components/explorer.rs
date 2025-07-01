@@ -4,13 +4,13 @@ use async_trait::async_trait;
 use color_eyre::{Result, eyre::eyre};
 use common::{
     TarsClient,
-    types::{Group, Id, Task, TaskFetchOptions},
+    types::{Color, Group, Id, Task, TaskFetchOptions},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style, Stylize},
+    style::{Color as RatColor, Style, Stylize},
     text::Text,
     widgets::{Paragraph, canvas::Line},
 };
@@ -426,11 +426,18 @@ impl Component for Explorer {
             .expect("ancestors should be valid")
             .map(|ancestor| {
                 let (name, color) = {
-                    let TarsKind::Group(ref g) = ancestor.data().kind else {
-                        panic!()
-                    };
+                    match ancestor.data().kind {
+                        TarsKind::Root => (
+                            "home".into(),
+                            TryInto::<Color>::try_into("cyan".to_owned()).unwrap(),
+                        ),
 
-                    (g.name.clone(), g.color.clone())
+                        TarsKind::Group(ref g) => (g.name.clone(), g.color.clone()),
+
+                        _ => {
+                            panic!()
+                        }
+                    }
                 };
 
                 Text::styled((*name).clone(), Style::new().bg(color.into()))
@@ -486,7 +493,7 @@ impl Component for Explorer {
                     .style(style.fg(t.group.color.as_ref().into())),
 
                 TarsKind::Group(ref g) => Paragraph::new(format!("{}    {postfix}", *g.name))
-                    .style(style.fg(Color::Black).bg(g.color.as_ref().into())),
+                    .style(style.fg(RatColor::Black).bg(g.color.as_ref().into())),
             };
 
             // pad with the depth we want
