@@ -1,3 +1,7 @@
+use ratatui::{
+    style::Style,
+    widgets::{Block, BorderType, Borders},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::ParseError;
@@ -14,6 +18,23 @@ pub enum Priority {
     Far = 5,
 }
 
+impl From<Priority> for Block<'_> {
+    fn from(value: Priority) -> Self {
+        Block::new()
+            .title_top("Priority")
+            .borders(Borders::all())
+            .border_type(BorderType::Rounded)
+            .style({
+                match value {
+                    Priority::Far => Style::new().fg(ratatui::style::Color::LightBlue),
+                    Priority::Low => Style::new().fg(ratatui::style::Color::Blue),
+                    Priority::Medium => Style::new().fg(ratatui::style::Color::Yellow),
+                    Priority::High => Style::new().fg(ratatui::style::Color::LightRed),
+                    Priority::Asap => Style::new().fg(ratatui::style::Color::Red),
+                }
+            })
+    }
+}
 impl TryFrom<&str> for Priority {
     type Error = ParseError;
 

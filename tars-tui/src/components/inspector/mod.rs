@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use color_eyre::Result;
-use common::{TarsClient, types::Priority};
+use common::{
+    TarsClient,
+    types::{Priority, Task, TaskFetchOptions},
+};
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -57,7 +60,7 @@ impl<'a> Inspector<'a> {
 }
 
 #[async_trait]
-impl Component for Inspector<'_> {
+impl<'a> Component for Inspector<'a> {
     fn init(
         &mut self,
         _area: ratatui::prelude::Size,
@@ -88,7 +91,7 @@ impl Component for Inspector<'_> {
         }
 
         if let Some(task_component) = self.task_component.as_mut() {
-            task_component.handle_key_event(key).await?;
+            return task_component.handle_key_event(key).await;
         }
 
         Ok(None)
@@ -102,10 +105,30 @@ impl Component for Inspector<'_> {
             Action::SwitchTo(_) => self.active = false,
             Action::Select(s) => {
                 if let Selection::Task(ref t) = s {
-                    self.task_component = Some(TaskComponent::new(t))
+                    self.task_component = Some(TaskComponent::new(t, self.client.clone()))
                 }
                 self.selection = Some(s);
             }
+
+            Action::Refresh => match self.selection {
+                None => {}
+                Some(Selection::Task(ref task)) => {
+                    //TODO: make task fetch by id an actual call
+                    let all_tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
+                    let Some(task) = all_tasks.iter().find(|t| t.id == task.id) else {
+                        self.selection = None;
+                        return Ok(None);
+                    };
+
+                    self.task_component = Some(TaskComponent::new(task, self.client.clone()));
+
+                    return Ok(None);
+                }
+                Some(Selection::Group(ref g)) => {
+                    //TODO: write refresh code once we have a group_component too.
+                    return Ok(None);
+                }
+            },
             _ => {}
         }
         Ok(None)

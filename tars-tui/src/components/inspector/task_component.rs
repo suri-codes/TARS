@@ -1,35 +1,58 @@
 use async_trait::async_trait;
-use color_eyre::Result;
-use common::types::Task;
+use color_eyre::{Result, owo_colors::OwoColorize};
+use common::{
+    ParseError, TarsClient,
+    types::{Priority, Task},
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{Modifier, Style},
-    widgets::Widget,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, BorderType, Borders, Paragraph},
 };
-use tokio::sync::mpsc::UnboundedSender;
-use tui_textarea::TextArea;
+use tui_textarea::{Input, Key, TextArea};
 
 use crate::{action::Action, components::Component};
 
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
+    task: Task,
     name: TarsText<'a>,
+    priority: TarsText<'a>,
+    edit_mode: EditMode,
+    client: TarsClient,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum EditMode {
-    Editing,
     #[default]
     Inactive,
+    Name,
+    Priority,
 }
 
 #[derive(Debug)]
 struct TarsText<'a> {
     textarea: TextArea<'a>,
-    mode: EditMode,
+    is_valid: bool,
 }
 
 impl<'a> TarsText<'a> {
+    pub fn new(string: &str, block: Block<'a>) -> Self {
+        let mut text_area = TextArea::default();
+        text_area.set_placeholder_text(string);
+        text_area.set_placeholder_style(Style::default());
+        text_area.set_block(block);
+
+        let mut text = Self {
+            textarea: text_area,
+            is_valid: true,
+        };
+
+        text.deactivate();
+        text
+    }
+
     pub fn deactivate(&mut self) {
         self.textarea.set_cursor_line_style(Style::default());
         self.textarea.set_cursor_style(Style::default());
@@ -44,18 +67,47 @@ impl<'a> TarsText<'a> {
 }
 
 impl<'a> TaskComponent<'a> {
-    pub fn new(task: &Task) -> Self {
-        let mut name = TextArea::from(vec![task.name.as_str()]);
-        name.set_cursor_line_style(Style::default());
-        // name.set_placeholder_text(task.name.as_str());
+    pub fn new(task: &Task, client: TarsClient) -> Self {
+        Self {
+            name: TarsText::new(
+                &task.name,
+                Block::new()
+                    .title_top("[N]ame")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
+            ),
+            priority: TarsText::new(
+                Into::<String>::into(task.priority).as_str(),
+                Block::new()
+                    .title_top("Priority")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded)
+                    .style({
+                        match task.priority {
+                            Priority::Far => Style::new().fg(ratatui::style::Color::LightBlue),
+                            Priority::Low => Style::new().fg(ratatui::style::Color::Blue),
+                            Priority::Medium => Style::new().fg(ratatui::style::Color::Yellow),
+                            Priority::High => Style::new().fg(ratatui::style::Color::LightRed),
+                            Priority::Asap => Style::new().fg(ratatui::style::Color::Red),
+                        }
+                    }),
+            ),
+            edit_mode: EditMode::Inactive,
+            client,
+            task: task.clone(),
+        }
+    }
 
-        let mut component = Self {
-            name: ,
-            mode: EditMode::default(),
+    pub async fn sync(&mut self) -> Result<()> {
+        let new_name = self.name.textarea.lines()[0].clone();
+
+        if !new_name.is_empty() {
+            self.task.name = new_name.into();
         };
 
-        component.name.deactivate();
-        component
+        self.task.sync(&self.client).await?;
+
+        Ok(())
     }
 }
 
@@ -72,9 +124,8 @@ impl Component for TaskComponent<'_> {
 
     async fn update(&mut self, action: Action) -> Result<Option<Action>> {
         if let Action::SwitchTo(_) = action {
-            self.deactivate()
+            self.name.deactivate()
         }
-
         Ok(None)
     }
 
@@ -83,20 +134,171 @@ impl Component for TaskComponent<'_> {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(&self.name, area);
+        let task_layout = Layout::new(
+            Direction::Vertical,
+            [
+                Constraint::Percentage(15), // name
+                Constraint::Percentage(15), // group | Priority
+                Constraint::Percentage(50), // Description
+                Constraint::Percentage(15), // completion | Due
+            ],
+        )
+        .split(area);
+
+        // Task name:
+        frame.render_widget(&self.name.textarea, task_layout[0]);
+
+        // group | priority
+        let group_priority = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(50), Constraint::Percentage(50)],
+        )
+        .split(task_layout[1]);
+
+        // Group name:
+        frame.render_widget(
+            Paragraph::new(self.task.group.name.as_str()).block(
+                Block::new()
+                    .title_top("Group")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded)
+                    .style(Style::new().fg((&self.task.group.color).into())),
+            ),
+            group_priority[0],
+        );
+
+        // Priority
+        frame.render_widget(&self.priority.textarea, group_priority[1]);
+
+        // Description
+        frame.render_widget(
+            Paragraph::new(self.task.description.clone()).block(
+                Block::new()
+                    .title_top("Description")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded),
+            ),
+            task_layout[2],
+        );
+
+        // let completion_due = Layout::new(
+        //     Direction::Horizontal,
+        //     [Constraint::Percentage(50), Constraint::Percentage(50)],
+        // )
+        // .split(task_layout[3]);
+
+        // let completion_symbol = if task.completed {
+        //     " ✅ Awesome"
+        // } else {
+        //     " ❌ Get to work cornball"
+        // };
+        // // Completion status
+        // frame.render_widget(
+        //     Paragraph::new(completion_symbol).block({
+        //         let block = Block::new()
+        //             .title_top("Completed")
+        //             .borders(Borders::all())
+        //             .border_type(BorderType::Rounded);
+
+        //         let style = if task.completed {
+        //             Style::new().fg(Color::Green)
+        //         } else {
+        //             Style::new().fg(Color::Red)
+        //         };
+
+        //         block.style(style)
+        //     }),
+        //     completion_due[0],
+        // );
+
+        // // Due Date
+        // frame.render_widget(
+        //     Paragraph::new(format!("{:?}", task.due)).block(
+        //         Block::new()
+        //             .title_top("Due")
+        //             .borders(Borders::all())
+        //             .border_type(BorderType::Rounded),
+        //     ),
+        //     completion_due[1],
+        // );
+
         Ok(())
     }
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        match key.code {
-            KeyCode::Char('n') => {
-                self.activate();
+        match self.edit_mode {
+            EditMode::Inactive => {
+                if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {
+                    self.name.activate();
+                    self.edit_mode = EditMode::Name
+                }
+                if let KeyCode::Char('p') | KeyCode::Char('P') = key.code {
+                    self.priority.activate();
+                    self.edit_mode = EditMode::Priority
+                }
             }
-
-            KeyCode::Esc => {
-                self.deactivate();
+            EditMode::Name => {
+                match key.into() {
+                    Input { key: Key::Esc, .. }
+                    | Input {
+                        key: Key::Enter, ..
+                    } => {
+                        self.name.deactivate();
+                        self.sync().await?;
+                        self.edit_mode = EditMode::Inactive;
+                        return Ok(Some(Action::Refresh));
+                        // can validate here
+                    }
+                    input => {
+                        self.name.textarea.input(input);
+                        // TextArea::input returns if the input modified its text
+                        // if textarea.input(input) {
+                        //     is_valid = validate(&mut textarea);
+                        // }
+                    }
+                }
             }
+            EditMode::Priority => {
+                match key.into() {
+                    Input { key: Key::Esc, .. }
+                    | Input {
+                        key: Key::Enter, ..
+                    } => {
+                        self.priority.deactivate();
+                        if self.priority.is_valid {
+                            self.sync().await?;
+                        }
+                        self.priority
+                            .textarea
+                            .set_placeholder_text(self.task.priority);
+                        self.edit_mode = EditMode::Inactive;
+                        //NOTE maybe not the best thing to do but its the easiest way to reset all the placeholder text
+                        return Ok(Some(Action::Refresh));
+                    }
+                    input => {
+                        if self.priority.textarea.input(input) {
+                            let p: Result<Priority, ParseError> =
+                                self.priority.textarea.lines()[0].as_str().try_into();
+                            let Some(block) = self.priority.textarea.block().cloned() else {
+                                return Ok(None);
+                            };
 
-            _ => {}
+                            let block = match p {
+                                Ok(p) => {
+                                    self.task.priority = p;
+                                    self.priority.is_valid = true;
+                                    self.task.priority.into()
+                                }
+                                Err(_) => {
+                                    self.priority.is_valid = false;
+                                    block.border_style(Style::new().fg(Color::Red))
+                                }
+                            };
+
+                            self.priority.textarea.set_block(block);
+                        };
+                    }
+                };
+            }
         }
 
         Ok(None)
