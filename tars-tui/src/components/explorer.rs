@@ -355,7 +355,12 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('k') => {
-                if let Some((prev_id, prev_node)) = pot.get(curr_idx - 1) {
+                if let Some((prev_id, prev_node)) = pot.get({
+                    let Some(i) = curr_idx.checked_sub(1) else {
+                        return Ok(None);
+                    };
+                    i
+                }) {
                     if self.tree.root_node_id().unwrap() == prev_id {
                         return Ok(None);
                     }

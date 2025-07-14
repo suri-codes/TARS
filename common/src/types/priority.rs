@@ -21,7 +21,7 @@ pub enum Priority {
 impl From<Priority> for Block<'_> {
     fn from(value: Priority) -> Self {
         Block::new()
-            .title_top("Priority")
+            .title_top("[P]riority")
             .borders(Borders::all())
             .border_type(BorderType::Rounded)
             .style({

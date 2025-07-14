@@ -2,12 +2,12 @@ use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
     TarsClient,
-    types::{Priority, Task, TaskFetchOptions},
+    types::{Task, TaskFetchOptions},
 };
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::Style,
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use task_component::TaskComponent;
@@ -31,7 +31,6 @@ pub struct Inspector<'a> {
     config: Config,
     selection: Option<Selection>,
 
-    #[expect(dead_code)]
     client: TarsClient,
     active: bool,
 
@@ -124,7 +123,7 @@ impl<'a> Component for Inspector<'a> {
 
                     return Ok(None);
                 }
-                Some(Selection::Group(ref g)) => {
+                Some(Selection::Group(ref _g)) => {
                     //TODO: write refresh code once we have a group_component too.
                     return Ok(None);
                 }
@@ -148,7 +147,7 @@ impl<'a> Component for Inspector<'a> {
             .split(area)[0];
 
         match self.selection {
-            Some(Selection::Task(ref task)) => {
+            Some(Selection::Task(ref _task)) => {
                 self.task_component.as_mut().unwrap().draw(frame, area)?;
 
                 // let task_layout = Layout::new(
