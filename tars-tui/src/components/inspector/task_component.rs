@@ -1,24 +1,12 @@
-use std::{
-    fs,
-    io::{Stdin, stdin, stdout},
-    path::PathBuf,
-    process::{Command, Stdio},
-    thread::sleep,
-    time::Duration,
-};
+use std::{fs, process::Command};
 
 use async_trait::async_trait;
-use clap::Subcommand;
 use color_eyre::Result;
 use common::{
     ParseError, TarsClient,
     types::{Priority, Task, parse_date_time},
 };
-use crossterm::{
-    ExecutableCommand, cursor,
-    event::{self, Event, KeyCode, KeyEvent},
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},

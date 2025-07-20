@@ -1,16 +1,14 @@
 use std::{
-    fs::{self, File, OpenOptions, create_dir_all},
+    fs::{self, File, create_dir_all},
     io::Read,
-    os::unix::process::CommandExt,
     path::PathBuf,
-    process::{Child, Command},
+    process::Command,
     rc::Rc,
-    sync::{Arc, Mutex},
     thread::{self, spawn},
     time::Duration,
 };
 
-use color_eyre::{Result, eyre::eyre, owo_colors::OwoColorize};
+use color_eyre::Result;
 use common::TarsClient;
 use crossterm::event::KeyEvent;
 use ratatui::{

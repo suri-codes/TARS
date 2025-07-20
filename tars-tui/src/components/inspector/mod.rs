@@ -12,7 +12,6 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 
 use crate::{
     action::{Action, Selection},
