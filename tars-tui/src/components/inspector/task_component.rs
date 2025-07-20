@@ -1,11 +1,13 @@
 use std::{
     io::{Stdin, stdin, stdout},
+    path::PathBuf,
     process::{Command, Stdio},
     thread::sleep,
     time::Duration,
 };
 
 use async_trait::async_trait;
+use clap::Subcommand;
 use color_eyre::Result;
 use common::{
     ParseError, TarsClient,
@@ -171,9 +173,10 @@ impl Component for TaskComponent<'_> {
                     return Ok(Some(Action::RawText));
                 }
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
-                    return Ok(Some(Action::LaunchHelix("lol".to_owned())));
-                    // Ideally we would like to swap into helix to edit the description file and then pop back out once we exit helix, that way shi stays clean
+                    return Ok(Some(Action::EditDescription(self.task.clone())));
                 }
+                // Ideally we would like to swap into helix to edit the description file and then pop back out once we exit helix, that way shi stays clean
+
                 if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
                     self.task.completed = !self.task.completed;
                     return self.sync().await.map(|_| None);

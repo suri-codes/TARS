@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use common::types::{Group, Task};
 use serde::{Deserialize, Serialize};
 use strum::Display;
@@ -27,8 +29,28 @@ pub enum Action {
     //Note: raw_text
     RawText,
     // the string is the file name to launch with
-    LaunchHelix(String),
+    EditDescription(Task),
 }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// pub struct EditDescriptionArgs {
+//     pub tmp_file_path: PathBuf,
+//     pub task: Task,
+// }
+
+// impl EditDescriptionArgs {
+//     pub fn new(tmp_file_path: PathBuf, task: Task) -> Self {
+//         Self {
+//             tmp_file_path,
+//             task,
+//         }
+//     }
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+// struct EditArgs {
+//     callback: Box<dyn Fn() -> Result<Option<Action>>>,
+// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum Selection {

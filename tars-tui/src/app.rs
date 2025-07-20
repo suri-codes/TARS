@@ -1,4 +1,10 @@
-use std::{process::Command, rc::Rc};
+use std::{
+    fs::{self, File, OpenOptions, create_dir_all},
+    io::Read,
+    path::PathBuf,
+    process::Command,
+    rc::Rc,
+};
 
 use color_eyre::Result;
 use common::TarsClient;
@@ -29,6 +35,7 @@ pub struct App {
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+    client: TarsClient,
 
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
@@ -73,6 +80,7 @@ impl App {
             action_tx,
             action_rx,
             raw_text: false,
+            client,
         })
     }
 
@@ -188,19 +196,41 @@ impl App {
                 Action::RawText => self.raw_text = true,
                 Action::Refresh => self.raw_text = false,
                 Action::Enter => tui.enter()?,
-                Action::LaunchHelix(ref file) => {
+                Action::EditDescription(ref task) => {
                     tui.exit()?;
 
+                    let mut task = task.clone();
+                    let tmp_file_path = PathBuf::from(format!("/tmp/tars/{}.md", *task.name));
+
+                    if let Some(parent) = tmp_file_path.parent() {
+                        create_dir_all(parent)?;
+                    }
+
+                    fs::write(&tmp_file_path, task.description)?;
+
                     Command::new("hx")
-                        .arg(".")
+                        .arg(tmp_file_path.to_str().unwrap())
                         .stdin(std::process::Stdio::inherit())
                         .stdout(std::process::Stdio::inherit())
                         .stderr(std::process::Stdio::inherit())
                         .status()?;
 
-                    self.action_tx.send(Action::Resume)?;
-                    self.action_tx.send(Action::ClearScreen)?;
+                    let mut f = File::open(&tmp_file_path)?;
+
+                    let mut updated_desc = String::new();
+                    f.read_to_string(&mut updated_desc)?;
+
+                    fs::remove_file(tmp_file_path)?;
+
+                    task.description = updated_desc;
+
+                    task.sync(&self.client).await?;
+
+                    self.should_suspend = false;
+                    tui.terminal.clear()?;
                     tui.enter()?;
+
+                    self.action_tx.send(Action::Refresh)?;
                 }
                 _ => {}
             }
