@@ -12,6 +12,7 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 
 use crate::{
     action::{Action, Selection},
@@ -75,7 +76,7 @@ impl<'a> Component for Inspector<'a> {
         &mut self,
         tx: UnboundedSender<Action>,
     ) -> color_eyre::eyre::Result<()> {
-        self.command_tx = Some(tx);
+        self.command_tx = Some(tx.clone());
         Ok(())
     }
 
@@ -104,7 +105,11 @@ impl<'a> Component for Inspector<'a> {
             Action::SwitchTo(_) => self.active = false,
             Action::Select(s) => {
                 if let Selection::Task(ref t) = s {
-                    self.task_component = Some(TaskComponent::new(t, self.client.clone()))
+                    let mut new_task_component = TaskComponent::new(t, self.client.clone());
+                    new_task_component.register_action_handler(
+                        self.command_tx.as_ref().expect("should exist").clone(),
+                    )?;
+                    self.task_component = Some(new_task_component);
                 }
                 self.selection = Some(s);
             }
@@ -119,9 +124,12 @@ impl<'a> Component for Inspector<'a> {
                         return Ok(None);
                     };
 
-                    self.task_component = Some(TaskComponent::new(task, self.client.clone()));
+                    let mut selected_task = TaskComponent::new(task, self.client.clone());
 
-                    return Ok(None);
+                    selected_task.register_action_handler(
+                        self.command_tx.as_ref().expect("should exist").clone(),
+                    )?;
+                    self.task_component = Some(selected_task);
                 }
                 Some(Selection::Group(ref _g)) => {
                     //TODO: write refresh code once we have a group_component too.

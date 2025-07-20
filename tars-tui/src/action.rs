@@ -10,6 +10,7 @@ pub enum Action {
     Render,
     Resize(u16, u16),
     Suspend,
+    Exit,
     Resume,
     Quit,
     ClearScreen,
@@ -24,6 +25,8 @@ pub enum Action {
     Refresh,
     //Note: raw_text
     RawText,
+    // the string is the file name to launch with
+    LaunchHelix(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]

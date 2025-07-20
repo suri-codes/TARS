@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{process::Command, rc::Rc};
 
 use color_eyre::Result;
 use common::TarsClient;
@@ -99,6 +99,7 @@ impl App {
             self.handle_actions(&mut tui).await?;
             if self.should_suspend {
                 tui.suspend()?;
+
                 action_tx.send(Action::Resume)?;
                 action_tx.send(Action::ClearScreen)?;
                 // tui.mouse(true);
@@ -116,6 +117,7 @@ impl App {
         let Some(event) = tui.next_event().await else {
             return Ok(());
         };
+        info!("event: {event:?}");
         let action_tx = self.action_tx.clone();
         match event {
             Event::Quit => action_tx.send(Action::Quit)?,
@@ -123,6 +125,7 @@ impl App {
             Event::Render => action_tx.send(Action::Render)?,
             Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
             Event::Key(key) => self.handle_key_event(key)?,
+
             _ => {}
         }
         for component in self.components.iter_mut() {
@@ -172,7 +175,10 @@ impl App {
                 Action::Tick => {
                     self.last_tick_key_events.drain(..);
                 }
+                Action::Exit => tui.exit()?,
+
                 Action::Quit => self.should_quit = true,
+
                 Action::Suspend => self.should_suspend = true,
                 Action::Resume => self.should_suspend = false,
                 Action::ClearScreen => tui.terminal.clear()?,
@@ -181,6 +187,23 @@ impl App {
                 Action::SwitchTo(mode) => self.mode = mode,
                 Action::RawText => self.raw_text = true,
                 Action::Refresh => self.raw_text = false,
+                Action::LaunchHelix(ref file) => {
+                    tui.exit()?;
+                    // self.action_tx.send(Action::Suspend)?;
+
+                    // Helix runs here while your process is still active
+                    Command::new("hx")
+                        .arg(".")
+                        .stdin(std::process::Stdio::inherit())
+                        .stdout(std::process::Stdio::inherit())
+                        .stderr(std::process::Stdio::inherit())
+                        .status()?;
+
+                    self.action_tx.send(Action::Resume)?;
+                    self.action_tx.send(Action::ClearScreen)?;
+                    // tui.mouse(true);
+                    tui.enter()?;
+                }
                 _ => {}
             }
             for component in self.components.iter_mut() {

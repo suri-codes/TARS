@@ -1,15 +1,28 @@
+use std::{
+    io::{Stdin, stdin, stdout},
+    process::{Command, Stdio},
+    thread::sleep,
+    time::Duration,
+};
+
 use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
     ParseError, TarsClient,
     types::{Priority, Task, parse_date_time},
 };
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::{
+    ExecutableCommand, cursor,
+    event::{self, Event, KeyCode, KeyEvent},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
+use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 use tui_textarea::{Input, Key, TextArea};
 
 use crate::{action::Action, components::Component};
@@ -23,6 +36,8 @@ pub struct TaskComponent<'a> {
     priority: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
+    // action_tx:
+    command_tx: Option<UnboundedSender<Action>>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -101,6 +116,7 @@ impl<'a> TaskComponent<'a> {
                     .border_type(BorderType::Rounded),
             ),
             task: task.clone(),
+            command_tx: None,
         }
     }
 
@@ -135,6 +151,12 @@ impl Component for TaskComponent<'_> {
         Ok(None)
     }
 
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+        self.command_tx = Some(tx.clone());
+        info!("received action handler");
+        Ok(())
+    }
+
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match self.edit_mode {
             EditMode::Inactive => {
@@ -149,6 +171,37 @@ impl Component for TaskComponent<'_> {
                     return Ok(Some(Action::RawText));
                 }
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
+                    return Ok(Some(Action::LaunchHelix("lol".to_owned())));
+                    // let sender = self.command_tx.as_ref().expect("should have sender"); //
+
+                    // // sender.send(Action::RawText).unwrap(); // Disable raw mode
+                    // // sender.send(Action::Suspend).unwrap();
+
+                    // // let handle = std::thread::spawn(|| Command::new("hx").arg(".").status());
+                    // // handle.join().unwrap();
+
+                    // // sender.send(Action::Resume).unwrap();
+                    // // sender.send(Action::Refresh).unwrap();
+
+                    // // Suspend your TUI
+                    // sender.send(Action::Suspend).unwrap();
+                    // sleep(Duration::from_millis(150));
+
+                    // // Exit the async context completely and run Helix on the main thread
+                    // std::thread::spawn(|| {
+                    //     Command::new("hx")
+                    //         .arg(".")
+                    //         .stdin(std::process::Stdio::inherit())
+                    //         .stdout(std::process::Stdio::inherit())
+                    //         .stderr(std::process::Stdio::inherit())
+                    //         .status()
+                    //         .expect("Failed to launch helix");
+                    // })
+                    // .join()
+                    // .unwrap();
+
+                    // // Resume your TUI
+                    // sleep(Duration::from_millis(150));
                     //TODO:
                     // Ideally we would like to swap into helix to edit the description file and then pop back out once we exit helix, that way shi stays clean
                 }
