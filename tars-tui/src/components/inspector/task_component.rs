@@ -12,7 +12,7 @@ use ratatui::{
 };
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::{action::Action, app::Mode, components::Component};
+use crate::{action::Action, components::Component};
 
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
@@ -96,7 +96,7 @@ impl<'a> TaskComponent<'a> {
                 )
                 .as_str(),
                 Block::new()
-                    .title_top("Due")
+                    .title_top("D[u]e")
                     .borders(Borders::all())
                     .border_type(BorderType::Rounded),
             ),
@@ -326,7 +326,7 @@ impl Component for TaskComponent<'_> {
         frame.render_widget(
             Paragraph::new(self.description.clone()).block(
                 Block::new()
-                    .title_top("Description")
+                    .title_top("[D]escription")
                     .borders(Borders::all())
                     .border_type(BorderType::Rounded),
             ),
@@ -349,7 +349,7 @@ impl Component for TaskComponent<'_> {
         frame.render_widget(
             Paragraph::new(completion_symbol).block({
                 let block = Block::new()
-                    .title_top("Completed")
+                    .title_top("[C]ompleted")
                     .borders(Borders::all())
                     .border_type(BorderType::Rounded);
 
