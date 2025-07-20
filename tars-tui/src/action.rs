@@ -11,6 +11,7 @@ pub enum Action {
     Resize(u16, u16),
     Suspend,
     Exit,
+    Enter,
     Resume,
     Quit,
     ClearScreen,

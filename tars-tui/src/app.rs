@@ -117,7 +117,6 @@ impl App {
         let Some(event) = tui.next_event().await else {
             return Ok(());
         };
-        info!("event: {event:?}");
         let action_tx = self.action_tx.clone();
         match event {
             Event::Quit => action_tx.send(Action::Quit)?,
@@ -137,6 +136,7 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
+        info!("key event: {key:?}");
         let action_tx = self.action_tx.clone();
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
@@ -187,11 +187,10 @@ impl App {
                 Action::SwitchTo(mode) => self.mode = mode,
                 Action::RawText => self.raw_text = true,
                 Action::Refresh => self.raw_text = false,
+                Action::Enter => tui.enter()?,
                 Action::LaunchHelix(ref file) => {
                     tui.exit()?;
-                    // self.action_tx.send(Action::Suspend)?;
 
-                    // Helix runs here while your process is still active
                     Command::new("hx")
                         .arg(".")
                         .stdin(std::process::Stdio::inherit())
@@ -201,7 +200,6 @@ impl App {
 
                     self.action_tx.send(Action::Resume)?;
                     self.action_tx.send(Action::ClearScreen)?;
-                    // tui.mouse(true);
                     tui.enter()?;
                 }
                 _ => {}

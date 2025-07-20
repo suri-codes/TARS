@@ -172,37 +172,6 @@ impl Component for TaskComponent<'_> {
                 }
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
                     return Ok(Some(Action::LaunchHelix("lol".to_owned())));
-                    // let sender = self.command_tx.as_ref().expect("should have sender"); //
-
-                    // // sender.send(Action::RawText).unwrap(); // Disable raw mode
-                    // // sender.send(Action::Suspend).unwrap();
-
-                    // // let handle = std::thread::spawn(|| Command::new("hx").arg(".").status());
-                    // // handle.join().unwrap();
-
-                    // // sender.send(Action::Resume).unwrap();
-                    // // sender.send(Action::Refresh).unwrap();
-
-                    // // Suspend your TUI
-                    // sender.send(Action::Suspend).unwrap();
-                    // sleep(Duration::from_millis(150));
-
-                    // // Exit the async context completely and run Helix on the main thread
-                    // std::thread::spawn(|| {
-                    //     Command::new("hx")
-                    //         .arg(".")
-                    //         .stdin(std::process::Stdio::inherit())
-                    //         .stdout(std::process::Stdio::inherit())
-                    //         .stderr(std::process::Stdio::inherit())
-                    //         .status()
-                    //         .expect("Failed to launch helix");
-                    // })
-                    // .join()
-                    // .unwrap();
-
-                    // // Resume your TUI
-                    // sleep(Duration::from_millis(150));
-                    //TODO:
                     // Ideally we would like to swap into helix to edit the description file and then pop back out once we exit helix, that way shi stays clean
                 }
                 if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
