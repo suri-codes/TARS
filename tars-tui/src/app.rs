@@ -29,6 +29,9 @@ pub struct App {
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+
+    // state to keep track if we need to send keystrokes un-modified
+    raw_text: bool,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -69,6 +72,7 @@ impl App {
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
+            raw_text: false,
         })
     }
 
@@ -134,10 +138,13 @@ impl App {
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
+
         match keymap.get(&vec![key]) {
             Some(action) => {
-                info!("Got action: {action:?}");
-                action_tx.send(action.clone())?;
+                if !self.raw_text {
+                    info!("Got action: {action:?}");
+                    action_tx.send(action.clone())?;
+                }
             }
             _ => {
                 // If the key was not handled as a single key action,
@@ -147,7 +154,9 @@ impl App {
                 // Check for multi-key combinations
                 if let Some(action) = keymap.get(&self.last_tick_key_events) {
                     info!("Got action: {action:?}");
-                    action_tx.send(action.clone())?;
+                    if !self.raw_text {
+                        action_tx.send(action.clone())?;
+                    }
                 }
             }
         }
@@ -170,6 +179,8 @@ impl App {
                 Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
                 Action::Render => self.render(tui)?,
                 Action::SwitchTo(mode) => self.mode = mode,
+                Action::RawText => self.raw_text = true,
+                Action::Refresh => self.raw_text = false,
                 _ => {}
             }
             for component in self.components.iter_mut() {

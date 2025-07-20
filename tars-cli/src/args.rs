@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use color_eyre::owo_colors::OwoColorize;
 use common::{
     ParseError,
-    types::{Color, Id, Name, Priority},
+    types::{Color, Id, Name, Priority, parse_date_time},
 };
 use sqlx::types::chrono::NaiveDateTime;
 
@@ -83,7 +83,7 @@ pub struct TaskAddArgs {
     pub priority: PriorityInput,
 
     /// An optional Due Date.
-    #[arg(short = 'D', long, value_parser=parse_date_time)]
+    #[arg(short = 'D', long, value_parser=clap_parse_date)]
     pub due: Option<NaiveDateTime>,
 
     #[arg(short, long)]
@@ -106,16 +106,6 @@ pub struct TaskListArgs {
     unfinished: Option<bool>,
 }
 
-fn parse_date_time(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {
-    match NaiveDateTime::parse_from_str(arg, "%Y-%m-%d %H:%M:%S") {
-        Ok(parsed_time) => Ok(Some(parsed_time)),
-        Err(_) => {
-            println!("{}", "Failed to Parse, using None as due date".magenta());
-            Err(ParseError::FailedToParse)
-        }
-    }
-}
-
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum PriorityInput {
     Low,
@@ -135,4 +125,35 @@ impl From<PriorityInput> for Priority {
             PriorityInput::Far => Priority::Far,
         }
     }
+}
+
+pub fn clap_parse_date(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {
+    if arg.is_empty() {
+        println!("{}", "No date provided!, using None as due date".yellow());
+        return Ok(None);
+    }
+
+    match parse_date_time(arg) {
+        Ok(res) => Ok(Some(res)),
+        Err(_) => {
+            println!(
+                "{}",
+                "Unable to parse date, we support the following formats!
+%m/%d/%Y %H:%M:%S
+%m/%d/%Y
+%m/%d               "
+                    .magenta()
+            );
+
+            Err(ParseError::FailedToParse)
+        }
+    }
+
+    // match NaiveDateTime::parse_from_str(arg, "%Y-%m-%d") {
+    //     Ok(parsed_time) => Ok(Some(parsed_time)),
+    //     Err(_) => {
+    //         println!("{}", "Failed to Parse, using None as due date".magenta());
+    //         Err(ParseError::FailedToParse)
+    //     }
+    // }
 }

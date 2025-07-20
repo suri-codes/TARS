@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
     ParseError, TarsClient,
-    types::{Priority, Task},
+    types::{Priority, Task, parse_date_time},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -12,7 +12,7 @@ use ratatui::{
 };
 use tui_textarea::{Input, Key, TextArea};
 
-use crate::{action::Action, components::Component};
+use crate::{action::Action, app::Mode, components::Component};
 
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
@@ -91,7 +91,7 @@ impl<'a> TaskComponent<'a> {
             due: TarsText::new(
                 Into::<String>::into(
                     task.due
-                        .map(|d| d.to_string())
+                        .map(|d| d.format("%m/%d/%Y %I:%M:%S %p").to_string())
                         .unwrap_or_else(|| "None".to_string()),
                 )
                 .as_str(),
@@ -140,11 +140,13 @@ impl Component for TaskComponent<'_> {
             EditMode::Inactive => {
                 if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {
                     self.name.activate();
-                    self.edit_mode = EditMode::Name
+                    self.edit_mode = EditMode::Name;
+                    return Ok(Some(Action::RawText));
                 }
                 if let KeyCode::Char('p') | KeyCode::Char('P') = key.code {
                     self.priority.activate();
-                    self.edit_mode = EditMode::Priority
+                    self.edit_mode = EditMode::Priority;
+                    return Ok(Some(Action::RawText));
                 }
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
                     //TODO:
@@ -157,6 +159,7 @@ impl Component for TaskComponent<'_> {
                 if let KeyCode::Char('u') | KeyCode::Char('U') = key.code {
                     self.due.activate();
                     self.edit_mode = EditMode::Due;
+                    return Ok(Some(Action::RawText));
                 }
             }
             EditMode::Name => {
@@ -240,33 +243,36 @@ impl Component for TaskComponent<'_> {
                     input => {
                         if self.due.textarea.input(input) {
                             // now we want to parse if the due date is valid
-                            //
-                            //
-                            
+
                             let entered_date_str = self.due.textarea.lines()[0].as_str();
-
-                            NaiveDateTime
-
-
-                            let p: Result<Priority, ParseError> =
-                                self.priority.textarea.lines()[0].as_str().try_into();
-                            let Some(block) = self.priority.textarea.block().cloned() else {
+                            let Some(block) = self.due.textarea.block().cloned() else {
                                 return Ok(None);
                             };
 
-                            let block = match p {
-                                Ok(p) => {
-                                    self.task.priority = p;
-                                    self.priority.is_valid = true;
-                                    self.task.priority.into()
+                            let block = block.border_style(Style::new().fg(Color::Red));
+
+                            let block = match parse_date_time(entered_date_str) {
+                                Ok(date) => {
+                                    self.task.due = Some(date);
+                                    self.due.is_valid = true;
+                                    block.border_style(Style::new().fg(Color::Green))
                                 }
+
                                 Err(_) => {
-                                    self.priority.is_valid = false;
-                                    block.border_style(Style::new().fg(Color::Red))
+                                    if entered_date_str.is_empty() {
+                                        self.task.due = None;
+                                        self.due.is_valid = true;
+                                        self.due.textarea.set_placeholder_text("None");
+
+                                        block.border_style(Style::new().fg(Color::Green))
+                                    } else {
+                                        self.due.is_valid = false;
+                                        block.border_style(Style::new().fg(Color::Red))
+                                    }
                                 }
                             };
 
-                            self.priority.textarea.set_block(block);
+                            self.due.textarea.set_block(block);
                         };
                     }
                 }
