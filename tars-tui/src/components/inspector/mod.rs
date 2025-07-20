@@ -105,7 +105,7 @@ impl<'a> Component for Inspector<'a> {
             Action::SwitchTo(_) => self.active = false,
             Action::Select(s) => {
                 if let Selection::Task(ref t) = s {
-                    let mut new_task_component = TaskComponent::new(t, self.client.clone());
+                    let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
                     new_task_component.register_action_handler(
                         self.command_tx.as_ref().expect("should exist").clone(),
                     )?;
@@ -124,7 +124,7 @@ impl<'a> Component for Inspector<'a> {
                         return Ok(None);
                     };
 
-                    let mut selected_task = TaskComponent::new(task, self.client.clone());
+                    let mut selected_task = TaskComponent::new(task, self.client.clone())?;
 
                     selected_task.register_action_handler(
                         self.command_tx.as_ref().expect("should exist").clone(),

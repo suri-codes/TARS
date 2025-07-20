@@ -1,12 +1,16 @@
 use std::{
     fs::{self, File, OpenOptions, create_dir_all},
     io::Read,
+    os::unix::process::CommandExt,
     path::PathBuf,
-    process::Command,
+    process::{Child, Command},
     rc::Rc,
+    sync::{Arc, Mutex},
+    thread::{self, spawn},
+    time::Duration,
 };
 
-use color_eyre::Result;
+use color_eyre::{Result, eyre::eyre, owo_colors::OwoColorize};
 use common::TarsClient;
 use crossterm::event::KeyEvent;
 use ratatui::{
@@ -14,7 +18,7 @@ use ratatui::{
     prelude::Rect,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, info};
 
 use crate::{
@@ -208,12 +212,64 @@ impl App {
 
                     fs::write(&tmp_file_path, task.description)?;
 
-                    Command::new("hx")
-                        .arg(tmp_file_path.to_str().unwrap())
-                        .stdin(std::process::Stdio::inherit())
-                        .stdout(std::process::Stdio::inherit())
-                        .stderr(std::process::Stdio::inherit())
-                        .status()?;
+                    let tmp_file_path_hx = tmp_file_path.clone();
+                    let tmp_file_path_glow = tmp_file_path.clone();
+
+                    let hx = spawn(move || -> Result<()> {
+                        Command::new("hx")
+                            .arg(tmp_file_path_hx.to_str().unwrap())
+                            .stdin(std::process::Stdio::inherit())
+                            .stdout(std::process::Stdio::inherit())
+                            .stderr(std::process::Stdio::inherit())
+                            .status()?;
+
+                        Ok(())
+                    });
+
+                    let (tx, rx) = oneshot::channel::<Option<()>>();
+
+                    let glow = spawn(move || -> Result<()> {
+                        Command::new("zellij")
+                            .args([
+                                "run",
+                                "--direction",
+                                "right",
+                                "--",
+                                "/bin/zsh",
+                                "-l",
+                                "-c",
+                                &format!(
+                                    "source ~/.zshrc && glow -t {}",
+                                    tmp_file_path_glow.to_string_lossy()
+                                ),
+                            ])
+                            .spawn()?;
+                        thread::sleep(Duration::from_millis(100));
+
+                        Command::new("zellij")
+                            .args(["action", "move-focus", "left"])
+                            .spawn()?;
+
+                        // now we just wait to kill
+                        if rx.blocking_recv()?.is_some() {
+                            Command::new("zellij")
+                                .args(["action", "focus-next-pane"])
+                                .spawn()?;
+
+                            thread::sleep(Duration::from_millis(20));
+
+                            Command::new("zellij")
+                                .args(["action", "close-pane"])
+                                .spawn()?;
+                        }
+                        Ok(())
+                    });
+
+                    // Join on hx first
+                    hx.join().unwrap()?;
+                    // tell glow to kill itself
+                    tx.send(Some(())).unwrap();
+                    drop(glow);
 
                     let mut f = File::open(&tmp_file_path)?;
 

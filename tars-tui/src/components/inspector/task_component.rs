@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{Stdin, stdin, stdout},
     path::PathBuf,
     process::{Command, Stdio},
@@ -89,8 +90,18 @@ impl<'a> TarsText<'a> {
 }
 
 impl<'a> TaskComponent<'a> {
-    pub fn new(task: &Task, client: TarsClient) -> Self {
-        Self {
+    pub fn new(task: &Task, client: TarsClient) -> Result<Self> {
+        // need to use glow for this
+        //
+        let desc_path = format!("/tmp/tars/{}.md", *task.name);
+
+        fs::write(&desc_path, task.description.clone())?;
+
+        let output = Command::new("glow").arg(desc_path.as_str()).output()?;
+
+        let rendered_desc = String::from_utf8(output.stdout)?;
+
+        Ok(Self {
             name: TarsText::new(
                 &task.name,
                 Block::new()
@@ -104,7 +115,7 @@ impl<'a> TaskComponent<'a> {
             ),
             edit_mode: EditMode::Inactive,
             client,
-            description: task.description.to_owned(),
+            description: rendered_desc,
             due: TarsText::new(
                 Into::<String>::into(
                     task.due
@@ -119,7 +130,7 @@ impl<'a> TaskComponent<'a> {
             ),
             task: task.clone(),
             command_tx: None,
-        }
+        })
     }
 
     pub async fn sync(&mut self) -> Result<()> {
