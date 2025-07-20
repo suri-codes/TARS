@@ -46,8 +46,6 @@ struct TarsText<'a> {
     is_valid: bool,
 }
 
-// for the description we are going to use helix as the editor
-
 impl<'a> TarsText<'a> {
     pub fn new(string: &str, block: Block<'a>) -> Self {
         let mut text_area = TextArea::default();

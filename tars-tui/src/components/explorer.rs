@@ -331,6 +331,14 @@ impl Component for Explorer {
         info!("key handler curr_node: {node:#?}");
 
         match key.code {
+            KeyCode::Enter => {
+                self.command_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SwitchTo(Mode::Inspector))?;
+                Ok(None)
+            }
+
             KeyCode::Char('j') => {
                 info!("J pressed");
                 if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
