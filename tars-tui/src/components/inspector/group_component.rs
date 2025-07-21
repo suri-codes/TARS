@@ -1,10 +1,7 @@
 use async_trait::async_trait;
 use color_eyre::eyre::Result;
 use common::{TarsClient, types::Group};
-use crossterm::{
-    event::{KeyCode, KeyEvent},
-    terminal::EndSynchronizedUpdate,
-};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::Style,
@@ -16,7 +13,7 @@ use tui_textarea::{Input, Key};
 
 use crate::{action::Action, components::Component};
 
-use super::{TarsText, task_component::TaskComponent};
+use super::TarsText;
 
 #[derive(Debug)]
 pub struct GroupComponent<'a> {

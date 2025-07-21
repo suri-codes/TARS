@@ -9,12 +9,12 @@ use common::{
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
-use tui_textarea::{Input, Key, TextArea};
+use tui_textarea::{Input, Key};
 
 use crate::{action::Action, components::Component};
 

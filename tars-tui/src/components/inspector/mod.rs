@@ -4,13 +4,12 @@ use common::{
     TarsClient,
     types::{Task, TaskFetchOptions},
 };
-use crossterm::event::{KeyCode, KeyEvent};
-use futures::future::Select;
+use crossterm::event::KeyEvent;
 use group_component::GroupComponent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Modifier, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, Paragraph},
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
@@ -193,7 +192,7 @@ impl<'a> Component for Inspector<'a> {
                     self.active_component =
                         Some(ActiveComponent::TaskComponent(Box::new(selected_task)));
                 }
-                Some(ActiveComponent::GroupComponent(ref g)) => {
+                Some(ActiveComponent::GroupComponent(ref _g)) => {
                     //TODO: write refresh code once we have a group_component too.
                     return Ok(None);
                 }
