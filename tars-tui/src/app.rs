@@ -17,7 +17,7 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     action::Action,
