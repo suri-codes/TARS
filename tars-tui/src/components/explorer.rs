@@ -174,10 +174,10 @@ impl Explorer {
             }),
             InsertBehavior::UnderNode(&parent_id),
         )?;
-        *depth += 1;
 
         // now we want to add all tasks to it?
         if let Some(tasks) = g_to_t.get(&group.id) {
+            *depth += 1;
             for task in tasks {
                 let _ = tree.insert(
                     Node::new(TarsNode {
@@ -191,14 +191,15 @@ impl Explorer {
         }
 
         if let Some(child_groups) = g_to_g.get(&group.id) {
-            *depth += 1;
+            // *depth += 1;
+            let mut depth = *depth + 1;
             for child_group in child_groups {
                 Explorer::tree_children_of_group(
                     tree,
                     child_group.clone(),
                     g_to_g,
                     g_to_t,
-                    depth,
+                    &mut depth,
                     group_id.clone(),
                 )?;
             }
@@ -377,8 +378,19 @@ impl Component for Explorer {
 
             // this will make a root group
             KeyCode::Char('G') => {
-                let _ =
-                    Group::new(&self.client, "new_group", None, Color::parse_str("white")?).await?;
+                let parent_group = match self.tree.get(&self.scope)?.data().kind {
+                    TarsKind::Root => None,
+                    TarsKind::Group(ref g) => Some(g.id.clone()),
+                    TarsKind::Task(_) => return Ok(None),
+                };
+
+                let _ = Group::new(
+                    &self.client,
+                    "new_group",
+                    parent_group,
+                    Color::parse_str("white")?,
+                )
+                .await?;
 
                 Ok(Some(Action::Refresh))
             }
@@ -386,10 +398,12 @@ impl Component for Explorer {
             // this will make a child of the currently selected group
             KeyCode::Char('g') => {
                 let curr_node_id = match self.tree.get(&self.selection)?.data().kind {
-                    TarsKind::Task(ref t) => Some(t.id.clone()),
+                    TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Root => None,
                 };
+
+                info!("id: {:?}", curr_node_id);
 
                 let _ = Group::new(
                     &self.client,
