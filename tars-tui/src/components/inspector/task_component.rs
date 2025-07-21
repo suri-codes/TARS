@@ -18,6 +18,8 @@ use tui_textarea::{Input, Key, TextArea};
 
 use crate::{action::Action, components::Component};
 
+use super::TarsText;
+
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
     task: Task,
@@ -32,47 +34,12 @@ pub struct TaskComponent<'a> {
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub enum EditMode {
+enum EditMode {
     #[default]
     Inactive,
     Name,
     Priority,
     Due,
-}
-
-#[derive(Debug)]
-struct TarsText<'a> {
-    textarea: TextArea<'a>,
-    is_valid: bool,
-}
-
-impl<'a> TarsText<'a> {
-    pub fn new(string: &str, block: Block<'a>) -> Self {
-        let mut text_area = TextArea::default();
-        text_area.set_placeholder_text(string);
-        text_area.set_placeholder_style(Style::default());
-        text_area.set_block(block);
-
-        let mut text = Self {
-            textarea: text_area,
-            is_valid: true,
-        };
-
-        text.deactivate();
-        text
-    }
-
-    pub fn deactivate(&mut self) {
-        self.textarea.set_cursor_line_style(Style::default());
-        self.textarea.set_cursor_style(Style::default());
-    }
-
-    pub fn activate(&mut self) {
-        self.textarea
-            .set_cursor_line_style(Style::default().add_modifier(Modifier::UNDERLINED));
-        self.textarea
-            .set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
-    }
 }
 
 impl<'a> TaskComponent<'a> {
@@ -86,6 +53,8 @@ impl<'a> TaskComponent<'a> {
         let output = Command::new("glow").arg(desc_path.as_str()).output()?;
 
         let rendered_desc = String::from_utf8(output.stdout)?;
+
+        fs::remove_file(&desc_path)?;
 
         Ok(Self {
             name: TarsText::new(

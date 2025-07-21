@@ -5,13 +5,16 @@ use common::{
     types::{Task, TaskFetchOptions},
 };
 use crossterm::event::{KeyCode, KeyEvent};
+use futures::future::Select;
+use group_component::GroupComponent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::Style,
+    style::{Modifier, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
+use tui_textarea::TextArea;
 
 use crate::{
     action::{Action, Selection},
@@ -35,8 +38,42 @@ pub struct Inspector<'a> {
     active: bool,
 
     task_component: Option<TaskComponent<'a>>,
+    group_component: Option<GroupComponent<'a>>,
 }
 
+#[derive(Debug)]
+struct TarsText<'a> {
+    textarea: TextArea<'a>,
+    is_valid: bool,
+}
+impl<'a> TarsText<'a> {
+    pub fn new(string: &str, block: Block<'a>) -> Self {
+        let mut text_area = TextArea::default();
+        text_area.set_placeholder_text(string);
+        text_area.set_placeholder_style(Style::default());
+        text_area.set_block(block);
+
+        let mut text = Self {
+            textarea: text_area,
+            is_valid: true,
+        };
+
+        text.deactivate();
+        text
+    }
+
+    pub fn deactivate(&mut self) {
+        self.textarea.set_cursor_line_style(Style::default());
+        self.textarea.set_cursor_style(Style::default());
+    }
+
+    pub fn activate(&mut self) {
+        self.textarea
+            .set_cursor_line_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        self.textarea
+            .set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
+    }
+}
 // let mut textarea = TextArea::default();
 // textarea.set_cursor_line_style(Style::default());
 // textarea.set_placeholder_text("Enter a valid float (e.g. 1.56)");
@@ -50,6 +87,7 @@ impl<'a> Inspector<'a> {
             client: client.clone(),
             active: false,
             task_component: None,
+            group_component: None,
         })
     }
 
@@ -103,12 +141,22 @@ impl<'a> Component for Inspector<'a> {
             Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
             Action::Select(s) => {
-                if let Selection::Task(ref t) = s {
-                    let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
-                    new_task_component.register_action_handler(
-                        self.command_tx.as_ref().expect("should exist").clone(),
-                    )?;
-                    self.task_component = Some(new_task_component);
+                match s {
+                    Selection::Task(ref t) => {
+                        let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
+                        new_task_component.register_action_handler(
+                            self.command_tx.as_ref().expect("should exist").clone(),
+                        )?;
+                        self.task_component = Some(new_task_component);
+                    }
+                    Selection::Group(ref g) => {
+                        let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
+                        new_group_component.register_action_handler(
+                            self.command_tx.as_ref().expect("should exit").clone(),
+                        )?;
+
+                        self.group_component = Some(new_group_component);
+                    }
                 }
                 self.selection = Some(s);
             }
@@ -158,42 +206,10 @@ impl<'a> Component for Inspector<'a> {
                 self.task_component.as_mut().unwrap().draw(frame, area)?;
             }
             Some(Selection::Group(ref group)) => {
-                let group_layout = Layout::new(
-                    Direction::Vertical,
-                    [
-                        Constraint::Percentage(15), // name
-                        Constraint::Percentage(15), // color
-                        Constraint::Percentage(15), // parent
-                    ],
-                )
-                .split(area);
-
-                // Group name:
-                frame.render_widget(
-                    Paragraph::new(group.name.as_str()).block(
-                        Block::new()
-                            .title_top("Name")
-                            .borders(Borders::all())
-                            .border_type(BorderType::Rounded),
-                    ),
-                    group_layout[0],
-                );
-                // Group color:
-                frame.render_widget(
-                    Paragraph::new(group.color.as_str()).block(
-                        Block::new()
-                            .title_top("Color")
-                            .borders(Borders::all())
-                            .border_type(BorderType::Rounded)
-                            .style(Style::new().fg(group.color.clone().into())),
-                    ),
-                    group_layout[1],
-                );
+                self.group_component.as_mut().unwrap().draw(frame, area)?;
             }
             None => {
                 frame.render_widget(Paragraph::new("Please perform a Selection!"), area);
-
-                // TODO: xd
             }
         }
 
