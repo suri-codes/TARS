@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use color_eyre::eyre::Result;
 use common::{TarsClient, types::Group};
-use crossterm::event::KeyEvent;
+use crossterm::{
+    event::{KeyCode, KeyEvent},
+    terminal::EndSynchronizedUpdate,
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::Style,
@@ -9,6 +12,7 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
+use tui_textarea::{Input, Key};
 
 use crate::{action::Action, components::Component};
 
@@ -96,7 +100,42 @@ impl Component for GroupComponent<'_> {
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        // todo!()
+        match self.edit_mode {
+            EditMode::Inactive => {
+                if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {
+                    self.name.activate();
+                    self.edit_mode = EditMode::Name;
+                    return Ok(Some(Action::RawText));
+                }
+                if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
+                    self.color.activate();
+                    self.edit_mode = EditMode::Color;
+                    return Ok(Some(Action::RawText));
+                }
+            }
+            EditMode::Name => {
+                match key.into() {
+                    Input { key: Key::Esc, .. }
+                    | Input {
+                        key: Key::Enter, ..
+                    } => {
+                        self.name.deactivate();
+                        self.sync().await?;
+                        self.edit_mode = EditMode::Inactive;
+                        return Ok(Some(Action::Refresh));
+                    }
+                    input => {
+                        self.name.textarea.input(input);
+                        // TextArea::input returns if the input modified its text
+                        // if textarea.input(input) {
+                        //     is_valid = validate(&mut textarea);
+                        // }
+                    }
+                }
+            }
+
+            EditMode::Color => {}
+        }
         Ok(None)
     }
 
@@ -114,15 +153,8 @@ impl Component for GroupComponent<'_> {
         .split(area);
 
         // Group name:
-        frame.render_widget(
-            Paragraph::new(self.group.name.as_str()).block(
-                Block::new()
-                    .title_top("Name")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
-            ),
-            group_layout[0],
-        );
+        frame.render_widget(&self.name.textarea, group_layout[0]);
+
         // Group color:
         frame.render_widget(
             Paragraph::new(self.group.color.as_str()).block(

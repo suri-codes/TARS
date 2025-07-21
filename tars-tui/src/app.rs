@@ -66,6 +66,9 @@ impl App {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         let client = TarsClient::default().await.unwrap();
 
+        // generate the tree once
+        // pass in ref to components
+
         Ok(Self {
             tick_rate,
             frame_rate,

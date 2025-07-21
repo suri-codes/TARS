@@ -32,13 +32,19 @@ use super::{Component, frame_block};
 pub struct Inspector<'a> {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
-    selection: Option<Selection>,
-
+    // selection: Option<Selection>,
     client: TarsClient,
     active: bool,
 
-    task_component: Option<TaskComponent<'a>>,
-    group_component: Option<GroupComponent<'a>>,
+    // task_component: Option<TaskComponent<'a>>,
+    // group_component: Option<GroupComponent<'a>>,
+    active_component: Option<ActiveComponent<'a>>,
+}
+
+#[derive(Debug)]
+enum ActiveComponent<'a> {
+    TaskComponent(Box<TaskComponent<'a>>),
+    GroupComponent(Box<GroupComponent<'a>>),
 }
 
 #[derive(Debug)]
@@ -83,11 +89,12 @@ impl<'a> Inspector<'a> {
         Ok(Self {
             command_tx: Default::default(),
             config: Default::default(),
-            selection: None,
+            // selection: None,
             client: client.clone(),
             active: false,
-            task_component: None,
-            group_component: None,
+            // task_component: None,
+            // group_component: None,
+            active_component: None,
         })
     }
 
@@ -127,11 +134,16 @@ impl<'a> Component for Inspector<'a> {
             return Ok(None);
         }
 
-        if let Some(task_component) = self.task_component.as_mut() {
-            return task_component.handle_key_event(key).await;
+        match self.active_component.as_mut() {
+            Some(ActiveComponent::TaskComponent(c)) => c.handle_key_event(key).await,
+            Some(ActiveComponent::GroupComponent(c)) => c.handle_key_event(key).await,
+            None => Ok(None),
         }
+        // if let Some(task_component) = self.task_component.as_mut() {
+        //     return task_component.handle_key_event(key).await;
+        // }
 
-        Ok(None)
+        // Ok(None)
     }
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
@@ -140,34 +152,35 @@ impl<'a> Component for Inspector<'a> {
             Action::Render => {}
             Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
-            Action::Select(s) => {
-                match s {
-                    Selection::Task(ref t) => {
-                        let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
-                        new_task_component.register_action_handler(
-                            self.command_tx.as_ref().expect("should exist").clone(),
-                        )?;
-                        self.task_component = Some(new_task_component);
-                    }
-                    Selection::Group(ref g) => {
-                        let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
-                        new_group_component.register_action_handler(
-                            self.command_tx.as_ref().expect("should exit").clone(),
-                        )?;
-
-                        self.group_component = Some(new_group_component);
-                    }
+            Action::Select(s) => match s {
+                Selection::Task(ref t) => {
+                    let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
+                    new_task_component.register_action_handler(
+                        self.command_tx.as_ref().expect("should exist").clone(),
+                    )?;
+                    self.active_component =
+                        Some(ActiveComponent::TaskComponent(Box::new(new_task_component)));
                 }
-                self.selection = Some(s);
-            }
+                Selection::Group(ref g) => {
+                    let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
+                    new_group_component.register_action_handler(
+                        self.command_tx.as_ref().expect("should exit").clone(),
+                    )?;
 
-            Action::Refresh => match self.selection {
+                    self.active_component = Some(ActiveComponent::GroupComponent(Box::new(
+                        new_group_component,
+                    )));
+                }
+            },
+
+            Action::Refresh => match self.active_component {
                 None => {}
-                Some(Selection::Task(ref task)) => {
+                Some(ActiveComponent::TaskComponent(ref t)) => {
+                    let task = t.task.clone();
                     //TODO: make task fetch by id an actual call
                     let all_tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
                     let Some(task) = all_tasks.iter().find(|t| t.id == task.id) else {
-                        self.selection = None;
+                        self.active_component = None;
                         return Ok(None);
                     };
 
@@ -176,9 +189,11 @@ impl<'a> Component for Inspector<'a> {
                     selected_task.register_action_handler(
                         self.command_tx.as_ref().expect("should exist").clone(),
                     )?;
-                    self.task_component = Some(selected_task);
+
+                    self.active_component =
+                        Some(ActiveComponent::TaskComponent(Box::new(selected_task)));
                 }
-                Some(Selection::Group(ref _g)) => {
+                Some(ActiveComponent::GroupComponent(ref g)) => {
                     //TODO: write refresh code once we have a group_component too.
                     return Ok(None);
                 }
@@ -201,12 +216,12 @@ impl<'a> Component for Inspector<'a> {
             .vertical_margin(2)
             .split(area)[0];
 
-        match self.selection {
-            Some(Selection::Task(ref _task)) => {
-                self.task_component.as_mut().unwrap().draw(frame, area)?;
+        match self.active_component.as_mut() {
+            Some(ActiveComponent::TaskComponent(t)) => {
+                t.draw(frame, area)?;
             }
-            Some(Selection::Group(ref group)) => {
-                self.group_component.as_mut().unwrap().draw(frame, area)?;
+            Some(ActiveComponent::GroupComponent(g)) => {
+                g.draw(frame, area)?;
             }
             None => {
                 frame.render_widget(Paragraph::new("Please perform a Selection!"), area);

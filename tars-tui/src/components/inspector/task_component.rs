@@ -22,7 +22,7 @@ use super::TarsText;
 
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
-    task: Task,
+    pub task: Task,
     name: TarsText<'a>,
     description: String,
     due: TarsText<'a>,
