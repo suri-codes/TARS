@@ -69,12 +69,15 @@ impl<'a> GroupComponent<'a> {
             self.group.name = new_name.into();
         };
 
-        self.group.color = MyColor::parse_str(self.color.textarea.lines()[0].as_str())?;
+        let new_color = self.color.textarea.lines()[0].clone();
+
+        if !new_color.is_empty() {
+            self.group.color = MyColor::parse_str(self.color.textarea.lines()[0].as_str())?;
+        }
 
         self.group.sync(&self.client).await?;
 
         Ok(())
-        // todo!()
     }
 }
 

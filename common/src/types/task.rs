@@ -137,7 +137,7 @@ impl Task {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if deleted task doesnt match the task we wanted to delete.
-    pub async fn delete(self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn delete(&self, client: &TarsClient) -> Result<(), TarsError> {
         let deleted_task: Task = client
             .conn
             .post(client.base_path.join("/task/delete")?)
@@ -149,7 +149,7 @@ impl Task {
             .await
             .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
 
-        assert_eq!(deleted_task, self);
+        assert_eq!(deleted_task, *self);
 
         Ok(())
     }

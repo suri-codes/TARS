@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use async_trait::async_trait;
-use color_eyre::Result;
+use color_eyre::{Result, owo_colors::OwoColorize};
 use common::{
     TarsClient,
     types::{Color, Group, Id, Task, TaskFetchOptions},
@@ -339,8 +339,73 @@ impl Component for Explorer {
                 Ok(None)
             }
 
+            KeyCode::Char('x') => {
+                let selected = self.tree.get(&self.selection)?.data();
+
+                match selected.kind {
+                    TarsKind::Task(ref t) => {
+                        t.delete(&self.client).await?;
+                    }
+                    TarsKind::Group(ref g) => {
+                        g.delete(&self.client).await?;
+                    }
+                    TarsKind::Root => return Ok(None),
+                };
+
+                return Ok(Some(Action::Refresh));
+            }
+
+            KeyCode::Char('t') => {
+                let parent = match self.tree.get(&self.selection)?.data().kind {
+                    TarsKind::Task(ref t) => &t.group,
+                    TarsKind::Group(ref g) => g,
+                    TarsKind::Root => return Ok(None),
+                };
+
+                let _ = Task::new(
+                    &self.client,
+                    parent,
+                    "new task",
+                    common::types::Priority::Far,
+                    "",
+                    None,
+                )
+                .await?;
+
+                Ok(Some(Action::Refresh))
+            }
+
+            // this will make a root group
+            KeyCode::Char('G') => {
+                let _ =
+                    Group::new(&self.client, "new_group", None, Color::parse_str("white")?).await?;
+
+                Ok(Some(Action::Refresh))
+            }
+
+            // this will make a child of the currently selected group
+            KeyCode::Char('g') => {
+                let curr_node_id = match self.tree.get(&self.selection)?.data().kind {
+                    TarsKind::Task(ref t) => Some(t.id.clone()),
+                    TarsKind::Group(ref g) => Some(g.id.clone()),
+                    TarsKind::Root => None,
+                };
+
+                let _ = Group::new(
+                    &self.client,
+                    "new_group",
+                    curr_node_id,
+                    Color::parse_str("white")?,
+                )
+                .await?;
+
+                Ok(Some(Action::Refresh))
+                // parent of the current selection
+            }
+
             KeyCode::Char('j') => {
                 info!("J pressed");
+
                 if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
                     self.selection = next_id.clone();
 

@@ -166,7 +166,7 @@ impl Group {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if deleted `Group` doesnt match the `Group` we wanted to delete.
-    pub async fn delete(self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn delete(&self, client: &TarsClient) -> Result<(), TarsError> {
         let deleted: Group = client
             .conn
             .post(client.base_path.join("/group/delete")?)
@@ -178,7 +178,7 @@ impl Group {
             .await
             .inspect_err(|e| error!("Error Deleting Group: {:?}", e))?;
 
-        assert_eq!(deleted, self);
+        assert_eq!(deleted, *self);
 
         Ok(())
     }
