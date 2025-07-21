@@ -62,8 +62,8 @@ impl AsRef<Color> for Color {
 
 impl Color {
     /// Parser for clap to form this type from a string.
-    pub fn parse_clap(arg: &str) -> Result<Self, ParseError> {
-        let x: Color = arg.to_owned().try_into()?;
+    pub fn parse_str(str: &str) -> Result<Self, ParseError> {
+        let x: Color = str.to_owned().try_into()?;
 
         Ok(x)
     }

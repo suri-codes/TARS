@@ -45,7 +45,7 @@ pub struct GroupAddArgs {
     /// NOTE: Will be orphan if argument not provided or parent not found.
     pub parent: Option<Name>,
 
-    #[arg(short, long,  value_parser=Color::parse_clap)]
+    #[arg(short, long,  value_parser=Color::parse_str)]
     pub color: Option<Color>,
 }
 

@@ -1,10 +1,13 @@
 use async_trait::async_trait;
 use color_eyre::eyre::Result;
-use common::{TarsClient, types::Group};
+use common::{
+    TarsClient,
+    types::{Color as MyColor, Group},
+};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::Style,
+    style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 use tokio::sync::mpsc::UnboundedSender;
@@ -48,7 +51,8 @@ impl<'a> GroupComponent<'a> {
                 Block::new()
                     .title_top("[C]olor")
                     .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::new().fg(group.color.clone().into())),
             ),
             group: group.clone(),
             edit_mode: EditMode::Inactive,
@@ -64,6 +68,8 @@ impl<'a> GroupComponent<'a> {
         if !new_name.is_empty() {
             self.group.name = new_name.into();
         };
+
+        self.group.color = MyColor::parse_str(self.color.textarea.lines()[0].as_str())?;
 
         self.group.sync(&self.client).await?;
 
@@ -131,7 +137,40 @@ impl Component for GroupComponent<'_> {
                 }
             }
 
-            EditMode::Color => {}
+            EditMode::Color => match key.into() {
+                Input { key: Key::Esc, .. }
+                | Input {
+                    key: Key::Enter, ..
+                } => {
+                    self.color.deactivate();
+
+                    if self.color.is_valid {
+                        self.sync().await?;
+                    }
+                    self.edit_mode = EditMode::Inactive;
+                    return Ok(Some(Action::Refresh));
+                }
+
+                input => {
+                    if self.color.textarea.input(input) {
+                        let entered_color = self.color.textarea.lines()[0].as_str();
+                        let Some(block) = self.color.textarea.block().cloned() else {
+                            return Ok(None);
+                        };
+
+                        let block = block.border_style(Style::new().fg(Color::Red));
+
+                        let block = if let Ok(col) = MyColor::parse_str(entered_color) {
+                            self.color.is_valid = true;
+                            block.border_style(Style::new().fg(col.into()))
+                        } else {
+                            self.color.is_valid = false;
+                            block
+                        };
+                        self.color.textarea.set_block(block);
+                    }
+                }
+            },
         }
         Ok(None)
     }
@@ -153,16 +192,18 @@ impl Component for GroupComponent<'_> {
         frame.render_widget(&self.name.textarea, group_layout[0]);
 
         // Group color:
-        frame.render_widget(
-            Paragraph::new(self.group.color.as_str()).block(
-                Block::new()
-                    .title_top("Color")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded)
-                    .style(Style::new().fg(self.group.color.clone().into())),
-            ),
-            group_layout[1],
-        );
+        //
+        frame.render_widget(&self.color.textarea, group_layout[1]);
+        // frame.render_widget(
+        //     Paragraph::new(self.group.color.as_str()).block(
+        //         Block::new()
+        //             .title_top("Color")
+        //             .borders(Borders::all())
+        //             .border_type(BorderType::Rounded)
+        //             .style(Style::new().fg(self.group.color.clone().into())),
+        //     ),
+        //     group_layout[1],
+        // );
         Ok(())
     }
 }
