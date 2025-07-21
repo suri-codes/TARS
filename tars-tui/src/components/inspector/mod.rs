@@ -207,7 +207,6 @@ impl<'a> Component for Inspector<'a> {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        // draw frame
         frame.render_widget(frame_block(self.active, self.mode()), area);
 
         let area = Layout::new(Direction::Horizontal, [Constraint::Percentage(100)])

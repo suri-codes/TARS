@@ -29,7 +29,6 @@ pub struct TaskComponent<'a> {
     priority: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
-    // action_tx:
     command_tx: Option<UnboundedSender<Action>>,
 }
 
@@ -44,8 +43,6 @@ enum EditMode {
 
 impl<'a> TaskComponent<'a> {
     pub fn new(task: &Task, client: TarsClient) -> Result<Self> {
-        // need to use glow for this
-        //
         let desc_path = format!("/tmp/tars/{}.md", *task.name);
 
         fs::write(&desc_path, task.description.clone())?;
@@ -141,7 +138,6 @@ impl Component for TaskComponent<'_> {
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
                     return Ok(Some(Action::EditDescription(self.task.clone())));
                 }
-                // Ideally we would like to swap into helix to edit the description file and then pop back out once we exit helix, that way shi stays clean
 
                 if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
                     self.task.completed = !self.task.completed;
@@ -188,7 +184,6 @@ impl Component for TaskComponent<'_> {
                             .textarea
                             .set_placeholder_text(self.task.priority);
                         self.edit_mode = EditMode::Inactive;
-                        //NOTE maybe not the best thing to do but its the easiest way to reset all the placeholder text
                         return Ok(Some(Action::Refresh));
                     }
                     input => {
@@ -226,9 +221,7 @@ impl Component for TaskComponent<'_> {
                         if self.due.is_valid {
                             self.sync().await?;
                         }
-                        // self.due.textarea.set_placeholder_text(self.task.priority);
                         self.edit_mode = EditMode::Inactive;
-                        //NOTE maybe not the best thing to do but its the easiest way to reset all the placeholder text
                         return Ok(Some(Action::Refresh));
                     }
                     input => {

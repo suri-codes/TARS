@@ -66,9 +66,6 @@ impl App {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         let client = TarsClient::default().await.unwrap();
 
-        // generate the tree once
-        // pass in ref to components
-
         Ok(Self {
             tick_rate,
             frame_rate,
@@ -149,7 +146,6 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        info!("key event: {key:?}");
         let action_tx = self.action_tx.clone();
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
@@ -158,7 +154,6 @@ impl App {
         match keymap.get(&vec![key]) {
             Some(action) => {
                 if !self.raw_text {
-                    info!("Got action: {action:?}");
                     action_tx.send(action.clone())?;
                 }
             }
@@ -169,7 +164,6 @@ impl App {
 
                 // Check for multi-key combinations
                 if let Some(action) = keymap.get(&self.last_tick_key_events) {
-                    info!("Got action: {action:?}");
                     if !self.raw_text {
                         action_tx.send(action.clone())?;
                     }
@@ -188,7 +182,6 @@ impl App {
                 Action::Tick => {
                     self.last_tick_key_events.drain(..);
                 }
-                Action::Exit => tui.exit()?,
 
                 Action::Quit => self.should_quit = true,
 
@@ -200,7 +193,6 @@ impl App {
                 Action::SwitchTo(mode) => self.mode = mode,
                 Action::RawText => self.raw_text = true,
                 Action::Refresh => self.raw_text = false,
-                Action::Enter => tui.enter()?,
                 Action::EditDescription(ref task) => {
                     tui.exit()?;
 

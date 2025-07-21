@@ -148,12 +148,4 @@ pub fn clap_parse_date(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {
             Err(ParseError::FailedToParse)
         }
     }
-
-    // match NaiveDateTime::parse_from_str(arg, "%Y-%m-%d") {
-    //     Ok(parsed_time) => Ok(Some(parsed_time)),
-    //     Err(_) => {
-    //         println!("{}", "Failed to Parse, using None as due date".magenta());
-    //         Err(ParseError::FailedToParse)
-    //     }
-    // }
 }
