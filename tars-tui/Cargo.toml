@@ -45,6 +45,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde"] }
 toml = "0.8.23"
 async-trait = "0.1.88"
 id_tree = "1.8.0"
+tui-textarea = "0.7.0"
 
 [build-dependencies]
 anyhow = "1.0.90"

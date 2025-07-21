@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            UPDATE Groups\n            SET\n            name = ?\n            WHERE pub_id = ?\n            RETURNING\n                name as \"name: Name\",\n                pub_id as \"id: Id\",\n                parent_id as \"parent_id: Id\",\n                color as \"color: Color\"\n\n        ",
+  "query": "\n            UPDATE Groups\n            SET\n            name = ?,\n            color = ?\n            WHERE pub_id = ?\n            RETURNING\n                name as \"name: Name\",\n                pub_id as \"id: Id\",\n                parent_id as \"parent_id: Id\",\n                color as \"color: Color\"\n\n        ",
   "describe": {
     "columns": [
       {
@@ -25,7 +25,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "ad4bc04d835fa77f9daf5a682e7180f210574f4e9c6366be7d1acd32bb7e5545"
+  "hash": "45aef6bae1b7bc3349ade5691560b3bf36c0403ca3f15d90cc65b2bf5d10f376"
 }

@@ -1,4 +1,12 @@
-use std::rc::Rc;
+use std::{
+    fs::{self, File, create_dir_all},
+    io::Read,
+    path::PathBuf,
+    process::Command,
+    rc::Rc,
+    thread::{self, spawn},
+    time::Duration,
+};
 
 use color_eyre::Result;
 use common::TarsClient;
@@ -8,8 +16,8 @@ use ratatui::{
     prelude::Rect,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-use tracing::{debug, info};
+use tokio::sync::{mpsc, oneshot};
+use tracing::debug;
 
 use crate::{
     action::Action,
@@ -29,6 +37,10 @@ pub struct App {
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+    client: TarsClient,
+
+    // state to keep track if we need to send keystrokes un-modified
+    raw_text: bool,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -69,6 +81,8 @@ impl App {
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
+            raw_text: false,
+            client,
         })
     }
 
@@ -95,6 +109,7 @@ impl App {
             self.handle_actions(&mut tui).await?;
             if self.should_suspend {
                 tui.suspend()?;
+
                 action_tx.send(Action::Resume)?;
                 action_tx.send(Action::ClearScreen)?;
                 // tui.mouse(true);
@@ -119,6 +134,7 @@ impl App {
             Event::Render => action_tx.send(Action::Render)?,
             Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
             Event::Key(key) => self.handle_key_event(key)?,
+
             _ => {}
         }
         for component in self.components.iter_mut() {
@@ -134,10 +150,12 @@ impl App {
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
+
         match keymap.get(&vec![key]) {
             Some(action) => {
-                info!("Got action: {action:?}");
-                action_tx.send(action.clone())?;
+                if !self.raw_text {
+                    action_tx.send(action.clone())?;
+                }
             }
             _ => {
                 // If the key was not handled as a single key action,
@@ -146,8 +164,9 @@ impl App {
 
                 // Check for multi-key combinations
                 if let Some(action) = keymap.get(&self.last_tick_key_events) {
-                    info!("Got action: {action:?}");
-                    action_tx.send(action.clone())?;
+                    if !self.raw_text {
+                        action_tx.send(action.clone())?;
+                    }
                 }
             }
         }
@@ -163,13 +182,105 @@ impl App {
                 Action::Tick => {
                     self.last_tick_key_events.drain(..);
                 }
+
                 Action::Quit => self.should_quit = true,
+
                 Action::Suspend => self.should_suspend = true,
                 Action::Resume => self.should_suspend = false,
                 Action::ClearScreen => tui.terminal.clear()?,
                 Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
                 Action::Render => self.render(tui)?,
                 Action::SwitchTo(mode) => self.mode = mode,
+                Action::RawText => self.raw_text = true,
+                Action::Refresh => self.raw_text = false,
+                Action::EditDescription(ref task) => {
+                    tui.exit()?;
+
+                    let mut task = task.clone();
+                    let tmp_file_path = PathBuf::from(format!("/tmp/tars/{}.md", *task.name));
+
+                    if let Some(parent) = tmp_file_path.parent() {
+                        create_dir_all(parent)?;
+                    }
+
+                    fs::write(&tmp_file_path, task.description)?;
+
+                    let tmp_file_path_hx = tmp_file_path.clone();
+                    let tmp_file_path_glow = tmp_file_path.clone();
+
+                    let hx = spawn(move || -> Result<()> {
+                        Command::new("hx")
+                            .arg(tmp_file_path_hx.to_str().unwrap())
+                            .stdin(std::process::Stdio::inherit())
+                            .stdout(std::process::Stdio::inherit())
+                            .stderr(std::process::Stdio::inherit())
+                            .status()?;
+
+                        Ok(())
+                    });
+
+                    let (tx, rx) = oneshot::channel::<Option<()>>();
+
+                    let glow = spawn(move || -> Result<()> {
+                        Command::new("zellij")
+                            .args([
+                                "run",
+                                "--direction",
+                                "right",
+                                "--",
+                                "/bin/zsh",
+                                "-l",
+                                "-c",
+                                &format!(
+                                    "source ~/.zshrc && glow -t {}",
+                                    tmp_file_path_glow.to_string_lossy()
+                                ),
+                            ])
+                            .spawn()?;
+                        thread::sleep(Duration::from_millis(100));
+
+                        Command::new("zellij")
+                            .args(["action", "move-focus", "left"])
+                            .spawn()?;
+
+                        // now we just wait to kill
+                        if rx.blocking_recv()?.is_some() {
+                            Command::new("zellij")
+                                .args(["action", "focus-next-pane"])
+                                .spawn()?;
+
+                            thread::sleep(Duration::from_millis(20));
+
+                            Command::new("zellij")
+                                .args(["action", "close-pane"])
+                                .spawn()?;
+                        }
+                        Ok(())
+                    });
+
+                    // Join on hx first
+                    hx.join().unwrap()?;
+                    // tell glow to kill itself
+                    tx.send(Some(())).unwrap();
+                    drop(glow);
+
+                    let mut f = File::open(&tmp_file_path)?;
+
+                    let mut updated_desc = String::new();
+                    f.read_to_string(&mut updated_desc)?;
+
+                    fs::remove_file(tmp_file_path)?;
+
+                    task.description = updated_desc;
+
+                    task.sync(&self.client).await?;
+
+                    self.should_suspend = false;
+                    tui.terminal.clear()?;
+                    tui.enter()?;
+
+                    self.action_tx.send(Action::Refresh)?;
+                }
                 _ => {}
             }
             for component in self.components.iter_mut() {

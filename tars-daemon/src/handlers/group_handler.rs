@@ -106,12 +106,15 @@ async fn update_group(
     State(state): State<DaemonState>,
     Json(group): Json<Group>,
 ) -> Result<Json<Group>, TarsError> {
+    let col = group.color.as_str();
+
     let updated = sqlx::query_as!(
         Group,
         r#"
             UPDATE Groups
             SET
-            name = ?
+            name = ?,
+            color = ?
             WHERE pub_id = ?
             RETURNING
                 name as "name: Name",
@@ -121,6 +124,7 @@ async fn update_group(
 
         "#,
         *group.name,
+        col,
         *group.id
     )
     .fetch_one(&state.pool)

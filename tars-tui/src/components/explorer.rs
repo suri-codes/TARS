@@ -36,7 +36,6 @@ pub struct Explorer {
     selection: NodeId,
     tree: Tree<TarsNode>,
     rel_depth: u16,
-    // pot: Vec<&Node TarsNode>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -69,7 +68,6 @@ impl Explorer {
             active: false,
             scope: tree.root_node_id().unwrap().clone(),
 
-            // if selection == 0 then its cookked
             selection: pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone(),
             tree,
             rel_depth: 0,
@@ -237,10 +235,20 @@ impl Component for Explorer {
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
         match action {
-            Action::Tick => {}
-            Action::Render => {}
-            Action::SwitchTo(Mode::Explorer) => self.active = true,
-            Action::SwitchTo(_) => self.active = false,
+            Action::Tick => Ok(None),
+            Action::Render => Ok(None),
+            Action::SwitchTo(Mode::Explorer) => {
+                self.active = true;
+                match self.tree.get(&self.selection)?.data().kind {
+                    TarsKind::Root => Ok(None),
+                    TarsKind::Group(ref g) => Ok(Some(Action::Select(Selection::Group(g.clone())))),
+                    TarsKind::Task(ref t) => Ok(Some(Action::Select(Selection::Task(t.clone())))),
+                }
+            }
+            Action::SwitchTo(_) => {
+                self.active = false;
+                Ok(None)
+            }
             Action::Refresh => {
                 let updated_tree = Self::generate_tree(&self.client).await?;
 
@@ -289,10 +297,10 @@ impl Component for Explorer {
                 }
 
                 self.tree = updated_tree;
+                Ok(None)
             }
-            _ => {}
+            _ => Ok(None),
         }
-        Ok(None)
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
@@ -323,6 +331,14 @@ impl Component for Explorer {
         info!("key handler curr_node: {node:#?}");
 
         match key.code {
+            KeyCode::Enter => {
+                self.command_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SwitchTo(Mode::Inspector))?;
+                Ok(None)
+            }
+
             KeyCode::Char('j') => {
                 info!("J pressed");
                 if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
@@ -347,7 +363,12 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('k') => {
-                if let Some((prev_id, prev_node)) = pot.get(curr_idx - 1) {
+                if let Some((prev_id, prev_node)) = pot.get({
+                    let Some(i) = curr_idx.checked_sub(1) else {
+                        return Ok(None);
+                    };
+                    i
+                }) {
                     if self.tree.root_node_id().unwrap() == prev_id {
                         return Ok(None);
                     }
