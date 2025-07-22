@@ -10,11 +10,12 @@ use common::{
     TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
 };
+use derive_deref::Deref;
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use tokio::sync::RwLock;
 use tracing::info;
 
-pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
+pub type TarsTreeHandle<'a> = Arc<RwLock<TarsTree<'a>>>;
 
 #[derive(Debug)]
 pub struct TarsTree<'a> {
@@ -39,20 +40,28 @@ pub struct TarsNode {
     pub depth: u16,
 }
 
-impl Deref for TarsTree {
-    type Target = Tree<TarsNode>;
+// impl Deref for TarsTree<'_> {
+//     type Target = Tree<TarsNode>;
 
-    fn deref(&self) -> &Self::Target {
+//     fn deref(&self) -> &Self::Target {
+//         &self.inner_tree
+//     }
+// }
+// impl DerefMut for TarsTree<'_> {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.inner_tree
+//     }
+// }
+
+impl<'a> TarsTree<'a> {
+    pub fn tree(&self) -> &Tree<TarsNode> {
         &self.inner_tree
     }
-}
-impl DerefMut for TarsTree {
-    fn deref_mut(&mut self) -> &mut Self::Target {
+
+    pub fn tree_mut(&mut self) -> &mut Tree<TarsNode> {
         &mut self.inner_tree
     }
-}
 
-impl TarsTree {
     pub async fn generate(client: &TarsClient) -> Result<Self> {
         // create a hashmap from a group id to its children groups
         let g_to_g = {
@@ -183,23 +192,22 @@ impl TarsTree {
     }
 
     /// a post order traversal of the TarsTree
-    pub fn traverse(&self) -> Vec<(NodeId, TarsNode)> {
+    pub fn traverse(&'a mut self) -> Vec<(NodeId, &'a Node<TarsNode>)> {
         if self.pot.is_some() {
-            let x = self.pot.unwrap();
-            let y = x.clone();
-            return self.pot.unwrap().clone();
+            return self.pot.clone().unwrap();
         }
 
-        let root = self.root_node_id().unwrap();
+        let root = self.tree().root_node_id().unwrap();
 
-        let pot = self
+        let pot: Vec<(NodeId, &'a Node<TarsNode>)> = self
+            .tree()
             .traverse_pre_order_ids(root)
             .unwrap()
             .into_iter()
-            .zip(self.traverse_pre_order(root).unwrap())
+            .zip(self.tree().traverse_pre_order(root).unwrap())
             .collect();
 
-        self.pot = pot.clone();
+        self.pot = Some(pot.clone());
         pot
     }
 }
