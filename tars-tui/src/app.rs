@@ -4,6 +4,7 @@ use std::{
     path::PathBuf,
     process::Command,
     rc::Rc,
+    sync::Arc,
     thread::{self, spawn},
     time::Duration,
 };
@@ -16,13 +17,14 @@ use ratatui::{
     prelude::Rect,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{RwLock, mpsc, oneshot};
 use tracing::debug;
 
 use crate::{
     action::Action,
     components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
     config::Config,
+    tree::TarsTree,
     tui::{Event, Tui},
 };
 
@@ -41,6 +43,8 @@ pub struct App {
 
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
+
+    tree: TarsTree,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -66,14 +70,17 @@ impl App {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         let client = TarsClient::default().await.unwrap();
 
-        Ok(Self {
+        let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
+
+        let app = Self {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Explorer::new(&client).await?),
+                Box::new(Explorer::new(&client, &tree).await?),
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client).await?),
             ],
+            tree,
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -83,7 +90,9 @@ impl App {
             action_rx,
             raw_text: false,
             client,
-        })
+        };
+
+        Ok(app)
     }
 
     pub async fn run(&mut self) -> Result<()> {

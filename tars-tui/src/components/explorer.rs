@@ -21,6 +21,7 @@ use crate::{
     action::{Action, Selection},
     app::Mode,
     config::Config,
+    tree::{TarsKind, TarsNode, TarsTree, TarsTreeHandle},
 };
 
 use super::{Component, frame_block};
@@ -34,44 +35,24 @@ pub struct Explorer {
     active: bool,
     scope: NodeId,
     selection: NodeId,
-    tree: Tree<TarsNode>,
+    tree: TarsTreeHandle,
     rel_depth: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum TarsKind {
-    Root,
-    Task(Task),
-    Group(Group),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct TarsNode {
-    kind: TarsKind,
-    // might need it when creating a new task but even then i think that
-    // should just cause a node refresh so this should ultimately be removed
-    parent: Option<NodeId>,
-    depth: u16,
-}
-
 impl Explorer {
-    pub async fn new(client: &TarsClient) -> Result<Self> {
-        let tree = Self::generate_tree(client).await?;
-        let root = tree.root_node_id().unwrap();
-
-        let pot: Vec<NodeId> = tree.traverse_pre_order_ids(root).unwrap().collect();
-
+    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+        let tree = tree_handle.read().await;
+        let pot = tree.traverse();
+        let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
         let explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
             active: false,
             scope: tree.root_node_id().unwrap().clone(),
-
-            selection: pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone(),
-            tree,
+            selection,
+            tree: tree_handle.clone(),
             rel_depth: 0,
-            // pot,
         };
 
         Ok(explorer)
@@ -79,132 +60,6 @@ impl Explorer {
 
     fn mode(&self) -> Mode {
         Mode::Explorer
-    }
-
-    async fn generate_tree(client: &TarsClient) -> Result<Tree<TarsNode>> {
-        let g_to_g = {
-            let mut map: HashMap<Id, Vec<Group>> = HashMap::new();
-
-            for group in Group::fetch_all(client).await? {
-                let Some(ref parent_id) = group.parent_id else {
-                    continue;
-                };
-
-                let children = match map.get_mut(parent_id) {
-                    Some(e) => e,
-                    None => {
-                        map.insert(parent_id.clone(), Vec::new());
-                        map.get_mut(parent_id).unwrap()
-                    }
-                };
-
-                children.push(group)
-            }
-
-            map
-        };
-
-        let g_to_t = {
-            let mut map: HashMap<Id, Vec<Task>> = HashMap::new();
-
-            for task in Task::fetch(client, TaskFetchOptions::All).await? {
-                let children = match map.get_mut(&task.group.id) {
-                    Some(e) => e,
-                    None => {
-                        map.insert(task.group.id.clone(), Vec::new());
-                        map.get_mut(&task.group.id).unwrap()
-                    }
-                };
-
-                children.push(task)
-            }
-
-            map
-        };
-
-        let mut tree: Tree<TarsNode> = TreeBuilder::new().build();
-
-        let root_id: NodeId = tree.insert(
-            Node::new(TarsNode {
-                kind: TarsKind::Root,
-                parent: None,
-                depth: 0,
-            }),
-            InsertBehavior::AsRoot,
-        )?;
-
-        let all_groups = Group::fetch_all(client).await?;
-        let root_groups: Vec<&Group> = all_groups
-            .iter()
-            .filter(|e| e.parent_id.is_none())
-            .collect();
-
-        for group in root_groups {
-            let mut depth = 0;
-
-            Explorer::tree_children_of_group(
-                &mut tree,
-                group.clone(),
-                &g_to_g,
-                &g_to_t,
-                &mut depth,
-                root_id.clone(),
-            )?;
-        }
-
-        info!("{tree:#?}");
-
-        Ok(tree)
-    }
-
-    fn tree_children_of_group(
-        tree: &mut Tree<TarsNode>,
-        group: Group,
-        g_to_g: &HashMap<Id, Vec<Group>>,
-        g_to_t: &HashMap<Id, Vec<Task>>,
-        depth: &mut u16,
-        parent_id: NodeId,
-    ) -> Result<()> {
-        // insert group into the parent group
-        let group_id = tree.insert(
-            Node::new(TarsNode {
-                kind: TarsKind::Group(group.clone()),
-                parent: Some(parent_id.clone()),
-                depth: *depth,
-            }),
-            InsertBehavior::UnderNode(&parent_id),
-        )?;
-
-        // now we want to add all tasks to it?
-        if let Some(tasks) = g_to_t.get(&group.id) {
-            *depth += 1;
-            for task in tasks {
-                let _ = tree.insert(
-                    Node::new(TarsNode {
-                        kind: TarsKind::Task(task.clone()),
-                        parent: Some(group_id.clone()),
-                        depth: *depth,
-                    }),
-                    InsertBehavior::UnderNode(&group_id),
-                );
-            }
-        }
-
-        if let Some(child_groups) = g_to_g.get(&group.id) {
-            // *depth += 1;
-            let mut depth = *depth + 1;
-            for child_group in child_groups {
-                Explorer::tree_children_of_group(
-                    tree,
-                    child_group.clone(),
-                    g_to_g,
-                    g_to_t,
-                    &mut depth,
-                    group_id.clone(),
-                )?;
-            }
-        }
-        Ok(())
     }
 }
 
@@ -240,7 +95,7 @@ impl Component for Explorer {
             Action::Render => Ok(None),
             Action::SwitchTo(Mode::Explorer) => {
                 self.active = true;
-                match self.tree.get(&self.selection)?.data().kind {
+                match self.tree.read().await.get(&self.selection)?.data().kind {
                     TarsKind::Root => Ok(None),
                     TarsKind::Group(ref g) => Ok(Some(Action::Select(Selection::Group(g.clone())))),
                     TarsKind::Task(ref t) => Ok(Some(Action::Select(Selection::Task(t.clone())))),
@@ -251,53 +106,55 @@ impl Component for Explorer {
                 Ok(None)
             }
             Action::Refresh => {
-                let updated_tree = Self::generate_tree(&self.client).await?;
+                //TODO: do not regenerate the tree on refresh, make it actually performant
 
-                let scope = self.tree.get(&self.scope)?.data();
+                // let updated_tree = Self::generate_tree(&self.client).await?;
 
-                if let Some((_, new_scope_id)) = updated_tree
-                    .traverse_pre_order(updated_tree.root_node_id().unwrap())?
-                    .zip(
-                        updated_tree
-                            .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
-                    )
-                    .find(|(e, _)| {
-                        if let TarsKind::Group(ref g1) = e.data().kind
-                            && let TarsKind::Group(ref g2) = scope.kind
-                        {
-                            return g1.id == g2.id;
-                        }
+                // let scope = self.tree.get(&self.scope)?.data();
 
-                        false
-                    })
-                {
-                    self.scope = new_scope_id;
-                } else {
-                    warn!("Scope not found on tree refresh, setting to root node.");
-                    self.scope = updated_tree.root_node_id().unwrap().clone();
-                }
+                // if let Some((_, new_scope_id)) = updated_tree
+                //     .traverse_pre_order(updated_tree.root_node_id().unwrap())?
+                //     .zip(
+                //         updated_tree
+                //             .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
+                //     )
+                //     .find(|(e, _)| {
+                //         if let TarsKind::Group(ref g1) = e.data().kind
+                //             && let TarsKind::Group(ref g2) = scope.kind
+                //         {
+                //             return g1.id == g2.id;
+                //         }
 
-                let selection = self.tree.get(&self.selection)?.data().clone();
+                //         false
+                //     })
+                // {
+                //     self.scope = new_scope_id;
+                // } else {
+                //     warn!("Scope not found on tree refresh, setting to root node.");
+                //     self.scope = updated_tree.root_node_id().unwrap().clone();
+                // }
 
-                if let Some((_, new_selection_id)) = updated_tree
-                    .traverse_pre_order(updated_tree.root_node_id().unwrap())?
-                    .zip(
-                        updated_tree
-                            .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
-                    )
-                    .find(|(e, _)| match (&e.data().kind, &selection.kind) {
-                        (TarsKind::Task(t1), TarsKind::Task(t2)) => t1.id == t2.id,
-                        (TarsKind::Group(g1), TarsKind::Group(g2)) => g1.id == g2.id,
-                        _ => false,
-                    })
-                {
-                    self.selection = new_selection_id;
-                } else {
-                    warn!("Selection not found on tree refresh, setting to root node.");
-                    self.selection = updated_tree.root_node_id().unwrap().clone();
-                }
+                // let selection = self.tree.get(&self.selection)?.data().clone();
 
-                self.tree = updated_tree;
+                // if let Some((_, new_selection_id)) = updated_tree
+                //     .traverse_pre_order(updated_tree.root_node_id().unwrap())?
+                //     .zip(
+                //         updated_tree
+                //             .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
+                //     )
+                //     .find(|(e, _)| match (&e.data().kind, &selection.kind) {
+                //         (TarsKind::Task(t1), TarsKind::Task(t2)) => t1.id == t2.id,
+                //         (TarsKind::Group(g1), TarsKind::Group(g2)) => g1.id == g2.id,
+                //         _ => false,
+                //     })
+                // {
+                //     self.selection = new_selection_id;
+                // } else {
+                //     warn!("Selection not found on tree refresh, setting to root node.");
+                //     self.selection = updated_tree.root_node_id().unwrap().clone();
+                // }
+
+                // self.tree = updated_tree;
                 Ok(None)
             }
             _ => Ok(None),
@@ -316,6 +173,8 @@ impl Component for Explorer {
 
         let pot: Vec<(NodeId, &Node<TarsNode>)> = self
             .tree
+            .read()
+            .await
             .traverse_pre_order_ids(&self.scope)
             .unwrap()
             .zip(self.tree.traverse_pre_order(&self.scope).unwrap())
