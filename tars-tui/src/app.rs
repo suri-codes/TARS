@@ -44,7 +44,7 @@ pub struct App {
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
 
-    tree: TarsTreeHandle,
+    _tree: TarsTreeHandle,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -80,7 +80,7 @@ impl App {
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client).await?),
             ],
-            tree,
+            _tree: tree,
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -109,7 +109,7 @@ impl App {
             component.register_config_handler(self.config.clone())?;
         }
         for component in self.components.iter_mut() {
-            component.init(tui.size()?, self.mode)?;
+            component.init(tui.size()?, self.mode).await?;
         }
 
         let action_tx = self.action_tx.clone();

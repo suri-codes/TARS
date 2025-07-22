@@ -53,7 +53,7 @@ impl TodoList {
 
 #[async_trait]
 impl Component for TodoList {
-    fn init(
+    async fn init(
         &mut self,
         _area: ratatui::prelude::Size,
         default_mode: Mode,

@@ -10,7 +10,6 @@ use common::{
     TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
 };
-use derive_deref::Deref;
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use tokio::sync::RwLock;
 use tracing::info;
@@ -177,14 +176,17 @@ impl TarsTree {
         Ok(())
     }
 
-    /// a post order traversal of the TarsTree
-    pub fn traverse(&self) -> Vec<(NodeId, &Node<TarsNode>)> {
-        let root = self.root_node_id().unwrap();
-
+    /// a post order traversal of the TarsTree, starting at the root
+    pub fn traverse_root(&self) -> Vec<(NodeId, &Node<TarsNode>)> {
+        let node = self.root_node_id().unwrap();
+        self.traverse(node)
+    }
+    /// a post order traversal of the TarsTree, starting at the specified node
+    pub fn traverse(&self, node: &NodeId) -> Vec<(NodeId, &Node<TarsNode>)> {
         let pot: Vec<(NodeId, &Node<TarsNode>)> = self
-            .traverse_pre_order_ids(root)
+            .traverse_pre_order_ids(node)
             .unwrap()
-            .zip(self.traverse_pre_order(root).unwrap())
+            .zip(self.traverse_pre_order(node).unwrap())
             .collect();
 
         pot

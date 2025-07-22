@@ -1,30 +1,26 @@
-use std::{collections::HashMap, fmt::Debug, rc::Rc};
-
 use async_trait::async_trait;
-use color_eyre::{Result, owo_colors::OwoColorize};
+use color_eyre::Result;
 use common::{
     TarsClient,
-    types::{Color, Group, Id, Task, TaskFetchOptions},
+    types::{Color, Group, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
-use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
-use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color as RatColor, Style, Stylize},
-    text::Text,
-    widgets::Paragraph,
-};
+use id_tree::NodeId;
+use ratatui::layout::{Constraint, Direction, Layout};
+use state::State;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::{
     action::{Action, Selection},
     app::Mode,
     config::Config,
-    tree::{TarsKind, TarsNode, TarsTree, TarsTreeHandle},
+    tree::{TarsKind, TarsTreeHandle},
 };
 
 use super::{Component, frame_block};
+
+mod state;
 
 #[derive(Debug)]
 /// Explorer component that allows you to navigate between different groups (scopes).
@@ -32,47 +28,26 @@ pub struct Explorer<'a> {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     client: TarsClient,
-    active: bool,
-    scope: NodeId,
-    selection: NodeId,
-    tree: TarsTreeHandle,
-    rel_depth: u16,
-    draw_info: DrawInfo<'a>,
-}
-
-#[derive(Debug)]
-struct DrawInfo<'a> {
-    // line_constraints: Vec<Constraint>,
-    // task_layouts: Layout,
-    entries: Vec<(Paragraph<'a>, Layout)>,
-    entries_layout: Layout,
-
-    breadcrumbs: Vec<(Text<'a>)>,
-    breadcrumb_layout: Layout,
+    state: State<'a>,
+    tree_handle: TarsTreeHandle,
 }
 
 impl<'a> Explorer<'a> {
     pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let tree = tree_handle.read().await;
-        let pot = tree.traverse();
+        let pot = tree.traverse_root();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
         let selection = selection.clone();
+        let scope = tree.root_node_id().unwrap().clone();
+
+        let state = State::new(false, scope, selection, tree_handle.clone(), 0).await;
+
         let explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
-            active: false,
-            scope: tree.root_node_id().unwrap().clone(),
-            selection: selection.clone(),
-            tree: tree_handle.clone(),
-            rel_depth: 0,
-            draw_info: Self::calculate_draw_info(
-                tree_handle.clone(),
-                tree.root_node_id().unwrap().clone(),
-                Some(selection),
-                0,
-            )
-            .await,
+            state,
+            tree_handle: tree_handle.clone(),
         };
 
         Ok(explorer)
@@ -81,137 +56,17 @@ impl<'a> Explorer<'a> {
     fn mode(&self) -> Mode {
         Mode::Explorer
     }
-
-    async fn calculate_draw_info(
-        tree_handle: TarsTreeHandle,
-        scope: NodeId,
-        selection: Option<NodeId>,
-        rel_depth: u16,
-    ) -> DrawInfo<'a> {
-        let tree = tree_handle.read().await;
-
-        let breadcrumbs_and_constraints = {
-            let mut ancestors: Vec<(Text, Constraint)> = tree
-                .ancestors(&scope)
-                .expect("ancestors should be valid")
-                .map(|ancestor| {
-                    let (name, color) = {
-                        match ancestor.data().kind {
-                            TarsKind::Root => (
-                                " Home ".into(),
-                                TryInto::<Color>::try_into("red".to_owned()).unwrap(),
-                            ),
-
-                            TarsKind::Group(ref g) => (format!(" {} ", *g.name), g.color.clone()),
-
-                            _ => {
-                                panic!()
-                            }
-                        }
-                    };
-
-                    (
-                        Text::styled(
-                            name.clone(),
-                            Style::new().bg(color.into()).fg(RatColor::Black),
-                        ),
-                        Constraint::Length(name.len() as u16),
-                    )
-                })
-                .collect();
-            ancestors.reverse();
-            ancestors
-        };
-
-        let breadcrumb_layout = {
-            let constraints: Vec<Constraint> = breadcrumbs_and_constraints
-                .iter()
-                .map(|(_, c)| *c)
-                .collect();
-
-            Layout::new(Direction::Horizontal, constraints)
-        };
-
-        let breadcrumbs = breadcrumbs_and_constraints
-            .into_iter()
-            .map(|(b, c)| b)
-            .collect();
-
-        let entries: Vec<(Paragraph<'_>, Layout)> = {
-            let root_node_id = tree.root_node_id().expect("root node id should exist");
-
-            let traverse = tree.traverse();
-
-            let pot: Vec<_> = traverse
-                .iter()
-                .enumerate()
-                // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
-                .filter(|(i, _)| !(scope == *root_node_id && *i == 0))
-                .map(|(_, x)| x)
-                .collect();
-            // how am i supposed to render this shit dawg
-
-            // need to divide up the area. algorithmically.
-
-            // ideally top 4 tasks per group + a line that says more coming after
-            //
-            pot.iter()
-                .map(|(entry_id, entry)| {
-                    let (style, postfix) = if selection == Some(entry_id.clone()) {
-                        (Style::new().bold().italic(), "*")
-                    } else {
-                        (Style::new(), "")
-                    };
-
-                    let widget = match entry.data().kind {
-                        TarsKind::Root => Paragraph::new("SHOULDNTBEPOSSIBLE"),
-                        TarsKind::Task(ref t) => {
-                            Paragraph::new(format!("{}    {postfix}", *t.name))
-                                .style(style.fg(t.group.color.as_ref().into()))
-                        }
-
-                        TarsKind::Group(ref g) => {
-                            Paragraph::new(format!("{}    {postfix}", *g.name))
-                                .style(style.fg(RatColor::Black).bg(g.color.as_ref().into()))
-                        }
-                    };
-
-                    let layout = Layout::new(
-                        Direction::Horizontal,
-                        [
-                            Constraint::Min(entry.data().depth - rel_depth),
-                            Constraint::Percentage(100),
-                        ],
-                    );
-
-                    (widget, layout)
-                })
-                .collect()
-        };
-
-        let entries_layout = {
-            let constraints: Vec<Constraint> = entries.iter().map(|_| Constraint::Max(1)).collect();
-            Layout::new(Direction::Vertical, constraints)
-        };
-
-        DrawInfo {
-            breadcrumb_layout,
-            breadcrumbs,
-            entries,
-            entries_layout,
-        }
-    }
 }
 
 #[async_trait]
 impl<'a> Component for Explorer<'a> {
-    fn init(
+    async fn init(
         &mut self,
         _area: ratatui::prelude::Size,
         default_mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
         if default_mode == self.mode() {
-            self.active = true
+            self.state.set_is_active(true)
         }
 
         Ok(())
@@ -234,25 +89,28 @@ impl<'a> Component for Explorer<'a> {
             Action::Tick => Ok(None),
             Action::Render => Ok(None),
             Action::SwitchTo(Mode::Explorer) => {
-                self.active = true;
-                match self.tree.read().await.get(&self.selection)?.data().kind {
+                self.state.set_is_active(true);
+                match self
+                    .state
+                    .tree_handle
+                    .read()
+                    .await
+                    .get(self.state.get_selection())?
+                    .data()
+                    .kind
+                {
                     TarsKind::Root => Ok(None),
                     TarsKind::Group(ref g) => Ok(Some(Action::Select(Selection::Group(g.clone())))),
                     TarsKind::Task(ref t) => Ok(Some(Action::Select(Selection::Task(t.clone())))),
                 }
             }
             Action::SwitchTo(_) => {
-                self.active = false;
+                self.state.set_is_active(false);
                 Ok(None)
             }
             Action::Refresh => {
-                self.draw_info = Self::calculate_draw_info(
-                    self.tree.clone(),
-                    self.scope.clone(),
-                    Some(self.selection.clone()),
-                    self.rel_depth,
-                )
-                .await;
+                // haha not this simple haha!
+                self.state.calculate_draw_info().await;
 
                 //TODO: do not regenerate the tree on refresh, make it actually performant
 
@@ -315,18 +173,19 @@ impl<'a> Component for Explorer<'a> {
         // k would move selection up
         // l would move into a new scope
         // h would move into the outer scope
-        if !self.active {
+        if !self.state.is_active() {
             return Ok(None);
         }
 
-        let tree = self.tree.read().await;
+        let tree = self.tree_handle.read().await;
 
-        let pot = tree.traverse();
+        let pot = tree.traverse(self.state.get_scope());
 
+        // let pot = tree.traverse_root;
         let Some((curr_idx, (_, node))) = pot
             .iter()
             .enumerate()
-            .find(|(_, (id, _))| self.selection == *id)
+            .find(|(_, (id, _))| *self.state.get_selection() == *id)
         else {
             return Ok(None);
         };
@@ -343,7 +202,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('x') => {
-                let selected = tree.get(&self.selection)?.data();
+                let selected = tree.get(self.state.get_selection())?.data();
 
                 match selected.kind {
                     TarsKind::Task(ref t) => {
@@ -359,7 +218,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('t') => {
-                let parent = match tree.get(&self.selection)?.data().kind {
+                let parent = match tree.get(self.state.get_selection())?.data().kind {
                     TarsKind::Task(ref t) => &t.group,
                     TarsKind::Group(ref g) => g,
                     TarsKind::Root => return Ok(None),
@@ -380,7 +239,7 @@ impl<'a> Component for Explorer<'a> {
 
             // this will make a root group
             KeyCode::Char('G') => {
-                let parent_group = match tree.get(&self.scope)?.data().kind {
+                let parent_group = match tree.get(self.state.get_scope())?.data().kind {
                     TarsKind::Root => None,
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Task(_) => return Ok(None),
@@ -399,7 +258,7 @@ impl<'a> Component for Explorer<'a> {
 
             // this will make a child of the currently selected group
             KeyCode::Char('g') => {
-                let curr_node_id = match tree.get(&self.selection)?.data().kind {
+                let curr_node_id = match tree.get(self.state.get_selection())?.data().kind {
                     TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Root => None,
@@ -423,7 +282,7 @@ impl<'a> Component for Explorer<'a> {
                 info!("J pressed");
 
                 if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
-                    self.selection = next_id.clone();
+                    self.state.set_selection(next_id.clone()).await;
 
                     match &next_node.data().kind {
                         TarsKind::Root => {}
@@ -454,7 +313,7 @@ impl<'a> Component for Explorer<'a> {
                         return Ok(None);
                     }
 
-                    self.selection = prev_id.clone();
+                    self.state.set_selection(prev_id.clone()).await;
 
                     match &prev_node.data().kind {
                         TarsKind::Root => {}
@@ -475,9 +334,9 @@ impl<'a> Component for Explorer<'a> {
                 let (curr_id, curr_node) = pot.get(curr_idx).unwrap();
 
                 if let TarsKind::Group(ref g) = curr_node.data().kind {
-                    self.rel_depth = curr_node.data().depth;
-                    self.scope = curr_id.clone();
-                    self.selection = curr_id.clone();
+                    self.state.set_rel_depth(curr_node.data().depth).await;
+                    self.state.set_scope(curr_id.clone()).await;
+                    self.state.set_selection(curr_id.clone()).await;
                     return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
                 };
 
@@ -485,18 +344,18 @@ impl<'a> Component for Explorer<'a> {
             }
             KeyCode::Char('h') => {
                 // now we need the ancestors of this guy
-                let ancestors: Vec<&NodeId> = tree.ancestor_ids(&self.scope)?.collect();
+                let ancestors: Vec<&NodeId> = tree.ancestor_ids(self.state.get_scope())?.collect();
                 if let Some(parent) = ancestors.first() {
-                    self.scope = (*parent).clone();
+                    self.state.set_scope((*parent).clone()).await;
                     let parent_node = tree.get(parent)?;
 
                     match parent_node.data().kind {
                         TarsKind::Root => {
-                            self.rel_depth = parent_node.data().depth;
+                            self.state.set_rel_depth(parent_node.data().depth).await;
                             return Ok(Some(Action::ScopeUpdate(None)));
                         }
                         TarsKind::Group(ref g) => {
-                            self.rel_depth = parent_node.data().depth;
+                            self.state.set_rel_depth(parent_node.data().depth).await;
                             return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
                         }
                         _ => {
@@ -516,7 +375,7 @@ impl<'a> Component for Explorer<'a> {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(frame_block(self.active, self.mode()), area);
+        frame.render_widget(frame_block(self.state.is_active(), self.mode()), area);
 
         let areas = Layout::new(
             Direction::Vertical,
@@ -530,16 +389,18 @@ impl<'a> Component for Explorer<'a> {
 
         let breadcrumbs_area = areas[1];
 
-        let crumb_rects = self.draw_info.breadcrumb_layout.split(breadcrumbs_area);
+        let draw_info = self.state.get_draw_info();
 
-        for (crumb, crumb_rect) in self.draw_info.breadcrumbs.iter().zip(crumb_rects.iter()) {
+        let crumb_rects = draw_info.breadcrumb_layout.split(breadcrumbs_area);
+
+        for (crumb, crumb_rect) in draw_info.breadcrumbs.iter().zip(crumb_rects.iter()) {
             frame.render_widget(crumb, *crumb_rect);
         }
 
-        let entries_rects = self.draw_info.entries_layout.split(entries_area);
+        let entries_rects = draw_info.entries_layout.split(entries_area);
 
         for ((entry, depth_offset_layout), entry_rect) in
-            self.draw_info.entries.iter().zip(entries_rects.iter())
+            draw_info.entries.iter().zip(entries_rects.iter())
         {
             frame.render_widget(entry, depth_offset_layout.split(*entry_rect)[1]);
         }
