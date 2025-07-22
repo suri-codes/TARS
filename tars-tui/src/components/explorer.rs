@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, rc::Rc};
 
 use async_trait::async_trait;
 use color_eyre::{Result, owo_colors::OwoColorize};
@@ -9,7 +9,7 @@ use common::{
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color as RatColor, Style, Stylize},
     text::Text,
     widgets::Paragraph,
@@ -28,7 +28,7 @@ use super::{Component, frame_block};
 
 #[derive(Debug)]
 /// Explorer component that allows you to navigate between different groups (scopes).
-pub struct Explorer {
+pub struct Explorer<'a> {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
     client: TarsClient,
@@ -37,9 +37,21 @@ pub struct Explorer {
     selection: NodeId,
     tree: TarsTreeHandle,
     rel_depth: u16,
+    draw_info: DrawInfo<'a>,
 }
 
-impl Explorer {
+#[derive(Debug)]
+struct DrawInfo<'a> {
+    // line_constraints: Vec<Constraint>,
+    // task_layouts: Layout,
+    entries: Vec<(Paragraph<'a>, Layout)>,
+    entries_layout: Layout,
+
+    breadcrumbs: Vec<(Text<'a>)>,
+    breadcrumb_layout: Layout,
+}
+
+impl<'a> Explorer<'a> {
     pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let tree = tree_handle.read().await;
         let pot = tree.traverse();
@@ -51,9 +63,16 @@ impl Explorer {
             client: client.clone(),
             active: false,
             scope: tree.root_node_id().unwrap().clone(),
-            selection,
+            selection: selection.clone(),
             tree: tree_handle.clone(),
             rel_depth: 0,
+            draw_info: Self::calculate_draw_info(
+                tree_handle.clone(),
+                tree.root_node_id().unwrap().clone(),
+                Some(selection),
+                0,
+            )
+            .await,
         };
 
         Ok(explorer)
@@ -62,10 +81,130 @@ impl Explorer {
     fn mode(&self) -> Mode {
         Mode::Explorer
     }
+
+    async fn calculate_draw_info(
+        tree_handle: TarsTreeHandle,
+        scope: NodeId,
+        selection: Option<NodeId>,
+        rel_depth: u16,
+    ) -> DrawInfo<'a> {
+        let tree = tree_handle.read().await;
+
+        let breadcrumbs_and_constraints = {
+            let mut ancestors: Vec<(Text, Constraint)> = tree
+                .ancestors(&scope)
+                .expect("ancestors should be valid")
+                .map(|ancestor| {
+                    let (name, color) = {
+                        match ancestor.data().kind {
+                            TarsKind::Root => (
+                                " Home ".into(),
+                                TryInto::<Color>::try_into("red".to_owned()).unwrap(),
+                            ),
+
+                            TarsKind::Group(ref g) => (format!(" {} ", *g.name), g.color.clone()),
+
+                            _ => {
+                                panic!()
+                            }
+                        }
+                    };
+
+                    (
+                        Text::styled(
+                            name.clone(),
+                            Style::new().bg(color.into()).fg(RatColor::Black),
+                        ),
+                        Constraint::Length(name.len() as u16),
+                    )
+                })
+                .collect();
+            ancestors.reverse();
+            ancestors
+        };
+
+        let breadcrumb_layout = {
+            let constraints: Vec<Constraint> = breadcrumbs_and_constraints
+                .iter()
+                .map(|(_, c)| *c)
+                .collect();
+
+            Layout::new(Direction::Horizontal, constraints)
+        };
+
+        let breadcrumbs = breadcrumbs_and_constraints
+            .into_iter()
+            .map(|(b, c)| b)
+            .collect();
+
+        let entries: Vec<(Paragraph<'_>, Layout)> = {
+            let root_node_id = tree.root_node_id().expect("root node id should exist");
+
+            let traverse = tree.traverse();
+
+            let pot: Vec<_> = traverse
+                .iter()
+                .enumerate()
+                // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
+                .filter(|(i, _)| !(scope == *root_node_id && *i == 0))
+                .map(|(_, x)| x)
+                .collect();
+            // how am i supposed to render this shit dawg
+
+            // need to divide up the area. algorithmically.
+
+            // ideally top 4 tasks per group + a line that says more coming after
+            //
+            pot.iter()
+                .map(|(entry_id, entry)| {
+                    let (style, postfix) = if selection == Some(entry_id.clone()) {
+                        (Style::new().bold().italic(), "*")
+                    } else {
+                        (Style::new(), "")
+                    };
+
+                    let widget = match entry.data().kind {
+                        TarsKind::Root => Paragraph::new("SHOULDNTBEPOSSIBLE"),
+                        TarsKind::Task(ref t) => {
+                            Paragraph::new(format!("{}    {postfix}", *t.name))
+                                .style(style.fg(t.group.color.as_ref().into()))
+                        }
+
+                        TarsKind::Group(ref g) => {
+                            Paragraph::new(format!("{}    {postfix}", *g.name))
+                                .style(style.fg(RatColor::Black).bg(g.color.as_ref().into()))
+                        }
+                    };
+
+                    let layout = Layout::new(
+                        Direction::Horizontal,
+                        [
+                            Constraint::Min(entry.data().depth - rel_depth),
+                            Constraint::Percentage(100),
+                        ],
+                    );
+
+                    (widget, layout)
+                })
+                .collect()
+        };
+
+        let entries_layout = {
+            let constraints: Vec<Constraint> = entries.iter().map(|_| Constraint::Max(1)).collect();
+            Layout::new(Direction::Vertical, constraints)
+        };
+
+        DrawInfo {
+            breadcrumb_layout,
+            breadcrumbs,
+            entries,
+            entries_layout,
+        }
+    }
 }
 
 #[async_trait]
-impl Component for Explorer {
+impl<'a> Component for Explorer<'a> {
     fn init(
         &mut self,
         _area: ratatui::prelude::Size,
@@ -107,6 +246,14 @@ impl Component for Explorer {
                 Ok(None)
             }
             Action::Refresh => {
+                self.draw_info = Self::calculate_draw_info(
+                    self.tree.clone(),
+                    self.scope.clone(),
+                    Some(self.selection.clone()),
+                    self.rel_depth,
+                )
+                .await;
+
                 //TODO: do not regenerate the tree on refresh, make it actually performant
 
                 // let updated_tree = Self::generate_tree(&self.client).await?;
@@ -379,98 +526,22 @@ impl Component for Explorer {
         .vertical_margin(1)
         .split(area);
 
-        let area = areas[0];
+        let entries_area = areas[0];
 
-        let tree = self.tree.blocking_read();
+        let breadcrumbs_area = areas[1];
 
-        let breadcrumbs = areas[1];
+        let crumb_rects = self.draw_info.breadcrumb_layout.split(breadcrumbs_area);
 
-        //TODO: actually have to split the breadcrumbs area into the shi.
-        let mut ancestors: Vec<(Text, Constraint)> = tree
-            .ancestors(&self.scope)
-            .expect("ancestors should be valid")
-            .map(|ancestor| {
-                let (name, color) = {
-                    match ancestor.data().kind {
-                        TarsKind::Root => (
-                            " Home ".into(),
-                            TryInto::<Color>::try_into("red".to_owned()).unwrap(),
-                        ),
-
-                        TarsKind::Group(ref g) => (format!(" {} ", *g.name), g.color.clone()),
-
-                        _ => {
-                            panic!()
-                        }
-                    }
-                };
-
-                (
-                    Text::styled(
-                        name.clone(),
-                        Style::new().bg(color.into()).fg(RatColor::Black),
-                    ),
-                    Constraint::Length(name.len() as u16),
-                )
-            })
-            .collect();
-        ancestors.reverse();
-
-        let constraints: Vec<Constraint> = ancestors.iter().map(|(_, c)| *c).collect();
-
-        let crumb_layout = Layout::new(Direction::Horizontal, constraints).split(breadcrumbs);
-
-        for ((ancestor, _), area) in ancestors.iter().zip(crumb_layout.iter()) {
-            frame.render_widget(ancestor, *area);
+        for (crumb, crumb_rect) in self.draw_info.breadcrumbs.iter().zip(crumb_rects.iter()) {
+            frame.render_widget(crumb, *crumb_rect);
         }
 
-        let root_node_id = tree.root_node_id().expect("root node id should exist");
+        let entries_rects = self.draw_info.entries_layout.split(entries_area);
 
-        let pot: Vec<(NodeId, TarsNode)> = tree
-            .traverse()
-            .into_iter()
-            .enumerate()
-            // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
-            .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
-            .map(|(_, (node_id, node))| (node_id, node.data().clone()))
-            .collect();
-
-        let constraints: Vec<Constraint> = pot.iter().map(|_| Constraint::Max(1)).collect();
-
-        let task_layouts = Layout::new(Direction::Vertical, constraints).split(area);
-        // how am i supposed to render this shit dawg
-
-        // need to divide up the area. algorithmically.
-
-        // ideally top 4 tasks per group + a line that says more coming after
-
-        // groups organized by parents
-        for ((entry_id, entry), area) in pot.iter().zip(task_layouts.iter()) {
-            let (style, postfix) = if self.selection == *entry_id {
-                (Style::new().bold().italic(), "*")
-            } else {
-                (Style::new(), "")
-            };
-            let widget = match entry.kind {
-                TarsKind::Root => Paragraph::new("SHOULDNTBEPOSSIBLE"),
-                TarsKind::Task(ref t) => Paragraph::new(format!("{}    {postfix}", *t.name))
-                    .style(style.fg(t.group.color.as_ref().into())),
-
-                TarsKind::Group(ref g) => Paragraph::new(format!("{}    {postfix}", *g.name))
-                    .style(style.fg(RatColor::Black).bg(g.color.as_ref().into())),
-            };
-
-            // pad with the depth we want
-            let area = Layout::new(
-                Direction::Horizontal,
-                [
-                    Constraint::Min(entry.depth - self.rel_depth),
-                    Constraint::Percentage(100),
-                ],
-            )
-            .split(*area)[1];
-
-            frame.render_widget(widget, area);
+        for ((entry, depth_offset_layout), entry_rect) in
+            self.draw_info.entries.iter().zip(entries_rects.iter())
+        {
+            frame.render_widget(entry, depth_offset_layout.split(*entry_rect)[1]);
         }
 
         Ok(())

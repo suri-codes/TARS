@@ -15,13 +15,10 @@ use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
 use tokio::sync::RwLock;
 use tracing::info;
 
-pub type TarsTreeHandle<'a> = Arc<RwLock<TarsTree<'a>>>;
+pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
 
 #[derive(Debug)]
-pub struct TarsTree<'a> {
-    inner_tree: Tree<TarsNode>,
-    pot: Option<Vec<(NodeId, &'a Node<TarsNode>)>>,
-}
+pub struct TarsTree(Tree<TarsNode>);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TarsKind {
@@ -40,28 +37,20 @@ pub struct TarsNode {
     pub depth: u16,
 }
 
-// impl Deref for TarsTree<'_> {
-//     type Target = Tree<TarsNode>;
+impl Deref for TarsTree {
+    type Target = Tree<TarsNode>;
 
-//     fn deref(&self) -> &Self::Target {
-//         &self.inner_tree
-//     }
-// }
-// impl DerefMut for TarsTree<'_> {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.inner_tree
-//     }
-// }
-
-impl<'a> TarsTree<'a> {
-    pub fn tree(&self) -> &Tree<TarsNode> {
-        &self.inner_tree
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
-
-    pub fn tree_mut(&mut self) -> &mut Tree<TarsNode> {
-        &mut self.inner_tree
+}
+impl DerefMut for TarsTree {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
+}
 
+impl TarsTree {
     pub async fn generate(client: &TarsClient) -> Result<Self> {
         // create a hashmap from a group id to its children groups
         let g_to_g = {
@@ -105,10 +94,7 @@ impl<'a> TarsTree<'a> {
             map
         };
 
-        let mut tree = TarsTree {
-            inner_tree: TreeBuilder::new().build(),
-            pot: None,
-        };
+        let mut tree = TarsTree(TreeBuilder::new().build());
 
         let root_id: NodeId = tree.insert(
             Node::new(TarsNode {
@@ -192,22 +178,15 @@ impl<'a> TarsTree<'a> {
     }
 
     /// a post order traversal of the TarsTree
-    pub fn traverse(&'a mut self) -> Vec<(NodeId, &'a Node<TarsNode>)> {
-        if self.pot.is_some() {
-            return self.pot.clone().unwrap();
-        }
+    pub fn traverse(&self) -> Vec<(NodeId, &Node<TarsNode>)> {
+        let root = self.root_node_id().unwrap();
 
-        let root = self.tree().root_node_id().unwrap();
-
-        let pot: Vec<(NodeId, &'a Node<TarsNode>)> = self
-            .tree()
+        let pot: Vec<(NodeId, &Node<TarsNode>)> = self
             .traverse_pre_order_ids(root)
             .unwrap()
-            .into_iter()
-            .zip(self.tree().traverse_pre_order(root).unwrap())
+            .zip(self.traverse_pre_order(root).unwrap())
             .collect();
 
-        self.pot = Some(pot.clone());
         pot
     }
 }
