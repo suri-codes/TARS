@@ -24,7 +24,7 @@ use crate::{
     action::Action,
     components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
     config::Config,
-    tree::TarsTree,
+    tree::{TarsTree, TarsTreeHandle},
     tui::{Event, Tui},
 };
 
@@ -44,7 +44,7 @@ pub struct App {
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
 
-    tree: TarsTree,
+    tree: TarsTreeHandle,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -76,7 +76,7 @@ impl App {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Explorer::new(&client, &tree).await?),
+                Box::new(Explorer::new(&client, tree.clone()).await?),
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client).await?),
             ],

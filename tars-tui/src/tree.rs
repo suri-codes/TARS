@@ -17,9 +17,9 @@ use tracing::info;
 pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
 
 #[derive(Debug)]
-pub struct TarsTree {
+pub struct TarsTree<'a> {
     inner_tree: Tree<TarsNode>,
-    pot: Vec<(NodeId, Node<TarsNode>)>,
+    pot: Option<Vec<(NodeId, &'a Node<TarsNode>)>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -96,9 +96,12 @@ impl TarsTree {
             map
         };
 
-        let mut tree = TarsTree(TreeBuilder::new().build());
+        let mut tree = TarsTree {
+            inner_tree: TreeBuilder::new().build(),
+            pot: None,
+        };
 
-        let root_id: NodeId = tree.0.insert(
+        let root_id: NodeId = tree.insert(
             Node::new(TarsNode {
                 kind: TarsKind::Root,
                 parent: None,
@@ -139,7 +142,7 @@ impl TarsTree {
         parent_id: NodeId,
     ) -> Result<()> {
         // insert group into the parent group
-        let group_id = self.0.insert(
+        let group_id = self.insert(
             Node::new(TarsNode {
                 kind: TarsKind::Group(group.clone()),
                 parent: Some(parent_id.clone()),
@@ -152,7 +155,7 @@ impl TarsTree {
         if let Some(tasks) = g_to_t.get(&group.id) {
             *depth += 1;
             for task in tasks {
-                let _ = self.0.insert(
+                let _ = self.insert(
                     Node::new(TarsNode {
                         kind: TarsKind::Task(task.clone()),
                         parent: Some(group_id.clone()),
@@ -180,14 +183,23 @@ impl TarsTree {
     }
 
     /// a post order traversal of the TarsTree
-    pub fn traverse(&self) -> Vec<(NodeId, &Node<TarsNode>)> {
-        let root = self.0.root_node_id().unwrap();
+    pub fn traverse(&self) -> Vec<(NodeId, TarsNode)> {
+        if self.pot.is_some() {
+            let x = self.pot.unwrap();
+            let y = x.clone();
+            return self.pot.unwrap().clone();
+        }
 
-        self.0
+        let root = self.root_node_id().unwrap();
+
+        let pot = self
             .traverse_pre_order_ids(root)
             .unwrap()
             .into_iter()
-            .zip(self.0.traverse_pre_order(root).unwrap())
-            .collect()
+            .zip(self.traverse_pre_order(root).unwrap())
+            .collect();
+
+        self.pot = pot.clone();
+        pot
     }
 }

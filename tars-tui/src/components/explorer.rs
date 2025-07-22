@@ -44,6 +44,7 @@ impl Explorer {
         let tree = tree_handle.read().await;
         let pot = tree.traverse();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
+        let selection = selection.clone();
         let explorer = Self {
             command_tx: Default::default(),
             config: Default::default(),
@@ -171,14 +172,9 @@ impl Component for Explorer {
             return Ok(None);
         }
 
-        let pot: Vec<(NodeId, &Node<TarsNode>)> = self
-            .tree
-            .read()
-            .await
-            .traverse_pre_order_ids(&self.scope)
-            .unwrap()
-            .zip(self.tree.traverse_pre_order(&self.scope).unwrap())
-            .collect();
+        let tree = self.tree.read().await;
+
+        let pot = tree.traverse();
 
         let Some((curr_idx, (_, node))) = pot
             .iter()
@@ -200,7 +196,7 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('x') => {
-                let selected = self.tree.get(&self.selection)?.data();
+                let selected = tree.get(&self.selection)?.data();
 
                 match selected.kind {
                     TarsKind::Task(ref t) => {
@@ -216,7 +212,7 @@ impl Component for Explorer {
             }
 
             KeyCode::Char('t') => {
-                let parent = match self.tree.get(&self.selection)?.data().kind {
+                let parent = match tree.get(&self.selection)?.data().kind {
                     TarsKind::Task(ref t) => &t.group,
                     TarsKind::Group(ref g) => g,
                     TarsKind::Root => return Ok(None),
@@ -237,7 +233,7 @@ impl Component for Explorer {
 
             // this will make a root group
             KeyCode::Char('G') => {
-                let parent_group = match self.tree.get(&self.scope)?.data().kind {
+                let parent_group = match tree.get(&self.scope)?.data().kind {
                     TarsKind::Root => None,
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Task(_) => return Ok(None),
@@ -256,7 +252,7 @@ impl Component for Explorer {
 
             // this will make a child of the currently selected group
             KeyCode::Char('g') => {
-                let curr_node_id = match self.tree.get(&self.selection)?.data().kind {
+                let curr_node_id = match tree.get(&self.selection)?.data().kind {
                     TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Root => None,
@@ -307,7 +303,7 @@ impl Component for Explorer {
                     };
                     i
                 }) {
-                    if self.tree.root_node_id().unwrap() == prev_id {
+                    if tree.root_node_id().unwrap() == prev_id {
                         return Ok(None);
                     }
 
@@ -342,10 +338,10 @@ impl Component for Explorer {
             }
             KeyCode::Char('h') => {
                 // now we need the ancestors of this guy
-                let ancestors: Vec<&NodeId> = self.tree.ancestor_ids(&self.scope)?.collect();
+                let ancestors: Vec<&NodeId> = tree.ancestor_ids(&self.scope)?.collect();
                 if let Some(parent) = ancestors.first() {
                     self.scope = (*parent).clone();
-                    let parent_node = self.tree.get(parent)?;
+                    let parent_node = tree.get(parent)?;
 
                     match parent_node.data().kind {
                         TarsKind::Root => {
@@ -385,11 +381,12 @@ impl Component for Explorer {
 
         let area = areas[0];
 
+        let tree = self.tree.blocking_read();
+
         let breadcrumbs = areas[1];
 
         //TODO: actually have to split the breadcrumbs area into the shi.
-        let mut ancestors: Vec<(Text, Constraint)> = self
-            .tree
+        let mut ancestors: Vec<(Text, Constraint)> = tree
             .ancestors(&self.scope)
             .expect("ancestors should be valid")
             .map(|ancestor| {
@@ -427,12 +424,11 @@ impl Component for Explorer {
             frame.render_widget(ancestor, *area);
         }
 
-        let root_node_id = self.tree.root_node_id().expect("root node id should exist");
+        let root_node_id = tree.root_node_id().expect("root node id should exist");
 
-        let pot: Vec<(NodeId, TarsNode)> = self
-            .tree
-            .traverse_pre_order_ids(&self.scope)?
-            .zip(self.tree.traverse_pre_order(&self.scope)?)
+        let pot: Vec<(NodeId, TarsNode)> = tree
+            .traverse()
+            .into_iter()
             .enumerate()
             // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
             .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
