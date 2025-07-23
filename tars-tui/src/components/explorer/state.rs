@@ -61,7 +61,7 @@ impl<'a> State<'a> {
                 .map(|ancestor| {
                     let (name, color) = {
                         match ancestor.data().kind {
-                            TarsKind::Root => (
+                            TarsKind::Root(_) => (
                                 " Home ".into(),
                                 TryInto::<Color>::try_into("red".to_owned()).unwrap(),
                             ),
@@ -129,7 +129,7 @@ impl<'a> State<'a> {
                     };
 
                     let widget = match entry.data().kind {
-                        TarsKind::Root => Paragraph::new("SHOULDNTBEPOSSIBLE"),
+                        TarsKind::Root(_) => Paragraph::new("SHOULDNTBEPOSSIBLE"),
                         TarsKind::Task(ref t) => {
                             Paragraph::new(format!("{}    {postfix}", *t.name))
                                 .style(style.fg(t.group.color.as_ref().into()))

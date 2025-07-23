@@ -19,14 +19,14 @@ pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
 #[derive(Debug)]
 pub struct TarsTree(Tree<TarsNode>);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TarsKind {
-    Root,
+    Root(HashMap<Id, NodeId>),
     Task(Task),
     Group(Group),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TarsNode {
     pub kind: TarsKind,
     // might need it when creating a new task but even then i think that
@@ -97,12 +97,14 @@ impl TarsTree {
 
         let root_id: NodeId = tree.insert(
             Node::new(TarsNode {
-                kind: TarsKind::Root,
+                kind: TarsKind::Root(HashMap::new()),
                 parent: None,
                 depth: 0,
             }),
             InsertBehavior::AsRoot,
         )?;
+
+        let mut inverted_map = HashMap::new();
 
         let all_groups = Group::fetch_all(client).await?;
         let root_groups: Vec<&Group> = all_groups
@@ -119,11 +121,18 @@ impl TarsTree {
                 &g_to_t,
                 &mut depth,
                 root_id.clone(),
+                &mut inverted_map,
             )?;
         }
 
-        info!("{tree:#?}");
+        let root = tree.get_mut(&root_id)?;
 
+        // replace the map with the one we created
+        if let TarsKind::Root(map) = &mut root.data_mut().kind {
+            *map = inverted_map
+        }
+
+        info!("{tree:#?}");
         Ok(tree)
     }
 
@@ -134,6 +143,7 @@ impl TarsTree {
         g_to_t: &HashMap<Id, Vec<Task>>,
         depth: &mut u16,
         parent_id: NodeId,
+        inverted_map: &mut HashMap<Id, NodeId>,
     ) -> Result<()> {
         // insert group into the parent group
         let group_id = self.insert(
@@ -145,18 +155,21 @@ impl TarsTree {
             InsertBehavior::UnderNode(&parent_id),
         )?;
 
+        inverted_map.insert(group.id.clone(), group_id.clone());
+
         // now we want to add all tasks to it?
         if let Some(tasks) = g_to_t.get(&group.id) {
             *depth += 1;
             for task in tasks {
-                let _ = self.insert(
+                let node_id = self.insert(
                     Node::new(TarsNode {
                         kind: TarsKind::Task(task.clone()),
                         parent: Some(group_id.clone()),
                         depth: *depth,
                     }),
                     InsertBehavior::UnderNode(&group_id),
-                );
+                )?;
+                inverted_map.insert(task.id.clone(), node_id.clone());
             }
         }
 
@@ -170,6 +183,7 @@ impl TarsTree {
                     g_to_t,
                     &mut depth,
                     group_id.clone(),
+                    inverted_map,
                 )?;
             }
         }
@@ -190,5 +204,39 @@ impl TarsTree {
             .collect();
 
         pot
+    }
+
+    // syncs the tree to the daemon
+    pub async fn sync(&mut self, client: &TarsClient) -> Result<()> {
+        // a recursive sync that takes a group, fetches the tasks of that remotely, and then verifies that way
+
+        let groups = Group::fetch_all(client).await?;
+
+        for (node_id, node) in self.traverse_root() {
+            // now what
+            //
+            if let TarsKind::Group(ref g) = node.data().kind {
+                // tasks for this group
+                let group_tasks = Task::fetch(
+                    client,
+                    TaskFetchOptions::ByGroup {
+                        group_id: g.id.clone(),
+                        recursive: false,
+                    },
+                )
+                .await?;
+
+                // now we want to ensure that the node in our tree has all these tasks
+
+                // self.get()
+            }
+        }
+
+        let groups = Group::fetch_all(client).await?;
+
+        // how do i sync the tree with the thing
+        let x = self.traverse_root();
+
+        Ok(())
     }
 }

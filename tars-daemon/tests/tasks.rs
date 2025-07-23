@@ -73,14 +73,26 @@ async fn task_fetch() {
     let all = Task::fetch(&client, TaskFetchOptions::All).await.unwrap();
     assert_eq!(all, vec![task1.clone(), task2.clone()]);
 
-    let g_1_tasks = Task::fetch(&client, TaskFetchOptions::ByGroup { group: g_1 })
-        .await
-        .unwrap();
+    let g_1_tasks = Task::fetch(
+        &client,
+        TaskFetchOptions::ByGroup {
+            group_id: g_1.id,
+            recursive: true,
+        },
+    )
+    .await
+    .unwrap();
     assert_eq!(g_1_tasks, vec![task1]);
 
-    let g_2_tasks = Task::fetch(&client, TaskFetchOptions::ByGroup { group: g_2 })
-        .await
-        .unwrap();
+    let g_2_tasks = Task::fetch(
+        &client,
+        TaskFetchOptions::ByGroup {
+            group_id: g_2.id,
+            recursive: true,
+        },
+    )
+    .await
+    .unwrap();
     assert_eq!(g_2_tasks, vec![task2]);
     x.await.unwrap()
 }

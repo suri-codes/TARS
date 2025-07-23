@@ -44,7 +44,7 @@ pub struct App {
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
 
-    _tree: TarsTreeHandle,
+    tree: TarsTreeHandle,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -80,7 +80,7 @@ impl App {
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client).await?),
             ],
-            _tree: tree,
+            tree,
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -201,7 +201,10 @@ impl App {
                 Action::Render => self.render(tui)?,
                 Action::SwitchTo(mode) => self.mode = mode,
                 Action::RawText => self.raw_text = true,
-                Action::Refresh => self.raw_text = false,
+                Action::Refresh => {
+                    self.raw_text = false;
+                    self.tree.write().await.sync(&self.client).await?;
+                }
                 Action::EditDescription(ref task) => {
                     tui.exit()?;
 

@@ -99,7 +99,7 @@ impl<'a> Component for Explorer<'a> {
                     .data()
                     .kind
                 {
-                    TarsKind::Root => Ok(None),
+                    TarsKind::Root(_) => Ok(None),
                     TarsKind::Group(ref g) => Ok(Some(Action::Select(Selection::Group(g.clone())))),
                     TarsKind::Task(ref t) => Ok(Some(Action::Select(Selection::Task(t.clone())))),
                 }
@@ -211,7 +211,7 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Group(ref g) => {
                         g.delete(&self.client).await?;
                     }
-                    TarsKind::Root => return Ok(None),
+                    TarsKind::Root(_) => return Ok(None),
                 };
 
                 return Ok(Some(Action::Refresh));
@@ -221,7 +221,7 @@ impl<'a> Component for Explorer<'a> {
                 let parent = match tree.get(self.state.get_selection())?.data().kind {
                     TarsKind::Task(ref t) => &t.group,
                     TarsKind::Group(ref g) => g,
-                    TarsKind::Root => return Ok(None),
+                    TarsKind::Root(_) => return Ok(None),
                 };
 
                 let _ = Task::new(
@@ -240,7 +240,7 @@ impl<'a> Component for Explorer<'a> {
             // this will make a root group
             KeyCode::Char('G') => {
                 let parent_group = match tree.get(self.state.get_scope())?.data().kind {
-                    TarsKind::Root => None,
+                    TarsKind::Root(_) => None,
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Task(_) => return Ok(None),
                 };
@@ -261,7 +261,7 @@ impl<'a> Component for Explorer<'a> {
                 let curr_node_id = match tree.get(self.state.get_selection())?.data().kind {
                     TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
-                    TarsKind::Root => None,
+                    TarsKind::Root(_) => None,
                 };
 
                 info!("id: {:?}", curr_node_id);
@@ -285,7 +285,7 @@ impl<'a> Component for Explorer<'a> {
                     self.state.set_selection(next_id.clone()).await;
 
                     match &next_node.data().kind {
-                        TarsKind::Root => {}
+                        TarsKind::Root(_) => {}
                         TarsKind::Task(t) => {
                             info!("selected: {t:#?}!");
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
@@ -316,7 +316,7 @@ impl<'a> Component for Explorer<'a> {
                     self.state.set_selection(prev_id.clone()).await;
 
                     match &prev_node.data().kind {
-                        TarsKind::Root => {}
+                        TarsKind::Root(_) => {}
                         TarsKind::Task(t) => {
                             return Ok(Some(Action::Select(Selection::Task(t.clone()))));
                         }
@@ -350,7 +350,7 @@ impl<'a> Component for Explorer<'a> {
                     let parent_node = tree.get(parent)?;
 
                     match parent_node.data().kind {
-                        TarsKind::Root => {
+                        TarsKind::Root(_) => {
                             self.state.set_rel_depth(parent_node.data().depth).await;
                             return Ok(Some(Action::ScopeUpdate(None)));
                         }
