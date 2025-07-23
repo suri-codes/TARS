@@ -1,4 +1,3 @@
-use clap::Id;
 use common::types::Color;
 use id_tree::NodeId;
 
@@ -125,7 +124,6 @@ impl<'a> State<'a> {
                 .enumerate()
                 // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
                 .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
-                // .map(|(_, x)| x)
                 .collect();
 
             // now we validate selection
@@ -193,7 +191,6 @@ impl<'a> State<'a> {
 
     pub fn set_is_active(&mut self, is_active: bool) {
         self.active = is_active;
-        // self.calculate_draw_info().await;
     }
 
     pub fn get_scope(&self) -> &NodeId {

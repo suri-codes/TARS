@@ -10,9 +10,7 @@ use common::{
     Diff, DiffInner, TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
 };
-use futures::StreamExt as _;
 use id_tree::{InsertBehavior, MoveBehavior, Node, NodeId, RemoveBehavior, Tree, TreeBuilder};
-use reqwest_eventsource::{Event, EventSource};
 use tokio::sync::RwLock;
 use tracing::{error, info};
 
@@ -41,8 +39,6 @@ impl TarsKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TarsNode {
     pub kind: TarsKind,
-    // might need it when creating a new task but even then i think that
-    // should just cause a node refresh so this should ultimately be removed
     pub parent: Option<NodeId>,
 
     pub depth: u16,
@@ -337,6 +333,7 @@ impl TarsTree {
 
                     self.move_node(&curr_node_id, MoveBehavior::ToParent(&new_parent_node_id))?
                 } else {
+                    // only the node data has changed
                     let curr_node = self.get_mut(&curr_node_id)?;
                     let depth = curr_node.data().depth;
                     let parent_id = curr_node.parent().expect("Parent should exist");
@@ -346,8 +343,8 @@ impl TarsTree {
                         Some(parent_id.clone()),
                         depth,
                     ));
-                    // only the node data has changed
                 }
+
                 // now we have to update the direct tasks of this child
                 let curr_node = self.get(&curr_node_id)?;
                 let children = curr_node.children().clone();

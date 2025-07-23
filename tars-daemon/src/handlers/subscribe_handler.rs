@@ -18,25 +18,18 @@ pub fn subscribe_router() -> Router<DaemonState> {
 async fn diff_handler(
     State(state): State<DaemonState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    // A `Stream` that repeats an event every second
     let rx = state.diff_tx.subscribe();
 
     let stream = BroadcastStream::new(rx)
-        .map(|res| {
-            match res {
-                Ok(data) => {
-                    // Convert your data to JSON or whatever format you need
-                    let json = serde_json::to_string(&data).unwrap_or_default();
+        .map(|res| match res {
+            Ok(data) => {
+                let json = serde_json::to_string(&data).unwrap_or_default();
 
-                    info!("sending: {json}");
+                info!("sending: {json}");
 
-                    Event::default().data(json)
-                }
-                Err(_) => {
-                    // Handle broadcast errors (like lagged receiver)
-                    Event::default().data("error")
-                }
+                Event::default().data(json)
             }
+            Err(_) => Event::default().data("error"),
         })
         .map(Ok);
 

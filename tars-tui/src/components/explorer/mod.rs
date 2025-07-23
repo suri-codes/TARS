@@ -131,8 +131,7 @@ impl<'a> Component for Explorer<'a> {
 
         let pot = tree.traverse(self.state.get_scope());
 
-        // let pot = tree.traverse_root;
-        let Some((curr_idx, (_, node))) = pot
+        let Some((curr_idx, (_, _))) = pot
             .iter()
             .enumerate()
             .find(|(_, (id, _))| *self.state.get_selection() == *id)
@@ -185,7 +184,7 @@ impl<'a> Component for Explorer<'a> {
                 Ok(Some(Action::Refresh))
             }
 
-            // this will make a root group
+            // this will make a group in the current scope
             KeyCode::Char('G') => {
                 let parent_group = match tree.get(self.state.get_scope())?.data().kind {
                     TarsKind::Root(_) => None,
@@ -221,12 +220,9 @@ impl<'a> Component for Explorer<'a> {
                 .await?;
 
                 Ok(Some(Action::Refresh))
-                // parent of the current selection
             }
 
             KeyCode::Char('j') => {
-                info!("J pressed");
-
                 if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
                     self.state.set_selection(next_id.clone()).await;
 
@@ -242,8 +238,6 @@ impl<'a> Component for Explorer<'a> {
                         }
                     };
                 }
-
-                info!("nothing!");
 
                 Ok(None)
             }

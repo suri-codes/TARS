@@ -213,8 +213,6 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
     }
 
     Ok(tasks)
-
-    // now lets look at children groups
 }
 
 #[async_recursion]
