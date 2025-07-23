@@ -12,7 +12,7 @@ use std::{
 use color_eyre::Result;
 use common::TarsClient;
 use crossterm::event::KeyEvent;
-use futures::StreamExt;
+use futures::{StreamExt, future::Join};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::Rect,
@@ -20,7 +20,11 @@ use ratatui::{
 use reqwest_eventsource::{Event as EsEvent, EventSource};
 use serde::{Deserialize, Serialize};
 use tokio::{
-    sync::{RwLock, mpsc, oneshot},
+    sync::{
+        RwLock,
+        mpsc::{self, UnboundedSender},
+        oneshot,
+    },
     task::JoinHandle,
 };
 use tracing::{debug, error, info};
@@ -79,26 +83,6 @@ impl App {
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
 
-        let diff_action_tx = action_tx.clone();
-
-        let base_path = client.base_path.clone();
-
-        let diff_handle = tokio::spawn(async move {
-            let mut es =
-                EventSource::get(base_path.join("/subscribe").expect("should have worked!"));
-
-            while let Some(event) = es.next().await {
-                match event {
-                    Ok(EsEvent::Open) => info!("diff connection opened!"),
-                    Ok(EsEvent::Message(message)) => {
-                        let data = message.data;
-                        info!("message received: {data}");
-                    }
-                    Err(e) => error!("error!: {e:#?}"),
-                }
-            }
-        });
-
         let app = Self {
             tick_rate,
             frame_rate,
@@ -113,14 +97,38 @@ impl App {
             config: Config::new()?,
             mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
+            diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
             action_tx,
             action_rx,
             raw_text: false,
             client,
-            diff_handle,
         };
 
         Ok(app)
+    }
+
+    pub fn spawn_diff_handler(
+        client: &TarsClient,
+        action_tx: UnboundedSender<Action>,
+    ) -> JoinHandle<()> {
+        let url = client.base_path.clone();
+        let url = url.join("/subscribe").unwrap();
+
+        tokio::spawn(async move {
+            let mut es = EventSource::get(url);
+
+            while let Some(event) = es.next().await {
+                match event {
+                    Ok(EsEvent::Open) => info!("diff connection opened!"),
+                    Ok(EsEvent::Message(message)) => {
+                        let data = message.data;
+                        
+                        info!("message received: {data}");
+                    }
+                    Err(e) => error!("error!: {e:#?}"),
+                }
+            }
+        })
     }
 
     pub async fn run(&mut self) -> Result<()> {

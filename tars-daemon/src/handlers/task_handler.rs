@@ -312,6 +312,8 @@ async fn update_task(
     assert_eq!(updated_task, task);
 
     info!("Updated task: {:#?}", updated_task);
+
+    state.diff_tx.send(Diff::Updated(updated_task.id.clone()))?;
     Ok(Json::from(updated_task))
 }
 
@@ -378,5 +380,6 @@ async fn delete_task(
     tx.commit().await?;
     info!("Deleted task: {:#?}", deleted_task);
 
+    state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()))?;
     Ok(Json::from(deleted_task))
 }
