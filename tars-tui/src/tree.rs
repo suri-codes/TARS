@@ -10,14 +10,16 @@ use common::{
     TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
 };
+use futures::StreamExt as _;
 use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
+use reqwest_eventsource::{Event, EventSource};
 use tokio::sync::RwLock;
-use tracing::info;
-
-pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct TarsTree(Tree<TarsNode>);
+
+pub type TarsTreeHandle = Arc<RwLock<TarsTree>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TarsKind {
@@ -208,34 +210,42 @@ impl TarsTree {
 
     // syncs the tree to the daemon
     pub async fn sync(&mut self, client: &TarsClient) -> Result<()> {
+        // let mut stream = client
+        //     .conn
+        //     .get(client.base_path.join("/subscribe")?)
+        //     .send()
+        //     .await?
+        //     .byte_stream;
+
         // a recursive sync that takes a group, fetches the tasks of that remotely, and then verifies that way
+        //
 
-        let groups = Group::fetch_all(client).await?;
+        // let groups = Group::fetch_all(client).await?;
 
-        for (node_id, node) in self.traverse_root() {
-            // now what
-            //
-            if let TarsKind::Group(ref g) = node.data().kind {
-                // tasks for this group
-                let group_tasks = Task::fetch(
-                    client,
-                    TaskFetchOptions::ByGroup {
-                        group_id: g.id.clone(),
-                        recursive: false,
-                    },
-                )
-                .await?;
+        // for (node_id, node) in self.traverse_root() {
+        //     // now what
+        //     //
+        //     if let TarsKind::Group(ref g) = node.data().kind {
+        //         // tasks for this group
+        //         let group_tasks = Task::fetch(
+        //             client,
+        //             TaskFetchOptions::ByGroup {
+        //                 group_id: g.id.clone(),
+        //                 recursive: false,
+        //             },
+        //         )
+        //         .await?;
 
-                // now we want to ensure that the node in our tree has all these tasks
+        //         // now we want to ensure that the node in our tree has all these tasks
 
-                // self.get()
-            }
-        }
+        //         // self.get()
+        //     }
+        // }
 
-        let groups = Group::fetch_all(client).await?;
+        // let groups = Group::fetch_all(client).await?;
 
-        // how do i sync the tree with the thing
-        let x = self.traverse_root();
+        // // how do i sync the tree with the thing
+        // let x = self.traverse_root();
 
         Ok(())
     }

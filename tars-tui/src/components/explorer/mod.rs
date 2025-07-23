@@ -190,8 +190,6 @@ impl<'a> Component for Explorer<'a> {
             return Ok(None);
         };
 
-        info!("key handler curr_node: {node:#?}");
-
         match key.code {
             KeyCode::Enter => {
                 self.command_tx
@@ -263,8 +261,6 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Root(_) => None,
                 };
-
-                info!("id: {:?}", curr_node_id);
 
                 let _ = Group::new(
                     &self.client,

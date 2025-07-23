@@ -9,6 +9,7 @@ use axum::{
 use futures_util::stream::Stream;
 use std::convert::Infallible;
 use tokio_stream::{StreamExt as _, wrappers::BroadcastStream};
+use tracing::info;
 
 pub fn subscribe_router() -> Router<DaemonState> {
     Router::new().route("/", get(diff_handler))
@@ -26,6 +27,8 @@ async fn diff_handler(
                 Ok(data) => {
                     // Convert your data to JSON or whatever format you need
                     let json = serde_json::to_string(&data).unwrap_or_default();
+
+                    info!("sending: {json}");
 
                     Event::default().data(json)
                 }

@@ -3,7 +3,7 @@ use axum::{Json, Router, debug_handler, extract::State, routing::post};
 
 use color_eyre::eyre::Result;
 use common::{
-    TarsError,
+    Diff, TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
 use sqlx::{Pool, Sqlite};
@@ -80,6 +80,8 @@ pub async fn create_task(
 
     assert_eq!(task, created_task);
     info!("Created task: {:#?}", created_task);
+
+    state.diff_tx.send(Diff::Added(created_task.id.clone()))?;
 
     Ok(Json::from(created_task))
 }
