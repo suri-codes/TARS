@@ -1,4 +1,7 @@
-use common::types::{Group, Task};
+use common::{
+    Diff,
+    types::{Group, Task},
+};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
@@ -24,6 +27,7 @@ pub enum Action {
     Refresh,
     RawText,
     EditDescription(Task),
+    Diff(Diff),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]

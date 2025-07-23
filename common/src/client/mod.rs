@@ -3,7 +3,10 @@ use std::str::FromStr;
 use reqwest::{Client, ClientBuilder, Url};
 use serde::{Deserialize, Serialize};
 
-use crate::{TarsError, types::Id};
+use crate::{
+    TarsError,
+    types::{Group, Id, Task},
+};
 /// Holds the reqwest `Client` and the base path for accessing the `TarsDaemon`
 #[derive(Debug, Clone)]
 pub struct TarsClient {
@@ -11,12 +14,19 @@ pub struct TarsClient {
     pub conn: Client,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Diff {
-    Added(Id),
-    Updated(Id),
+    Added(DiffInner),
+    Updated(DiffInner),
     Deleted(Id),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DiffInner {
+    Task(Task),
+    Group(Group),
+}
+
 impl TarsClient {
     /// Creates a new TarsClient with the provided base_url.
     ///

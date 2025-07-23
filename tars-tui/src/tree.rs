@@ -7,7 +7,7 @@ use std::{
 
 use color_eyre::Result;
 use common::{
-    TarsClient,
+    Diff, DiffInner, TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
 };
 use futures::StreamExt as _;
@@ -36,6 +36,16 @@ pub struct TarsNode {
     pub parent: Option<NodeId>,
 
     pub depth: u16,
+}
+
+impl TarsNode {
+    fn new(kind: TarsKind, parent: Option<NodeId>, depth: u16) -> Self {
+        Self {
+            kind,
+            parent,
+            depth,
+        }
+    }
 }
 
 impl Deref for TarsTree {
@@ -149,11 +159,11 @@ impl TarsTree {
     ) -> Result<()> {
         // insert group into the parent group
         let group_id = self.insert(
-            Node::new(TarsNode {
-                kind: TarsKind::Group(group.clone()),
-                parent: Some(parent_id.clone()),
-                depth: *depth,
-            }),
+            Node::new(TarsNode::new(
+                TarsKind::Group(group.clone()),
+                Some(parent_id.clone()),
+                *depth,
+            )),
             InsertBehavior::UnderNode(&parent_id),
         )?;
 
@@ -164,11 +174,11 @@ impl TarsTree {
             *depth += 1;
             for task in tasks {
                 let node_id = self.insert(
-                    Node::new(TarsNode {
-                        kind: TarsKind::Task(task.clone()),
-                        parent: Some(group_id.clone()),
-                        depth: *depth,
-                    }),
+                    Node::new(TarsNode::new(
+                        TarsKind::Task(task.clone()),
+                        Some(group_id.clone()),
+                        *depth,
+                    )),
                     InsertBehavior::UnderNode(&group_id),
                 )?;
                 inverted_map.insert(task.id.clone(), node_id.clone());
@@ -208,45 +218,77 @@ impl TarsTree {
         pot
     }
 
-    // syncs the tree to the daemon
-    pub async fn sync(&mut self, client: &TarsClient) -> Result<()> {
-        // let mut stream = client
-        //     .conn
-        //     .get(client.base_path.join("/subscribe")?)
-        //     .send()
-        //     .await?
-        //     .byte_stream;
+    pub async fn apply_diff(&mut self, diff: Diff) -> Result<()> {
+        match diff {
+            Diff::Added(DiffInner::Task(t)) => {
+                let group_id = &t.group.id;
+                let group_node_id = self
+                    .inverted_map()
+                    .get(group_id)
+                    .expect("group_id should exist")
+                    .clone();
 
-        // a recursive sync that takes a group, fetches the tasks of that remotely, and then verifies that way
-        //
+                let group_depth = self
+                    .get(&group_node_id)
+                    .expect("node should exist")
+                    .data()
+                    .depth;
 
-        // let groups = Group::fetch_all(client).await?;
+                let inserted = self.insert(
+                    Node::new(TarsNode::new(
+                        TarsKind::Task(t.clone()),
+                        Some(group_node_id.clone()),
+                        group_depth + 1,
+                    )),
+                    InsertBehavior::UnderNode(&group_node_id),
+                )?;
 
-        // for (node_id, node) in self.traverse_root() {
-        //     // now what
-        //     //
-        //     if let TarsKind::Group(ref g) = node.data().kind {
-        //         // tasks for this group
-        //         let group_tasks = Task::fetch(
-        //             client,
-        //             TaskFetchOptions::ByGroup {
-        //                 group_id: g.id.clone(),
-        //                 recursive: false,
-        //             },
-        //         )
-        //         .await?;
+                self.inverted_map().insert(t.id, inserted);
+            }
 
-        //         // now we want to ensure that the node in our tree has all these tasks
+            Diff::Added(DiffInner::Group(g)) => {
+                let parent_group_id = g.parent_id.clone();
 
-        //         // self.get()
-        //     }
-        // }
+                let inserted = if parent_group_id.is_none() {
+                    // its a new root group
+                    let root = self.root_node_id().cloned().unwrap();
+                    self.insert(
+                        Node::new(TarsNode::new(TarsKind::Group(g.clone()), None, 0)),
+                        InsertBehavior::UnderNode(&root),
+                    )?
+                } else {
+                    let parent_node_id = self
+                        .inverted_map()
+                        .get(&parent_group_id.unwrap())
+                        .expect("group should exist")
+                        .clone();
 
-        // let groups = Group::fetch_all(client).await?;
+                    self.insert(
+                        Node::new(TarsNode::new(TarsKind::Group(g.clone()), None, 0)),
+                        InsertBehavior::UnderNode(&parent_node_id),
+                    )?
+                };
+                self.inverted_map().insert(g.id, inserted);
+            }
+            Diff::Updated(DiffInner::Task(t)) => {}
+            Diff::Updated(DiffInner::Group(g)) => {}
 
-        // // how do i sync the tree with the thing
-        // let x = self.traverse_root();
-
+            Diff::Deleted(id) => {}
+        };
         Ok(())
     }
+
+    fn inverted_map(&mut self) -> &mut HashMap<Id, NodeId> {
+        let root = self.root_node_id().unwrap().clone();
+        let node = self.get_mut(&root).unwrap().data_mut();
+
+        if let TarsKind::Root(map) = &mut node.kind {
+            map
+        } else {
+            error!("Tree in impossible state");
+            panic!()
+        }
+    }
+
+    // syncs the tree to the daemon
 }

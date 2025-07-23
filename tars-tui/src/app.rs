@@ -10,7 +10,7 @@ use std::{
 };
 
 use color_eyre::Result;
-use common::TarsClient;
+use common::{Diff, TarsClient};
 use crossterm::event::KeyEvent;
 use futures::{StreamExt, future::Join};
 use ratatui::{
@@ -121,9 +121,13 @@ impl App {
                 match event {
                     Ok(EsEvent::Open) => info!("diff connection opened!"),
                     Ok(EsEvent::Message(message)) => {
-                        let data = message.data;
-                        
-                        info!("message received: {data}");
+                        let data: Diff = serde_json::from_str(message.data.as_str())
+                            .expect("message should be parseable as a Diff");
+                        debug!("message received: {data:?}");
+
+                        action_tx
+                            .send(Action::Diff(data))
+                            .expect("sending action should not fail");
                     }
                     Err(e) => error!("error!: {e:#?}"),
                 }
@@ -239,7 +243,11 @@ impl App {
                 Action::RawText => self.raw_text = true,
                 Action::Refresh => {
                     self.raw_text = false;
-                    self.tree.write().await.sync(&self.client).await?;
+                }
+
+                Action::Diff(ref diff) => {
+                    self.tree.write().await.apply_diff(diff.clone()).await?;
+                    self.action_tx.send(Action::Refresh)?
                 }
                 Action::EditDescription(ref task) => {
                     tui.exit()?;
