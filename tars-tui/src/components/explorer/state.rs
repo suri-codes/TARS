@@ -1,3 +1,4 @@
+use clap::Id;
 use common::types::Color;
 use id_tree::NodeId;
 
@@ -6,6 +7,7 @@ use ratatui::{
     layout::{Constraint, Direction},
     style::{Color as RatColor, Style, Stylize},
 };
+use tracing::info;
 
 use crate::tree::TarsKind;
 use crate::tree::TarsTreeHandle;
@@ -14,7 +16,7 @@ use crate::tree::TarsTreeHandle;
 pub struct State<'a> {
     active: bool,
     scope: NodeId,
-    selection: NodeId,
+    selection: Selection,
     pub tree_handle: TarsTreeHandle,
     rel_depth: u16,
     draw_info: Option<DrawInfo<'a>>,
@@ -29,14 +31,26 @@ pub struct DrawInfo<'a> {
     pub breadcrumb_layout: Layout,
 }
 
+#[derive(Debug, Clone)]
+struct Selection {
+    id: NodeId,
+    idx: u32,
+}
+
 impl<'a> State<'a> {
     pub async fn new(
         active: bool,
         scope: NodeId,
         selection: NodeId,
+
         tree_handle: TarsTreeHandle,
         rel_depth: u16,
     ) -> Self {
+        let selection = Selection {
+            id: selection,
+            idx: 0,
+        };
+
         let mut state = Self {
             active,
             scope,
@@ -111,18 +125,22 @@ impl<'a> State<'a> {
                 .enumerate()
                 // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
                 .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
-                .map(|(_, x)| x)
+                // .map(|(_, x)| x)
                 .collect();
 
-            // how am i supposed to render this shit dawg
+            // now we validate selection
+            if tree.get(self.get_selection()).is_err() {
+                let (_, (id, _)) = pot
+                    .get(self.selection.idx.saturating_sub(1) as usize)
+                    .unwrap_or(pot.last().expect("why is there nothing to render"));
 
-            // need to divide up the area. algorithmically.
+                self.selection.id = id.clone();
+            };
 
-            // ideally top 4 tasks per group + a line that says more coming after
-            //
             pot.iter()
-                .map(|(entry_id, entry)| {
-                    let (style, postfix) = if self.selection == entry_id.clone() {
+                .map(|(i, (entry_id, entry))| {
+                    let (style, postfix) = if self.selection.id == entry_id.clone() {
+                        self.selection.idx = *i as u32;
                         (Style::new().bold().italic(), "*")
                     } else {
                         (Style::new(), "")
@@ -165,6 +183,8 @@ impl<'a> State<'a> {
             entries,
             entries_layout,
         });
+
+        info!("updated draw info! {:#?}", self.draw_info);
     }
 
     pub fn is_active(&self) -> bool {
@@ -186,10 +206,11 @@ impl<'a> State<'a> {
     }
 
     pub fn get_selection(&self) -> &NodeId {
-        &self.selection
+        &self.selection.id
     }
     pub async fn set_selection(&mut self, selection: NodeId) {
-        self.selection = selection;
+        self.selection.id = selection;
+
         self.calculate_draw_info().await;
     }
 

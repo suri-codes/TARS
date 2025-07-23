@@ -179,9 +179,9 @@ impl TarsTree {
 
         inverted_map.insert(group.id.clone(), group_id.clone());
 
-        // now we want to add all tasks to it?
+        *depth += 1;
+        // now we want to add all tasks to it
         if let Some(tasks) = g_to_t.get(&group.id) {
-            *depth += 1;
             for task in tasks {
                 let node_id = self.insert(
                     Node::new(TarsNode::new(
@@ -196,9 +196,8 @@ impl TarsTree {
         }
 
         if let Some(child_groups) = g_to_g.get(&group.id) {
-            // *depth += 1;
-            let mut depth = *depth + 1;
             for child_group in child_groups {
+                let mut depth = *depth;
                 self.attach_children_of_group(
                     child_group.clone(),
                     g_to_g,
@@ -329,7 +328,7 @@ impl TarsTree {
                 // the node has been moved
                 if g.parent_id != curr_parent_id {
                     let new_parent_node_id = match g.parent_id {
-                        Some(id) => self.inverted_map().get(&id).expect("should exist").clone(),
+                        Some(ref id) => self.inverted_map().get(id).expect("should exist").clone(),
                         None => self
                             .root_node_id()
                             .expect("root node id should exist")
@@ -343,37 +342,52 @@ impl TarsTree {
                     let parent_id = curr_node.parent().expect("Parent should exist");
 
                     curr_node.replace_data(TarsNode::new(
-                        TarsKind::Group(g),
+                        TarsKind::Group(g.clone()),
                         Some(parent_id.clone()),
                         depth,
                     ));
                     // only the node data has changed
                 }
+                // now we have to update the direct tasks of this child
+                let curr_node = self.get(&curr_node_id)?;
+                let children = curr_node.children().clone();
+                for child in children {
+                    if let TarsKind::Task(t) = &mut self.get_mut(&child)?.data_mut().kind {
+                        t.group = g.clone()
+                    }
+                }
             }
 
             Diff::Deleted(id) => {
                 let node_id = self.inverted_map().get(&id).expect("should exist").clone();
-
-                let children = self.get(&node_id)?.children().clone();
-
-                // first remove all the children from the map
-                for child in children {
-                    let node = self
-                        .get(&child)
-                        .expect("should exist")
-                        .data()
-                        .kind
-                        .id()
-                        .expect("node should eist");
-
-                    let _ = self.inverted_map().remove(&node);
-                }
-
+                self.recur_delete(id)?;
                 let _ = self.remove_node(node_id, RemoveBehavior::DropChildren)?;
-
-                let _ = self.inverted_map().remove(&id);
             }
         };
+        Ok(())
+    }
+
+    fn recur_delete(&mut self, id: Id) -> Result<()> {
+        let node_id = self.inverted_map().get(&id).expect("should exist").clone();
+        let children = self.get(&node_id)?.children().clone();
+
+        // first remove all the children from the map
+        for child in children {
+            let node = self
+                .get(&child)
+                .expect("should exist")
+                .data()
+                .kind
+                .id()
+                .expect("node should eist");
+
+            let _ = self.inverted_map().remove(&node);
+
+            self.recur_delete(node)?;
+        }
+
+        let _ = self.inverted_map().remove(&id);
+
         Ok(())
     }
 

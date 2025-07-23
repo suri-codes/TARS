@@ -111,56 +111,6 @@ impl<'a> Component for Explorer<'a> {
             Action::Refresh => {
                 // haha not this simple haha!
                 self.state.calculate_draw_info().await;
-
-                //TODO: do not regenerate the tree on refresh, make it actually performant
-
-                // let updated_tree = Self::generate_tree(&self.client).await?;
-
-                // let scope = self.tree.get(&self.scope)?.data();
-
-                // if let Some((_, new_scope_id)) = updated_tree
-                //     .traverse_pre_order(updated_tree.root_node_id().unwrap())?
-                //     .zip(
-                //         updated_tree
-                //             .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
-                //     )
-                //     .find(|(e, _)| {
-                //         if let TarsKind::Group(ref g1) = e.data().kind
-                //             && let TarsKind::Group(ref g2) = scope.kind
-                //         {
-                //             return g1.id == g2.id;
-                //         }
-
-                //         false
-                //     })
-                // {
-                //     self.scope = new_scope_id;
-                // } else {
-                //     warn!("Scope not found on tree refresh, setting to root node.");
-                //     self.scope = updated_tree.root_node_id().unwrap().clone();
-                // }
-
-                // let selection = self.tree.get(&self.selection)?.data().clone();
-
-                // if let Some((_, new_selection_id)) = updated_tree
-                //     .traverse_pre_order(updated_tree.root_node_id().unwrap())?
-                //     .zip(
-                //         updated_tree
-                //             .traverse_pre_order_ids(updated_tree.root_node_id().unwrap())?,
-                //     )
-                //     .find(|(e, _)| match (&e.data().kind, &selection.kind) {
-                //         (TarsKind::Task(t1), TarsKind::Task(t2)) => t1.id == t2.id,
-                //         (TarsKind::Group(g1), TarsKind::Group(g2)) => g1.id == g2.id,
-                //         _ => false,
-                //     })
-                // {
-                //     self.selection = new_selection_id;
-                // } else {
-                //     warn!("Selection not found on tree refresh, setting to root node.");
-                //     self.selection = updated_tree.root_node_id().unwrap().clone();
-                // }
-
-                // self.tree = updated_tree;
                 Ok(None)
             }
             _ => Ok(None),
