@@ -12,7 +12,7 @@ use std::{
 use color_eyre::Result;
 use common::{Diff, TarsClient};
 use crossterm::event::KeyEvent;
-use futures::{StreamExt, future::Join};
+use futures::StreamExt;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::Rect,
@@ -55,7 +55,7 @@ pub struct App {
 
     tree: TarsTreeHandle,
 
-    diff_handle: JoinHandle<()>,
+    _diff_handle: JoinHandle<()>,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -97,7 +97,7 @@ impl App {
             config: Config::new()?,
             mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
-            diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
+            _diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
             action_tx,
             action_rx,
             raw_text: false,
@@ -246,7 +246,7 @@ impl App {
                 }
 
                 Action::Diff(ref diff) => {
-                    self.tree.write().await.apply_diff(diff.clone()).await?;
+                    self.tree.write().await.apply_diff(diff.clone())?;
                     self.action_tx.send(Action::Refresh)?
                 }
                 Action::EditDescription(ref task) => {

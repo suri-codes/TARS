@@ -11,7 +11,7 @@ use common::{
     types::{Group, Id, Task, TaskFetchOptions},
 };
 use futures::StreamExt as _;
-use id_tree::{InsertBehavior, Node, NodeId, Tree, TreeBuilder};
+use id_tree::{InsertBehavior, MoveBehavior, Node, NodeId, RemoveBehavior, Tree, TreeBuilder};
 use reqwest_eventsource::{Event, EventSource};
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -26,6 +26,16 @@ pub enum TarsKind {
     Root(HashMap<Id, NodeId>),
     Task(Task),
     Group(Group),
+}
+
+impl TarsKind {
+    pub fn id(&self) -> Option<Id> {
+        match self {
+            TarsKind::Root(_) => None,
+            TarsKind::Task(t) => Some(t.id.clone()),
+            TarsKind::Group(g) => Some(g.id.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -218,7 +228,7 @@ impl TarsTree {
         pot
     }
 
-    pub async fn apply_diff(&mut self, diff: Diff) -> Result<()> {
+    pub fn apply_diff(&mut self, diff: Diff) -> Result<()> {
         match diff {
             Diff::Added(DiffInner::Task(t)) => {
                 let group_id = &t.group.id;
@@ -263,17 +273,106 @@ impl TarsTree {
                         .expect("group should exist")
                         .clone();
 
+                    let parent_depth = self.get(&parent_node_id)?.data().depth;
+
                     self.insert(
-                        Node::new(TarsNode::new(TarsKind::Group(g.clone()), None, 0)),
+                        Node::new(TarsNode::new(
+                            TarsKind::Group(g.clone()),
+                            Some(parent_node_id.clone()),
+                            parent_depth + 1,
+                        )),
                         InsertBehavior::UnderNode(&parent_node_id),
                     )?
                 };
                 self.inverted_map().insert(g.id, inserted);
             }
-            Diff::Updated(DiffInner::Task(t)) => {}
-            Diff::Updated(DiffInner::Group(g)) => {}
+            Diff::Updated(DiffInner::Task(t)) => {
+                let node_id = self
+                    .inverted_map()
+                    .get(&t.id)
+                    .expect("node should exist")
+                    .clone();
 
-            Diff::Deleted(id) => {}
+                // just gonna drop the old node
+                self.remove_node(node_id, RemoveBehavior::DropChildren)?;
+
+                let parent_node_id = self
+                    .inverted_map()
+                    .get(&t.group.id)
+                    .expect("parent group should exist")
+                    .clone();
+
+                let parent_depth = self.get(&parent_node_id)?.data().depth;
+
+                self.insert(
+                    Node::new(TarsNode::new(
+                        TarsKind::Task(t),
+                        Some(parent_node_id.clone()),
+                        parent_depth + 1,
+                    )),
+                    InsertBehavior::UnderNode(&parent_node_id),
+                )?;
+            }
+            Diff::Updated(DiffInner::Group(g)) => {
+                let curr_node_id = self
+                    .inverted_map()
+                    .get(&g.id)
+                    .expect("node should exist")
+                    .clone();
+                let curr_node = self.get(&curr_node_id)?;
+
+                // we want to make sure that they are still parented to the same node
+                let curr_parent_id = curr_node
+                    .parent()
+                    .and_then(|e| self.get(e).expect("should be valid").data().kind.id());
+
+                // the node has been moved
+                if g.parent_id != curr_parent_id {
+                    let new_parent_node_id = match g.parent_id {
+                        Some(id) => self.inverted_map().get(&id).expect("should exist").clone(),
+                        None => self
+                            .root_node_id()
+                            .expect("root node id should exist")
+                            .clone(),
+                    };
+
+                    self.move_node(&curr_node_id, MoveBehavior::ToParent(&new_parent_node_id))?
+                } else {
+                    let curr_node = self.get_mut(&curr_node_id)?;
+                    let depth = curr_node.data().depth;
+                    let parent_id = curr_node.parent().expect("Parent should exist");
+
+                    curr_node.replace_data(TarsNode::new(
+                        TarsKind::Group(g),
+                        Some(parent_id.clone()),
+                        depth,
+                    ));
+                    // only the node data has changed
+                }
+            }
+
+            Diff::Deleted(id) => {
+                let node_id = self.inverted_map().get(&id).expect("should exist").clone();
+
+                let children = self.get(&node_id)?.children().clone();
+
+                // first remove all the children from the map
+                for child in children {
+                    let node = self
+                        .get(&child)
+                        .expect("should exist")
+                        .data()
+                        .kind
+                        .id()
+                        .expect("node should eist");
+
+                    let _ = self.inverted_map().remove(&node);
+                }
+
+                let _ = self.remove_node(node_id, RemoveBehavior::DropChildren)?;
+
+                let _ = self.inverted_map().remove(&id);
+            }
         };
         Ok(())
     }
