@@ -19,8 +19,10 @@ pub enum Action {
     Error(String),
     Help,
     SwitchTo(Mode),
+    //TODO: make select only work off id instaed of passing the whole thing
     Select(Selection),
     ScopeUpdate(Option<Group>),
+    Update,
     // NOTE: whenever something is changed / added, we send this refresh action. All components
     // will then refresh their state from the daemon, otherwise they dont communicate with it.
     // this will also clear raw text

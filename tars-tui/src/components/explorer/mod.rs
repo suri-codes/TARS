@@ -1,14 +1,16 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
-    TarsClient,
-    types::{Color, Group, Task},
+    Diff, DiffInner, TarsClient,
+    types::{Color, Group, Id, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::NodeId;
 use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{broadcast::Receiver, mpsc::UnboundedSender};
 use tracing::info;
 
 use crate::{
@@ -30,10 +32,23 @@ pub struct Explorer<'a> {
     client: TarsClient,
     state: State<'a>,
     tree_handle: TarsTreeHandle,
+    tree_rx: Receiver<Diff>,
+
+    on_update: OnUpdate,
+}
+
+#[derive(Debug)]
+enum OnUpdate {
+    None,
+    Select(Id),
 }
 
 impl<'a> Explorer<'a> {
-    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+    pub async fn new(
+        client: &TarsClient,
+        tree_handle: TarsTreeHandle,
+        tree_rx: Receiver<Diff>,
+    ) -> Result<Self> {
         let tree = tree_handle.read().await;
         let pot = tree.traverse_root();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
@@ -48,6 +63,8 @@ impl<'a> Explorer<'a> {
             client: client.clone(),
             state,
             tree_handle: tree_handle.clone(),
+            tree_rx,
+            on_update: OnUpdate::None,
         };
 
         Ok(explorer)
@@ -88,6 +105,27 @@ impl<'a> Component for Explorer<'a> {
         match action {
             Action::Tick => Ok(None),
             Action::Render => Ok(None),
+
+            Action::Update => match self.on_update {
+                OnUpdate::Select(ref id) => {
+                    info!("runnin on update!");
+
+                    let tree = self.tree_handle.read().await;
+                    let (_node_id, node) = tree.get_by_tars_id(id.clone()).unwrap();
+                    let command_tx = self.command_tx.as_ref().expect("should exist");
+
+                    let TarsKind::Task(ref t) = node.data().kind else {
+                        return Ok(None);
+                    };
+
+                    info!("sending out actions!");
+                    command_tx.send(Action::Select(Selection::Task(t.clone())))?;
+
+                    Ok(Some(Action::SwitchTo(Mode::Inspector)))
+                }
+                OnUpdate::None => Ok(None),
+            },
+
             Action::SwitchTo(Mode::Explorer) => {
                 self.state.set_is_active(true);
                 match self
@@ -113,6 +151,9 @@ impl<'a> Component for Explorer<'a> {
                 self.state.calculate_draw_info().await;
                 Ok(None)
             }
+
+            // TODO: work on dis shi
+            // Action::Select()
             _ => Ok(None),
         }
     }
@@ -171,7 +212,7 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Root(_) => return Ok(None),
                 };
 
-                let _ = Task::new(
+                let t = Task::new(
                     &self.client,
                     parent,
                     "new task",
@@ -180,6 +221,9 @@ impl<'a> Component for Explorer<'a> {
                     None,
                 )
                 .await?;
+
+                self.on_update = OnUpdate::Select(t.id.clone());
+                info!("set on update!");
 
                 Ok(Some(Action::Refresh))
             }
