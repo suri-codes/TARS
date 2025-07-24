@@ -59,9 +59,10 @@ async fn create_group(
 
     info!("Created group: {:#?}", inserted);
 
-    state
+    let _ = state
         .diff_tx
-        .send(Diff::Added(DiffInner::Group(inserted.clone())))?;
+        .send(Diff::Added(DiffInner::Group(inserted.clone())));
+
     Ok(Json(inserted))
 }
 
@@ -137,9 +138,9 @@ async fn update_group(
     assert_eq!(group, updated);
     info!("Updated group: {:#?}", updated);
 
-    state
+    let _ = state
         .diff_tx
-        .send(Diff::Updated(DiffInner::Group(updated.clone())))?;
+        .send(Diff::Updated(DiffInner::Group(updated.clone())));
     Ok(Json::from(updated))
 }
 
@@ -177,6 +178,6 @@ async fn delete_group(
     info!("Deleted group: {:#?}", deleted);
     assert_eq!(group, deleted);
 
-    state.diff_tx.send(Diff::Deleted(deleted.id.clone()))?;
+    let _ = state.diff_tx.send(Diff::Deleted(deleted.id.clone()));
     Ok(Json::from(deleted))
 }

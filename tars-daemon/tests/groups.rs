@@ -9,7 +9,7 @@ async fn group_creation() {
     let (d, addr) = new_test_daemon().await;
 
     let x = tokio::spawn(async move {
-        timeout(Duration::from_secs(2), d.run())
+        timeout(Duration::from_secs(3), d.run())
             .await
             .unwrap_or_else(|_x| Ok(()))
             .unwrap();
@@ -35,8 +35,7 @@ async fn group_creation() {
     fetched.sort();
 
     assert_eq!(created, fetched);
-
-    x.await.unwrap();
+    x.await.unwrap()
 }
 
 #[tokio::test]

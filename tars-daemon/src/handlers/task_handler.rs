@@ -81,9 +81,9 @@ pub async fn create_task(
     assert_eq!(task, created_task);
     info!("Created task: {:#?}", created_task);
 
-    state
+    let _ = state
         .diff_tx
-        .send(Diff::Added(DiffInner::Task(created_task.clone())))?;
+        .send(Diff::Added(DiffInner::Task(created_task.clone())));
     Ok(Json::from(created_task))
 }
 
@@ -312,9 +312,9 @@ async fn update_task(
 
     info!("Updated task: {:#?}", updated_task);
 
-    state
+    let _ = state
         .diff_tx
-        .send(Diff::Updated(DiffInner::Task(updated_task.clone())))?;
+        .send(Diff::Updated(DiffInner::Task(updated_task.clone())));
     Ok(Json::from(updated_task))
 }
 
@@ -381,6 +381,6 @@ async fn delete_task(
     tx.commit().await?;
     info!("Deleted task: {:#?}", deleted_task);
 
-    state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()))?;
+    let _ = state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()));
     Ok(Json::from(deleted_task))
 }
