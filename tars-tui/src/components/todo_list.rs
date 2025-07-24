@@ -53,7 +53,7 @@ impl TodoList {
 
 #[async_trait]
 impl Component for TodoList {
-    fn init(
+    async fn init(
         &mut self,
         _area: ratatui::prelude::Size,
         default_mode: Mode,
@@ -97,8 +97,14 @@ impl Component for TodoList {
             }
             Action::ScopeUpdate(scope) => {
                 if let Some(g) = scope {
-                    self.tasks =
-                        Task::fetch(&self.client, TaskFetchOptions::ByGroup { group: g }).await?;
+                    self.tasks = Task::fetch(
+                        &self.client,
+                        TaskFetchOptions::ByGroup {
+                            group_id: g.id,
+                            recursive: true,
+                        },
+                    )
+                    .await?;
                 } else {
                     self.tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
                 }

@@ -104,7 +104,7 @@ impl<'a> Inspector<'a> {
 
 #[async_trait]
 impl<'a> Component for Inspector<'a> {
-    fn init(
+    async fn init(
         &mut self,
         _area: ratatui::prelude::Size,
         default_mode: Mode,

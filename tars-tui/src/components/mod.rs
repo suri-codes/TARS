@@ -59,7 +59,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn init(&mut self, area: Size, default_mode: Mode) -> Result<()>;
+    async fn init(&mut self, area: Size, default_mode: Mode) -> Result<()>;
     /// Handle incoming events and produce actions if necessary.
     ///
     /// # Arguments

@@ -83,7 +83,7 @@ impl<'a> GroupComponent<'a> {
 
 #[async_trait]
 impl Component for GroupComponent<'_> {
-    fn init(
+    async fn init(
         &mut self,
 
         _area: ratatui::prelude::Size,

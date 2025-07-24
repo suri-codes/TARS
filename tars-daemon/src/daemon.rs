@@ -1,12 +1,16 @@
 use axum::{Router, routing::get};
 use color_eyre::eyre::{Result, eyre};
+use common::Diff;
 use sqlx::{Pool, Sqlite};
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    sync::broadcast::{self, Sender},
+};
 use tracing::{error, info};
 
 use crate::{
     db::Db,
-    handlers::{group_router, task_router},
+    handlers::{group_router, subscribe_router, task_router},
 };
 
 /// Daemon that exposes access to the database, as well as being responsible
@@ -21,14 +25,18 @@ pub struct TarsDaemon {
 pub struct DaemonState {
     pub pool: Pool<Sqlite>,
     addr: String,
+    pub diff_tx: Sender<Diff>,
 }
 
 impl DaemonState {
     /// Returns a new instance of DaemonState
     pub fn new(db: Db, addr: &str) -> Self {
+        let (tx, _) = broadcast::channel::<Diff>(50);
+
         DaemonState {
             pool: db.pool,
             addr: addr.to_owned(),
+            diff_tx: tx,
         }
     }
 }
@@ -40,6 +48,7 @@ impl TarsDaemon {
             .route("/", get(root))
             .nest("/task", task_router())
             .nest("/group", group_router())
+            .nest("/subscribe", subscribe_router())
             .with_state(state.clone());
 
         Self { app, state }

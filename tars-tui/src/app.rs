@@ -4,25 +4,36 @@ use std::{
     path::PathBuf,
     process::Command,
     rc::Rc,
+    sync::Arc,
     thread::{self, spawn},
     time::Duration,
 };
 
 use color_eyre::Result;
-use common::TarsClient;
+use common::{Diff, TarsClient};
 use crossterm::event::KeyEvent;
+use futures::StreamExt;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::Rect,
 };
+use reqwest_eventsource::{Event as EsEvent, EventSource};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, oneshot};
-use tracing::debug;
+use tokio::{
+    sync::{
+        RwLock,
+        mpsc::{self, UnboundedSender},
+        oneshot,
+    },
+    task::JoinHandle,
+};
+use tracing::{debug, error, info};
 
 use crate::{
     action::Action,
     components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
     config::Config,
+    tree::{TarsTree, TarsTreeHandle},
     tui::{Event, Tui},
 };
 
@@ -41,6 +52,10 @@ pub struct App {
 
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
+
+    tree: TarsTreeHandle,
+
+    _diff_handle: JoinHandle<()>,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -66,23 +81,57 @@ impl App {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         let client = TarsClient::default().await.unwrap();
 
-        Ok(Self {
+        let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
+
+        let app = Self {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Explorer::new(&client).await?),
+                Box::new(Explorer::new(&client, tree.clone()).await?),
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client).await?),
             ],
+            tree,
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
             mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
+            _diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
             action_tx,
             action_rx,
             raw_text: false,
             client,
+        };
+
+        Ok(app)
+    }
+
+    pub fn spawn_diff_handler(
+        client: &TarsClient,
+        action_tx: UnboundedSender<Action>,
+    ) -> JoinHandle<()> {
+        let url = client.base_path.clone();
+        let url = url.join("/subscribe").unwrap();
+
+        tokio::spawn(async move {
+            let mut es = EventSource::get(url);
+
+            while let Some(event) = es.next().await {
+                match event {
+                    Ok(EsEvent::Open) => info!("diff connection opened!"),
+                    Ok(EsEvent::Message(message)) => {
+                        let data: Diff = serde_json::from_str(message.data.as_str())
+                            .expect("message should be parseable as a Diff");
+                        debug!("message received: {data:?}");
+
+                        action_tx
+                            .send(Action::Diff(data))
+                            .expect("sending action should not fail");
+                    }
+                    Err(e) => error!("error!: {e:#?}"),
+                }
+            }
         })
     }
 
@@ -100,7 +149,7 @@ impl App {
             component.register_config_handler(self.config.clone())?;
         }
         for component in self.components.iter_mut() {
-            component.init(tui.size()?, self.mode)?;
+            component.init(tui.size()?, self.mode).await?;
         }
 
         let action_tx = self.action_tx.clone();
@@ -192,7 +241,14 @@ impl App {
                 Action::Render => self.render(tui)?,
                 Action::SwitchTo(mode) => self.mode = mode,
                 Action::RawText => self.raw_text = true,
-                Action::Refresh => self.raw_text = false,
+                Action::Refresh => {
+                    self.raw_text = false;
+                }
+
+                Action::Diff(ref diff) => {
+                    self.tree.write().await.apply_diff(diff.clone())?;
+                    self.action_tx.send(Action::Refresh)?
+                }
                 Action::EditDescription(ref task) => {
                     tui.exit()?;
 

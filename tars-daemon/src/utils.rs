@@ -9,6 +9,8 @@ pub async fn new_test_daemon() -> (TarsDaemon, String) {
         .local_addr()
         .unwrap()
         .port();
+    // use common::logging;
+    // logging::init(format!("tars-d-{availible_port}.log").as_str(), true).unwrap();
 
     let port_str = format!("127.0.0.1:{availible_port}");
 

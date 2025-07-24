@@ -1,8 +1,9 @@
 use async_recursion::async_recursion;
 use axum::{Json, Router, debug_handler, extract::State, routing::post};
 
+use color_eyre::eyre::Result;
 use common::{
-    TarsError,
+    Diff, DiffInner, TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
 use sqlx::{Pool, Sqlite};
@@ -80,6 +81,9 @@ pub async fn create_task(
     assert_eq!(task, created_task);
     info!("Created task: {:#?}", created_task);
 
+    let _ = state
+        .diff_tx
+        .send(Diff::Added(DiffInner::Task(created_task.clone())));
     Ok(Json::from(created_task))
 }
 
@@ -143,26 +147,27 @@ async fn fetch_task(
 
             Ok(Json::from(tasks))
         }
-        TaskFetchOptions::ByGroup { group } => {
-            let mut tasks: Vec<Task> = Vec::new();
+        TaskFetchOptions::ByGroup {
+            group_id,
+            recursive,
+        } => {
+            let tasks = if recursive {
+                let mut tasks: Vec<Task> = Vec::new();
 
-            recurse_group_fetch(&mut tasks, group, &state.pool).await?;
+                recurse_group_fetch(&mut tasks, group_id, &state.pool).await?;
+                tasks
+            } else {
+                fetch_group(group_id, &state.pool).await?
+            };
 
-            info!("Fetched tasks: {:#?}", &state.pool);
+            info!("Fetched tasks: {:#?}", tasks);
 
             Ok(Json::from(tasks))
         }
     }
 }
 
-#[async_recursion]
-async fn recurse_group_fetch(
-    tasks: &mut Vec<Task>,
-    group: Group,
-    pool: &Pool<Sqlite>,
-) -> Result<(), TarsError> {
-    // first we add the tasks pertinent to the passed in group
-
+async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, TarsError> {
     let records = sqlx::query!(
         r#"
                     SELECT
@@ -181,10 +186,12 @@ async fn recurse_group_fetch(
                     WHERE g.pub_id = ?
                         
                 "#,
-        group.id
+        group_id
     )
     .fetch_all(pool)
     .await?;
+
+    let mut tasks = vec![];
 
     for row in records {
         let task = Task::with_all_fields(
@@ -205,6 +212,21 @@ async fn recurse_group_fetch(
         tasks.push(task)
     }
 
+    Ok(tasks)
+}
+
+#[async_recursion]
+async fn recurse_group_fetch(
+    tasks: &mut Vec<Task>,
+    group_id: Id,
+    pool: &Pool<Sqlite>,
+) -> Result<(), TarsError> {
+    // first we add the tasks pertinent to the passed in group
+    let immediate_tasks = fetch_group(group_id.clone(), pool).await?;
+    for task in immediate_tasks {
+        tasks.push(task);
+    }
+
     // now lets look at children groups
     let children = sqlx::query_as!(
         Group,
@@ -213,19 +235,14 @@ async fn recurse_group_fetch(
         FROM Groups
         WHERE parent_id = ?
         "#,
-        group.id
+        group_id
     ).fetch_all(pool).await?;
 
     for child in children {
-        recurse_group_fetch(tasks, child, pool).await?;
+        recurse_group_fetch(tasks, child.id, pool).await?;
     }
 
     Ok(())
-
-    //
-    //
-    //
-    // then we take whatever groups are the children of this one, and add those.
 }
 /// Takes in a task, uses the id to find the old one and updates it with the new information.
 ///
@@ -294,6 +311,10 @@ async fn update_task(
     assert_eq!(updated_task, task);
 
     info!("Updated task: {:#?}", updated_task);
+
+    let _ = state
+        .diff_tx
+        .send(Diff::Updated(DiffInner::Task(updated_task.clone())));
     Ok(Json::from(updated_task))
 }
 
@@ -360,5 +381,6 @@ async fn delete_task(
     tx.commit().await?;
     info!("Deleted task: {:#?}", deleted_task);
 
+    let _ = state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()));
     Ok(Json::from(deleted_task))
 }

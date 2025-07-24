@@ -5,7 +5,7 @@ use axum::{
     routing::{get, post},
 };
 use common::{
-    TarsError,
+    Diff, DiffInner, TarsError,
     types::{Color, Group, Id, Name},
 };
 use tracing::{info, instrument};
@@ -58,7 +58,12 @@ async fn create_group(
     assert_eq!(group, inserted);
 
     info!("Created group: {:#?}", inserted);
-    Ok(Json(group))
+
+    let _ = state
+        .diff_tx
+        .send(Diff::Added(DiffInner::Group(inserted.clone())));
+
+    Ok(Json(inserted))
 }
 
 /// Fetches all groups from the database.
@@ -133,6 +138,9 @@ async fn update_group(
     assert_eq!(group, updated);
     info!("Updated group: {:#?}", updated);
 
+    let _ = state
+        .diff_tx
+        .send(Diff::Updated(DiffInner::Group(updated.clone())));
     Ok(Json::from(updated))
 }
 
@@ -170,5 +178,6 @@ async fn delete_group(
     info!("Deleted group: {:#?}", deleted);
     assert_eq!(group, deleted);
 
+    let _ = state.diff_tx.send(Diff::Deleted(deleted.id.clone()));
     Ok(Json::from(deleted))
 }

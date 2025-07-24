@@ -11,6 +11,7 @@ mod cli;
 mod components;
 mod config;
 mod errors;
+mod tree;
 mod tui;
 
 #[tokio::main]
