@@ -21,7 +21,7 @@ pub enum Action {
     Help,
     SwitchTo(Mode),
     Select(NodeId),
-    ScopeUpdate(Option<Group>),
+    ScopeUpdate(NodeId),
     Update,
     // NOTE: whenever something is changed / added, we send this refresh action. All components
     // will then refresh their state from the daemon, otherwise they dont communicate with it.

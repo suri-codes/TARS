@@ -53,9 +53,7 @@ pub struct App {
 
     // state to keep track if we need to send keystrokes un-modified
     raw_text: bool,
-
     tree: TarsTreeHandle,
-
     _diff_handle: JoinHandle<()>,
 }
 
@@ -89,7 +87,7 @@ impl App {
             frame_rate,
             components: vec![
                 Box::new(Explorer::new(&client, tree.clone()).await?),
-                Box::new(TodoList::new(&client).await?),
+                Box::new(TodoList::new(&client, tree.clone()).await?),
                 Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
             tree,

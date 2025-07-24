@@ -13,11 +13,10 @@ use crate::tree::TarsTreeHandle;
 
 #[derive(Debug, Clone)]
 pub struct State<'a> {
-    active: bool,
+    pub active: bool,
     scope: NodeId,
     selection: Selection,
     pub tree_handle: TarsTreeHandle,
-    rel_depth: u16,
     draw_info: Option<DrawInfo<'a>>,
 }
 
@@ -43,7 +42,6 @@ impl<'a> State<'a> {
         selection: NodeId,
 
         tree_handle: TarsTreeHandle,
-        rel_depth: u16,
     ) -> Self {
         let selection = Selection {
             id: selection,
@@ -55,7 +53,6 @@ impl<'a> State<'a> {
             scope,
             selection,
             tree_handle,
-            rel_depth,
             draw_info: None,
         };
 
@@ -127,7 +124,7 @@ impl<'a> State<'a> {
                 .collect();
 
             // now we validate selection
-            if tree.get(self.get_selection()).is_err() {
+            if tree.get(self.get_selected_id()).is_err() {
                 let (_, (id, _)) = pot
                     .get(self.selection.idx.saturating_sub(1) as usize)
                     .unwrap_or(pot.last().expect("why is there nothing to render"));
@@ -157,10 +154,12 @@ impl<'a> State<'a> {
                         }
                     };
 
+                    let rel_depth = tree.get(&self.scope).unwrap().data().depth;
+
                     let layout = Layout::new(
                         Direction::Horizontal,
                         [
-                            Constraint::Min(entry.data().depth.saturating_sub(self.rel_depth)),
+                            Constraint::Min(entry.data().depth.saturating_sub(rel_depth)),
                             Constraint::Percentage(100),
                         ],
                     );
@@ -185,14 +184,6 @@ impl<'a> State<'a> {
         info!("updated draw info! {:#?}", self.draw_info);
     }
 
-    pub fn is_active(&self) -> bool {
-        self.active
-    }
-
-    pub fn set_is_active(&mut self, is_active: bool) {
-        self.active = is_active;
-    }
-
     pub fn get_scope(&self) -> &NodeId {
         &self.scope
     }
@@ -202,17 +193,17 @@ impl<'a> State<'a> {
         self.calculate_draw_info().await;
     }
 
-    pub fn get_selection(&self) -> &NodeId {
+    pub fn get_selected_id(&self) -> &NodeId {
         &self.selection.id
     }
+
+    pub fn get_selected_idx(&self) -> &u32 {
+        &self.selection.idx
+    }
+
     pub async fn set_selection(&mut self, selection: NodeId) {
         self.selection.id = selection;
 
-        self.calculate_draw_info().await;
-    }
-
-    pub async fn set_rel_depth(&mut self, new_rel_depth: u16) {
-        self.rel_depth = new_rel_depth;
         self.calculate_draw_info().await;
     }
 
