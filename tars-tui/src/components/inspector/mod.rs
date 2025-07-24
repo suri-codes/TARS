@@ -16,9 +16,10 @@ use tokio::sync::mpsc::UnboundedSender;
 use tui_textarea::TextArea;
 
 use crate::{
-    action::{Action, Selection},
+    action::Action,
     app::Mode,
     config::Config,
+    tree::{TarsKind, TarsTreeHandle},
 };
 
 mod group_component;
@@ -34,6 +35,7 @@ pub struct Inspector<'a> {
     // selection: Option<Selection>,
     client: TarsClient,
     active: bool,
+    tree_handle: TarsTreeHandle,
 
     // task_component: Option<TaskComponent<'a>>,
     // group_component: Option<GroupComponent<'a>>,
@@ -84,7 +86,7 @@ impl<'a> TarsText<'a> {
 // textarea.set_placeholder_text("Enter a valid float (e.g. 1.56)");
 
 impl<'a> Inspector<'a> {
-    pub async fn new(client: &TarsClient) -> Result<Self> {
+    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         Ok(Self {
             command_tx: Default::default(),
             config: Default::default(),
@@ -94,6 +96,7 @@ impl<'a> Inspector<'a> {
             // task_component: None,
             // group_component: None,
             active_component: None,
+            tree_handle,
         })
     }
 
@@ -151,26 +154,35 @@ impl<'a> Component for Inspector<'a> {
             Action::Render => {}
             Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
-            Action::Select(s) => match s {
-                Selection::Task(ref t) => {
-                    let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
-                    new_task_component.register_action_handler(
-                        self.command_tx.as_ref().expect("should exist").clone(),
-                    )?;
-                    self.active_component =
-                        Some(ActiveComponent::TaskComponent(Box::new(new_task_component)));
-                }
-                Selection::Group(ref g) => {
-                    let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
-                    new_group_component.register_action_handler(
-                        self.command_tx.as_ref().expect("should exit").clone(),
-                    )?;
+            Action::Select(id) => {
+                let tree = self.tree_handle.read().await;
 
-                    self.active_component = Some(ActiveComponent::GroupComponent(Box::new(
-                        new_group_component,
-                    )));
+                let node = tree.get(&id)?;
+
+                match node.data().kind {
+                    TarsKind::Task(ref t) => {
+                        let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
+                        new_task_component.register_action_handler(
+                            self.command_tx.as_ref().expect("should exist").clone(),
+                        )?;
+                        self.active_component =
+                            Some(ActiveComponent::TaskComponent(Box::new(new_task_component)));
+                    }
+
+                    TarsKind::Group(ref g) => {
+                        let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
+                        new_group_component.register_action_handler(
+                            self.command_tx.as_ref().expect("should exit").clone(),
+                        )?;
+
+                        self.active_component = Some(ActiveComponent::GroupComponent(Box::new(
+                            new_group_component,
+                        )));
+                    }
+
+                    _ => {}
                 }
-            },
+            }
 
             Action::Refresh => match self.active_component {
                 None => {}

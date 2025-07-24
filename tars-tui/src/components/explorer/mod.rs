@@ -1,18 +1,17 @@
 use async_trait::async_trait;
-use color_eyre::Result;
+use color_eyre::{Result, eyre::OptionExt};
 use common::{
     TarsClient,
-    types::{Color, Group, Task},
+    types::{Color, Group, Id, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::NodeId;
 use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 
 use crate::{
-    action::{Action, Selection},
+    action::Action,
     app::Mode,
     config::Config,
     tree::{TarsKind, TarsTreeHandle},
@@ -30,6 +29,14 @@ pub struct Explorer<'a> {
     client: TarsClient,
     state: State<'a>,
     tree_handle: TarsTreeHandle,
+
+    on_update: OnUpdate,
+}
+
+#[derive(Debug)]
+enum OnUpdate {
+    None,
+    Select(Id),
 }
 
 impl<'a> Explorer<'a> {
@@ -48,6 +55,7 @@ impl<'a> Explorer<'a> {
             client: client.clone(),
             state,
             tree_handle: tree_handle.clone(),
+            on_update: OnUpdate::None,
         };
 
         Ok(explorer)
@@ -88,21 +96,34 @@ impl<'a> Component for Explorer<'a> {
         match action {
             Action::Tick => Ok(None),
             Action::Render => Ok(None),
+            Action::Select(id) => {
+                self.state.set_selection(id).await;
+
+                Ok(None)
+            }
+
+            Action::Update => match self.on_update {
+                OnUpdate::Select(ref id) => {
+                    let tree = self.tree_handle.read().await;
+
+                    let node_id = tree
+                        .translate_id_to_node_id(id)
+                        .ok_or_eyre("missing node id")?;
+
+                    let command_tx = self.command_tx.as_ref().expect("should exist");
+
+                    command_tx.send(Action::Select(node_id.clone()))?;
+                    self.on_update = OnUpdate::None;
+
+                    Ok(Some(Action::SwitchTo(Mode::Inspector)))
+                }
+                OnUpdate::None => Ok(None),
+            },
+
             Action::SwitchTo(Mode::Explorer) => {
                 self.state.set_is_active(true);
-                match self
-                    .state
-                    .tree_handle
-                    .read()
-                    .await
-                    .get(self.state.get_selection())?
-                    .data()
-                    .kind
-                {
-                    TarsKind::Root(_) => Ok(None),
-                    TarsKind::Group(ref g) => Ok(Some(Action::Select(Selection::Group(g.clone())))),
-                    TarsKind::Task(ref t) => Ok(Some(Action::Select(Selection::Task(t.clone())))),
-                }
+
+                Ok(Some(Action::Select(self.state.get_selection().clone())))
             }
             Action::SwitchTo(_) => {
                 self.state.set_is_active(false);
@@ -171,7 +192,7 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Root(_) => return Ok(None),
                 };
 
-                let _ = Task::new(
+                let t = Task::new(
                     &self.client,
                     parent,
                     "new task",
@@ -180,6 +201,8 @@ impl<'a> Component for Explorer<'a> {
                     None,
                 )
                 .await?;
+
+                self.on_update = OnUpdate::Select(t.id.clone());
 
                 Ok(Some(Action::Refresh))
             }
@@ -192,13 +215,9 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Task(_) => return Ok(None),
                 };
 
-                let _ = Group::new(
-                    &self.client,
-                    "new_group",
-                    parent_group,
-                    Color::parse_str("white")?,
-                )
-                .await?;
+                let g =
+                    Group::new(&self.client, "new_group", parent_group, Color::random()).await?;
+                self.on_update = OnUpdate::Select(g.id.clone());
 
                 Ok(Some(Action::Refresh))
             }
@@ -211,39 +230,24 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Root(_) => None,
                 };
 
-                let _ = Group::new(
-                    &self.client,
-                    "new_group",
-                    curr_node_id,
-                    Color::parse_str("white")?,
-                )
-                .await?;
+                let g =
+                    Group::new(&self.client, "new_group", curr_node_id, Color::random()).await?;
 
+                self.on_update = OnUpdate::Select(g.id.clone());
                 Ok(Some(Action::Refresh))
             }
 
             KeyCode::Char('j') => {
-                if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
+                if let Some((next_id, _)) = pot.get(curr_idx + 1) {
                     self.state.set_selection(next_id.clone()).await;
-
-                    match &next_node.data().kind {
-                        TarsKind::Root(_) => {}
-                        TarsKind::Task(t) => {
-                            info!("selected: {t:#?}!");
-                            return Ok(Some(Action::Select(Selection::Task(t.clone()))));
-                        }
-                        TarsKind::Group(g) => {
-                            info!("selected: {g:#?}!");
-                            return Ok(Some(Action::Select(Selection::Group(g.clone()))));
-                        }
-                    };
+                    return Ok(Some(Action::Select(next_id.clone())));
                 }
 
                 Ok(None)
             }
 
             KeyCode::Char('k') => {
-                if let Some((prev_id, prev_node)) = pot.get({
+                if let Some((prev_id, _)) = pot.get({
                     let Some(i) = curr_idx.checked_sub(1) else {
                         return Ok(None);
                     };
@@ -254,16 +258,7 @@ impl<'a> Component for Explorer<'a> {
                     }
 
                     self.state.set_selection(prev_id.clone()).await;
-
-                    match &prev_node.data().kind {
-                        TarsKind::Root(_) => {}
-                        TarsKind::Task(t) => {
-                            return Ok(Some(Action::Select(Selection::Task(t.clone()))));
-                        }
-                        TarsKind::Group(g) => {
-                            return Ok(Some(Action::Select(Selection::Group(g.clone()))));
-                        }
-                    };
+                    return Ok(Some(Action::Select(prev_id.clone())));
                 }
 
                 Ok(None)

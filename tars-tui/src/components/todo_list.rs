@@ -11,11 +11,7 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{
-    action::{Action, Selection},
-    app::Mode,
-    config::Config,
-};
+use crate::{action::Action, app::Mode, config::Config};
 use color_eyre::Result;
 
 use super::{Component, frame_block};
@@ -84,12 +80,14 @@ impl Component for TodoList {
             Action::SwitchTo(Mode::TodoList) => {
                 self.active = true;
 
-                let action = self
-                    .tasks
-                    .get(self.selection as usize)
-                    .map(|t| Action::Select(Selection::Task(t.clone())));
+                // yeah gotta rework todo_list component
+                // let action = self
+                //     .tasks
+                //     .get(self.selection as usize)
+                //     .map(|t| Action::Select(Selection::Task(t.clone())));
 
-                Ok(action)
+                // Ok(action)
+                Ok(None)
             }
             Action::SwitchTo(_) => {
                 self.active = false;
@@ -130,23 +128,23 @@ impl Component for TodoList {
         match key.code {
             KeyCode::Char('j') => {
                 // would increment by one
-                if let Some(next) = self.tasks.get(self.selection as usize + 1) {
-                    self.selection += 1;
-                    return Ok(Some(Action::Select(Selection::Task(next.clone()))));
+                if let Some(_next) = self.tasks.get(self.selection as usize + 1) {
+                    // self.selection += 1;
+                    // return Ok(Some(Action::Select(Selection::Task(next.clone()))));
                 }
 
                 Ok(None)
             }
             KeyCode::Char('k') => {
-                if let Some(prev) = self.tasks.get({
+                if let Some(_prev) = self.tasks.get({
                     if let Some(i) = (self.selection as usize).checked_sub(1) {
                         i
                     } else {
                         return Ok(None);
                     }
                 }) {
-                    self.selection -= 1;
-                    return Ok(Some(Action::Select(Selection::Task(prev.clone()))));
+                    // self.selection -= 1;
+                    // return Ok(Some(Action::Select(Selection::Task(prev.clone()))));
                 }
 
                 Ok(None)

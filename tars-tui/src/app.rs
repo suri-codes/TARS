@@ -48,6 +48,7 @@ pub struct App {
     last_tick_key_events: Vec<KeyEvent>,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+
     client: TarsClient,
 
     // state to keep track if we need to send keystrokes un-modified
@@ -89,7 +90,7 @@ impl App {
             components: vec![
                 Box::new(Explorer::new(&client, tree.clone()).await?),
                 Box::new(TodoList::new(&client).await?),
-                Box::new(Inspector::new(&client).await?),
+                Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
             tree,
             should_quit: false,
@@ -246,7 +247,10 @@ impl App {
                 }
 
                 Action::Diff(ref diff) => {
+                    info!("received diff");
                     self.tree.write().await.apply_diff(diff.clone())?;
+                    info!("applied diff");
+                    self.action_tx.send(Action::Update)?;
                     self.action_tx.send(Action::Refresh)?
                 }
                 Action::EditDescription(ref task) => {
