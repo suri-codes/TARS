@@ -424,11 +424,24 @@ impl TarsTree {
         }
     }
 
-    pub fn get_by_tars_id(&self, id: Id) -> Option<(&NodeId, &Node<TarsNode>)> {
+    pub fn get_by_tars_id(&self, id: Id) -> Option<&Node<TarsNode>> {
         let node_id = self.inverted_map().get(&id)?;
 
         let node = self.get(node_id).ok()?;
-        Some((node_id, node))
+        Some(node)
+    }
+
+    pub fn translate_id_to_node_id(&self, id: &Id) -> Option<NodeId> {
+        self.inverted_map().get(id).cloned()
+    }
+    pub fn translate_node_id_to_id(&self, node_id: &NodeId) -> Option<Id> {
+        let x = self.get(node_id).ok()?;
+
+        match x.data().kind {
+            TarsKind::Root(_) => None,
+            TarsKind::Group(ref g) => Some(g.id.clone()),
+            TarsKind::Task(ref t) => Some(t.id.clone()),
+        }
     }
 
     // syncs the tree to the daemon

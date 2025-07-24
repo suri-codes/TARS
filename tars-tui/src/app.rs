@@ -93,7 +93,7 @@ impl App {
             components: vec![
                 Box::new(Explorer::new(&client, tree.clone(), tree_rx).await?),
                 Box::new(TodoList::new(&client).await?),
-                Box::new(Inspector::new(&client).await?),
+                Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
             tree,
             should_quit: false,

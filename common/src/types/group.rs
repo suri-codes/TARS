@@ -1,3 +1,4 @@
+use rand::random_range;
 use serde::{Deserialize, Serialize};
 use sqlx::Decode;
 use sqlx::{Database, Encode, Sqlite, Type};
@@ -48,6 +49,13 @@ impl From<Color> for RatColor {
         col
     }
 }
+
+impl From<RatColor> for Color {
+    fn from(value: RatColor) -> Self {
+        Color(value.to_string())
+    }
+}
+
 impl Default for Color {
     fn default() -> Self {
         Self("white".to_owned())
@@ -70,6 +78,28 @@ impl Color {
 
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+
+    pub fn random() -> Self {
+        let rat_col = match random_range(0..=13) {
+            0 => RatColor::Red,
+            1 => RatColor::Green,
+            2 => RatColor::Yellow,
+            3 => RatColor::Blue,
+            4 => RatColor::Magenta,
+            5 => RatColor::Cyan,
+            6 => RatColor::Gray,
+            7 => RatColor::DarkGray,
+            8 => RatColor::LightRed,
+            9 => RatColor::LightGreen,
+            10 => RatColor::LightYellow,
+            11 => RatColor::LightBlue,
+            12 => RatColor::LightMagenta,
+            13 => RatColor::LightCyan,
+            _ => panic!("impossible"),
+        };
+
+        rat_col.into()
     }
 }
 impl Group {

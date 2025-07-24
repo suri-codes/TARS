@@ -1,7 +1,8 @@
 use common::{
     Diff,
-    types::{Group, Task},
+    types::{Group, Id, Task},
 };
+use id_tree::NodeId;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
@@ -20,7 +21,8 @@ pub enum Action {
     Help,
     SwitchTo(Mode),
     //TODO: make select only work off id instaed of passing the whole thing
-    Select(Selection),
+    // this should really be node id instead of id id
+    Select(NodeId),
     ScopeUpdate(Option<Group>),
     Update,
     // NOTE: whenever something is changed / added, we send this refresh action. All components
@@ -32,8 +34,8 @@ pub enum Action {
     Diff(Diff),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
-pub enum Selection {
-    Task(Task),
-    Group(Group),
-}
+// #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+// pub enum Selection {
+//     Task(Task),
+//     Group(Group),
+// }
