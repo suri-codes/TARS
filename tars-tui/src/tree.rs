@@ -436,7 +436,6 @@ impl TarsTree {
         self.inverted_map().get(id).cloned()
     }
 
-    
     #[allow(dead_code)]
     pub fn translate_node_id_to_id(&self, node_id: &NodeId) -> Option<Id> {
         let x = self.get(node_id).ok()?;
@@ -447,6 +446,4 @@ impl TarsTree {
             TarsKind::Task(ref t) => Some(t.id.clone()),
         }
     }
-
-    // syncs the tree to the daemon
 }
