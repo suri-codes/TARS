@@ -21,7 +21,7 @@ use reqwest_eventsource::{Event as EsEvent, EventSource};
 use serde::{Deserialize, Serialize};
 use tokio::{
     sync::{
-        RwLock, broadcast,
+        RwLock,
         mpsc::{self, UnboundedSender},
         oneshot,
     },
@@ -49,7 +49,6 @@ pub struct App {
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
 
-    tree_tx: broadcast::Sender<Diff>,
     client: TarsClient,
 
     // state to keep track if we need to send keystrokes un-modified
@@ -85,13 +84,11 @@ impl App {
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
 
-        let (tree_tx, tree_rx) = broadcast::channel::<Diff>(5);
-
         let app = Self {
             tick_rate,
             frame_rate,
             components: vec![
-                Box::new(Explorer::new(&client, tree.clone(), tree_rx).await?),
+                Box::new(Explorer::new(&client, tree.clone()).await?),
                 Box::new(TodoList::new(&client).await?),
                 Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
@@ -105,7 +102,6 @@ impl App {
             action_tx,
             action_rx,
             raw_text: false,
-            tree_tx,
             client,
         };
 
@@ -254,7 +250,6 @@ impl App {
                     info!("received diff");
                     self.tree.write().await.apply_diff(diff.clone())?;
                     info!("applied diff");
-                    self.tree_tx.send(diff.clone())?;
                     self.action_tx.send(Action::Update)?;
                     self.action_tx.send(Action::Refresh)?
                 }

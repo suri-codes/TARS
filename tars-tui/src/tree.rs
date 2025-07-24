@@ -424,6 +424,7 @@ impl TarsTree {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_by_tars_id(&self, id: Id) -> Option<&Node<TarsNode>> {
         let node_id = self.inverted_map().get(&id)?;
 
@@ -434,6 +435,9 @@ impl TarsTree {
     pub fn translate_id_to_node_id(&self, id: &Id) -> Option<NodeId> {
         self.inverted_map().get(id).cloned()
     }
+
+    
+    #[allow(dead_code)]
     pub fn translate_node_id_to_id(&self, node_id: &NodeId) -> Option<Id> {
         let x = self.get(node_id).ok()?;
 

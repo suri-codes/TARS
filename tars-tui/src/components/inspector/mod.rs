@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use color_eyre::{Result, eyre::eyre};
+use color_eyre::Result;
 use common::{
     TarsClient,
     types::{Task, TaskFetchOptions},

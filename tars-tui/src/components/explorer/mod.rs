@@ -1,18 +1,14 @@
 use async_trait::async_trait;
-use color_eyre::{
-    Result,
-    eyre::{OptionExt, eyre},
-};
+use color_eyre::{Result, eyre::OptionExt};
 use common::{
-    Diff, TarsClient,
+    TarsClient,
     types::{Color, Group, Id, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::NodeId;
 use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
-use tokio::sync::{broadcast::Receiver, mpsc::UnboundedSender};
-use tracing::info;
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::Action,
@@ -33,7 +29,6 @@ pub struct Explorer<'a> {
     client: TarsClient,
     state: State<'a>,
     tree_handle: TarsTreeHandle,
-    tree_rx: Receiver<Diff>,
 
     on_update: OnUpdate,
 }
@@ -45,11 +40,7 @@ enum OnUpdate {
 }
 
 impl<'a> Explorer<'a> {
-    pub async fn new(
-        client: &TarsClient,
-        tree_handle: TarsTreeHandle,
-        tree_rx: Receiver<Diff>,
-    ) -> Result<Self> {
+    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let tree = tree_handle.read().await;
         let pot = tree.traverse_root();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
@@ -64,7 +55,6 @@ impl<'a> Explorer<'a> {
             client: client.clone(),
             state,
             tree_handle: tree_handle.clone(),
-            tree_rx,
             on_update: OnUpdate::None,
         };
 
@@ -251,7 +241,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('j') => {
-                if let Some((next_id, next_node)) = pot.get(curr_idx + 1) {
+                if let Some((next_id, _)) = pot.get(curr_idx + 1) {
                     self.state.set_selection(next_id.clone()).await;
                     return Ok(Some(Action::Select(next_id.clone())));
                 }
