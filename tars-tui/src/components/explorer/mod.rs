@@ -134,9 +134,6 @@ impl<'a> Component for Explorer<'a> {
                 self.state.calculate_draw_info().await;
                 Ok(None)
             }
-
-            // TODO: work on dis shi
-            // Action::Select()
             _ => Ok(None),
         }
     }

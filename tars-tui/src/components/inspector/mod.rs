@@ -154,27 +154,6 @@ impl<'a> Component for Inspector<'a> {
             Action::Render => {}
             Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
-            // Action::Select(s) => match s {
-            //     Selection::Task(ref t) => {
-            //         let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
-            //         new_task_component.register_action_handler(
-            //             self.command_tx.as_ref().expect("should exist").clone(),
-            //         )?;
-            //         self.active_component =
-            //             Some(ActiveComponent::TaskComponent(Box::new(new_task_component)));
-            //     }
-            //     Selection::Group(ref g) => {
-            //         let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
-            //         new_group_component.register_action_handler(
-            //             self.command_tx.as_ref().expect("should exit").clone(),
-            //         )?;
-
-            //         self.active_component = Some(ActiveComponent::GroupComponent(Box::new(
-            //             new_group_component,
-            //         )));
-            //     }
-            // },
-            //
             Action::Select(id) => {
                 let tree = self.tree_handle.read().await;
 
