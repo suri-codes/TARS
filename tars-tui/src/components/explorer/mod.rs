@@ -243,9 +243,10 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Root(_) => None,
                 };
 
-                let _ =
+                let g =
                     Group::new(&self.client, "new_group", curr_node_id, Color::random()).await?;
 
+                self.on_update = OnUpdate::Select(g.id.clone());
                 Ok(Some(Action::Refresh))
             }
 
