@@ -69,7 +69,6 @@ impl<'a> State<'a> {
         &self.tasks
     }
 
-    //TODO: we would need to run the algorithm here to deterime the ordering of tasks
     async fn refresh_tasks(&mut self) {
         let tree = self.tree_handle.read().await;
 
@@ -90,8 +89,10 @@ impl<'a> State<'a> {
             })
             .collect();
 
+        // sort for least to most
         tasks_in_scope.sort_by(|(_, a), (_, b)| a.cmp(b));
 
+        // reverse so we see highest first
         tasks_in_scope.reverse();
 
         self.tasks = tasks_in_scope;
