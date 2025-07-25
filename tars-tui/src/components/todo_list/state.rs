@@ -1,4 +1,4 @@
-use common::types::{Priority, Task};
+use common::types::Task;
 use id_tree::NodeId;
 use ratatui::{
     layout::{Constraint, Direction, Layout},

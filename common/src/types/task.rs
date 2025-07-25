@@ -1,6 +1,6 @@
 use std::{f64, fmt::Display, ops::Div};
 
-use chrono::{DateTime, Local, NaiveDateTime, Utc};
+use chrono::{Local, NaiveDateTime};
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
