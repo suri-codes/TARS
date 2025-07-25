@@ -187,11 +187,11 @@ impl Task {
 
         let today = today.fixed_offset();
 
-        let difference = (due - today).num_nanoseconds().unwrap();
+        let difference = (due - today).num_nanoseconds().unwrap() as f64 / 8.64E13;
 
         let e = f64::consts::E / 3.0;
 
-        let x = e.powf(difference as f64);
+        let x = e.powf(difference);
 
         x + evald_prio
     }

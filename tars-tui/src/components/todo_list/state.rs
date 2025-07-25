@@ -30,6 +30,7 @@ pub struct DrawInfo<'a> {
 pub struct LineEntry<'a> {
     pub task: Paragraph<'a>,
     pub group: Paragraph<'a>,
+    pub prio_date: Paragraph<'a>,
     pub layout: Layout,
 }
 #[derive(Debug, Clone)]
@@ -118,7 +119,11 @@ impl<'a> State<'a> {
             .map(|(i, (id, task))| {
                 let layout = Layout::new(
                     Direction::Horizontal,
-                    [Constraint::Percentage(60), Constraint::Percentage(40)],
+                    [
+                        Constraint::Percentage(50),
+                        Constraint::Percentage(30),
+                        Constraint::Percentage(20),
+                    ],
                 );
 
                 let text_style = Style::new().fg((&task.group.color).into()).bg({
@@ -137,11 +142,27 @@ impl<'a> State<'a> {
                 let task_line = Paragraph::new((*task.name).to_string()).style(text_style);
 
                 let group_line = Paragraph::new((*task.group.name).to_string()).style(text_style);
+                let prio_date = {
+                    let text = match task.due {
+                        Some(t) => {
+                            let text = t.format("%I:%M:%S %p").to_string();
+
+                            if text.as_str() == "11:59:59 PM" {
+                                t.format("%m/%d").to_string()
+                            } else {
+                                t.format("%m/%d %I:%M %p").to_string()
+                            }
+                        }
+                        None => task.priority.into(),
+                    };
+                    Paragraph::new(text.to_string()).style(text_style)
+                };
 
                 LineEntry {
                     layout,
                     task: task_line,
                     group: group_line,
+                    prio_date,
                 }
             })
             .collect();

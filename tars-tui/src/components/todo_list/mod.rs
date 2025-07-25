@@ -128,6 +128,15 @@ impl Component for TodoList<'_> {
 
                 Ok(None)
             }
+
+            KeyCode::Enter => {
+                self.command_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SwitchTo(Mode::Inspector))?;
+                Ok(None)
+            }
+
             _ => Ok(None),
         }
     }
@@ -148,9 +157,11 @@ impl Component for TodoList<'_> {
 
             let task_rect = parts[0];
             let group_rect = parts[1];
+            let prio_date_rect = parts[2];
 
             frame.render_widget(&line.task, task_rect);
             frame.render_widget(&line.group, group_rect);
+            frame.render_widget(&line.prio_date, prio_date_rect);
         }
 
         Ok(())
