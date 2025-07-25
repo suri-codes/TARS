@@ -1,7 +1,4 @@
-use common::{
-    Diff,
-    types::{Group, Task},
-};
+use common::{Diff, types::Task};
 use id_tree::NodeId;
 use serde::{Deserialize, Serialize};
 use strum::Display;

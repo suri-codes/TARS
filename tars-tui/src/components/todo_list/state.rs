@@ -1,12 +1,13 @@
-use common::types::Task;
-use id_tree::{Node, NodeId};
+use common::types::{Priority, Task};
+use id_tree::NodeId;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::Paragraph,
 };
+use tracing::info;
 
-use crate::tree::{TarsKind, TarsNode, TarsTreeHandle};
+use crate::tree::{TarsKind, TarsTreeHandle};
 
 #[derive(Debug)]
 pub struct State<'a> {
@@ -34,7 +35,7 @@ pub struct LineEntry<'a> {
 #[derive(Debug, Clone)]
 struct Selection {
     id: NodeId,
-    idx: u32,
+    idx: usize,
 }
 
 impl<'a> State<'a> {
@@ -73,16 +74,24 @@ impl<'a> State<'a> {
 
         let pot = tree.traverse(&self.scope);
 
-        let tasks_in_scope: Vec<(NodeId, Task)> = pot
+        let mut tasks_in_scope: Vec<(NodeId, Task)> = pot
             .iter()
             .filter_map(|(id, node)| {
                 if let TarsKind::Task(ref t) = node.data().kind {
+                    info!(
+                        "evaluated task: {t:#?} to have evaluation: {}",
+                        t.evaluate()
+                    );
                     return Some((id.clone(), t.clone()));
                 }
 
                 None
             })
             .collect();
+
+        tasks_in_scope.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+        tasks_in_scope.reverse();
 
         self.tasks = tasks_in_scope;
     }
@@ -100,10 +109,13 @@ impl<'a> State<'a> {
             Layout::new(Direction::Vertical, constraints)
         };
 
+        let mut new_sel_idx = self.selection.idx;
+
         let lines: Vec<LineEntry> = self
             .get_tasks()
             .iter()
-            .map(|(id, task)| {
+            .enumerate()
+            .map(|(i, (id, task))| {
                 let layout = Layout::new(
                     Direction::Horizontal,
                     [Constraint::Percentage(60), Constraint::Percentage(40)],
@@ -111,6 +123,7 @@ impl<'a> State<'a> {
 
                 let text_style = Style::new().fg((&task.group.color).into()).bg({
                     if *id == self.selection.id {
+                        new_sel_idx = i;
                         if self.active {
                             Color::Rgb(70, 70, 70)
                         } else {
@@ -133,9 +146,13 @@ impl<'a> State<'a> {
             })
             .collect();
 
+        self.selection.idx = new_sel_idx;
+
         self.draw_info = Some(DrawInfo { lines, line_layout })
     }
 
+    /// Returns a reference to the get scope of this [`State`].
+    #[allow(unused)]
     pub fn get_scope(&self) -> &NodeId {
         &self.scope
     }
@@ -149,7 +166,7 @@ impl<'a> State<'a> {
         &self.selection.id
     }
 
-    pub fn get_selected_idx(&self) -> &u32 {
+    pub fn get_selected_idx(&self) -> &usize {
         &self.selection.idx
     }
 

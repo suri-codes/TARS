@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{f64, fmt::Display, ops::Div};
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -10,7 +10,7 @@ use crate::{TarsClient, TarsError};
 use super::{Group, Id, Name, Priority};
 
 /// Task type that holds all information relavant to a task.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub id: Id,
     pub name: Name,
@@ -19,6 +19,20 @@ pub struct Task {
     pub description: String,
     pub completed: bool,
     pub due: Option<NaiveDateTime>,
+}
+
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let self_eval = self.evaluate();
+        let other_eval = other.evaluate();
+        self_eval.total_cmp(&other_eval)
+    }
+}
+
+impl PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Task {
@@ -152,6 +166,34 @@ impl Task {
         assert_eq!(deleted_task, *self);
 
         Ok(())
+    }
+
+    pub fn evaluate(&self) -> f64 {
+        let evald_prio = (self.priority as i32 as f64).div(5.0);
+
+        if self.due.is_none() {
+            return evald_prio;
+        }
+
+        let today = Local::now();
+
+        let due = self
+            .due
+            .unwrap()
+            .and_local_timezone(*today.offset())
+            .unwrap();
+
+        // (e/3)^(delta) + prio
+
+        let today = today.fixed_offset();
+
+        let difference = (due - today).num_nanoseconds().unwrap();
+
+        let e = f64::consts::E / 3.0;
+
+        let x = e.powf(difference as f64);
+
+        x + evald_prio
     }
 }
 

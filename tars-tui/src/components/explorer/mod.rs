@@ -268,7 +268,7 @@ impl<'a> Component for Explorer<'a> {
                 // all we do here is change the scope to be this new one
                 let (curr_id, curr_node) = pot.get(curr_idx).unwrap();
 
-                if let TarsKind::Group(ref g) = curr_node.data().kind {
+                if let TarsKind::Group(_) = curr_node.data().kind {
                     self.state.set_scope(curr_id.clone()).await;
                     self.state.set_selection(curr_id.clone()).await;
                     return Ok(Some(Action::ScopeUpdate(curr_id.clone())));

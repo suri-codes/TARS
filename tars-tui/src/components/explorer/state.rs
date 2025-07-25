@@ -197,6 +197,7 @@ impl<'a> State<'a> {
         &self.selection.id
     }
 
+    #[allow(unused)]
     pub fn get_selected_idx(&self) -> &u32 {
         &self.selection.idx
     }

@@ -1,14 +1,6 @@
 use async_trait::async_trait;
-use common::{
-    TarsClient,
-    types::{Task, TaskFetchOptions},
-};
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
-    widgets::Paragraph,
-};
+use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -23,14 +15,13 @@ mod state;
 /// Component that shows all the tasks within the current scope, ordered by priority.
 pub struct TodoList<'a> {
     command_tx: Option<UnboundedSender<Action>>,
-    client: TarsClient,
     config: Config,
     state: State<'a>,
-    tree_handle: TarsTreeHandle,
+    _tree_handle: TarsTreeHandle,
 }
 
 impl<'a> TodoList<'a> {
-    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+    pub async fn new(tree_handle: TarsTreeHandle) -> Result<Self> {
         let tree = tree_handle.read().await;
         let pot = tree.traverse_root();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
@@ -42,8 +33,7 @@ impl<'a> TodoList<'a> {
         Ok(Self {
             command_tx: Default::default(),
             config: Default::default(),
-            client: client.clone(),
-            tree_handle: tree_handle.clone(),
+            _tree_handle: tree_handle.clone(),
             state,
         })
     }
@@ -120,7 +110,7 @@ impl Component for TodoList<'_> {
                 if let Some((next_id, _)) = self
                     .state
                     .get_tasks()
-                    .get(*self.state.get_selected_idx() as usize + 1)
+                    .get(*self.state.get_selected_idx() + 1)
                 {
                     return Ok(Some(Action::Select(next_id.clone())));
                 }
@@ -131,7 +121,7 @@ impl Component for TodoList<'_> {
                 if let Some((prev_id, _)) = self
                     .state
                     .get_tasks()
-                    .get((*self.state.get_selected_idx() as usize).saturating_sub(1))
+                    .get((*self.state.get_selected_idx()).saturating_sub(1))
                 {
                     return Ok(Some(Action::Select(prev_id.clone())));
                 }
