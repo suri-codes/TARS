@@ -29,7 +29,6 @@ pub struct Explorer<'a> {
     client: TarsClient,
     state: State<'a>,
     tree_handle: TarsTreeHandle,
-
     on_update: OnUpdate,
 }
 
@@ -47,7 +46,7 @@ impl<'a> Explorer<'a> {
         let selection = selection.clone();
         let scope = tree.root_node_id().unwrap().clone();
 
-        let state = State::new(false, scope, selection, tree_handle.clone(), 0).await;
+        let state = State::new(false, scope, selection, tree_handle.clone()).await;
 
         let explorer = Self {
             command_tx: Default::default(),
@@ -74,7 +73,7 @@ impl<'a> Component for Explorer<'a> {
         default_mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
         if default_mode == self.mode() {
-            self.state.set_is_active(true)
+            self.state.active = true
         }
 
         Ok(())
@@ -121,12 +120,12 @@ impl<'a> Component for Explorer<'a> {
             },
 
             Action::SwitchTo(Mode::Explorer) => {
-                self.state.set_is_active(true);
+                self.state.active = true;
 
-                Ok(Some(Action::Select(self.state.get_selection().clone())))
+                Ok(Some(Action::Select(self.state.get_selected_id().clone())))
             }
             Action::SwitchTo(_) => {
-                self.state.set_is_active(false);
+                self.state.active = false;
                 Ok(None)
             }
             Action::Refresh => {
@@ -144,7 +143,7 @@ impl<'a> Component for Explorer<'a> {
         // k would move selection up
         // l would move into a new scope
         // h would move into the outer scope
-        if !self.state.is_active() {
+        if !self.state.active {
             return Ok(None);
         }
 
@@ -152,10 +151,11 @@ impl<'a> Component for Explorer<'a> {
 
         let pot = tree.traverse(self.state.get_scope());
 
+        //TODO: just use the idx inside of selection instead of having to do an entire tree traversal lol
         let Some((curr_idx, (_, _))) = pot
             .iter()
             .enumerate()
-            .find(|(_, (id, _))| *self.state.get_selection() == *id)
+            .find(|(_, (id, _))| *self.state.get_selected_id() == *id)
         else {
             return Ok(None);
         };
@@ -170,7 +170,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('x') => {
-                let selected = tree.get(self.state.get_selection())?.data();
+                let selected = tree.get(self.state.get_selected_id())?.data();
 
                 match selected.kind {
                     TarsKind::Task(ref t) => {
@@ -186,7 +186,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('t') => {
-                let parent = match tree.get(self.state.get_selection())?.data().kind {
+                let parent = match tree.get(self.state.get_selected_id())?.data().kind {
                     TarsKind::Task(ref t) => &t.group,
                     TarsKind::Group(ref g) => g,
                     TarsKind::Root(_) => return Ok(None),
@@ -224,7 +224,7 @@ impl<'a> Component for Explorer<'a> {
 
             // this will make a child of the currently selected group
             KeyCode::Char('g') => {
-                let curr_node_id = match tree.get(self.state.get_selection())?.data().kind {
+                let curr_node_id = match tree.get(self.state.get_selected_id())?.data().kind {
                     TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
                     TarsKind::Root(_) => None,
@@ -268,11 +268,10 @@ impl<'a> Component for Explorer<'a> {
                 // all we do here is change the scope to be this new one
                 let (curr_id, curr_node) = pot.get(curr_idx).unwrap();
 
-                if let TarsKind::Group(ref g) = curr_node.data().kind {
-                    self.state.set_rel_depth(curr_node.data().depth).await;
+                if let TarsKind::Group(_) = curr_node.data().kind {
                     self.state.set_scope(curr_id.clone()).await;
                     self.state.set_selection(curr_id.clone()).await;
-                    return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
+                    return Ok(Some(Action::ScopeUpdate(curr_id.clone())));
                 };
 
                 Ok(None)
@@ -282,21 +281,8 @@ impl<'a> Component for Explorer<'a> {
                 let ancestors: Vec<&NodeId> = tree.ancestor_ids(self.state.get_scope())?.collect();
                 if let Some(parent) = ancestors.first() {
                     self.state.set_scope((*parent).clone()).await;
-                    let parent_node = tree.get(parent)?;
 
-                    match parent_node.data().kind {
-                        TarsKind::Root(_) => {
-                            self.state.set_rel_depth(parent_node.data().depth).await;
-                            return Ok(Some(Action::ScopeUpdate(None)));
-                        }
-                        TarsKind::Group(ref g) => {
-                            self.state.set_rel_depth(parent_node.data().depth).await;
-                            return Ok(Some(Action::ScopeUpdate(Some(g.clone()))));
-                        }
-                        _ => {
-                            return Ok(None);
-                        }
-                    }
+                    return Ok(Some(Action::ScopeUpdate((*parent).clone())));
                 };
                 Ok(None)
             }
@@ -310,7 +296,7 @@ impl<'a> Component for Explorer<'a> {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        frame.render_widget(frame_block(self.state.is_active(), self.mode()), area);
+        frame.render_widget(frame_block(self.state.active, self.mode()), area);
 
         let areas = Layout::new(
             Direction::Vertical,

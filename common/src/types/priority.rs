@@ -11,11 +11,11 @@ use crate::ParseError;
 )]
 #[repr(i32)]
 pub enum Priority {
-    Low = 1,
-    Medium = 2,
-    High = 3,
-    Asap = 4,
-    Far = 5,
+    Far = 1,
+    Low = 2,
+    Medium = 3,
+    High = 4,
+    Asap = 5,
 }
 
 impl From<Priority> for Block<'_> {
