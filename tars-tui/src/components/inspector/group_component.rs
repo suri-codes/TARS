@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use color_eyre::eyre::Result;
 use common::{
     TarsClient,
-    types::{Color as MyColor, Group},
+    types::{Color as MyColor, Group, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -14,7 +14,11 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
 use tui_textarea::{Input, Key};
 
-use crate::{action::Action, components::Component, tree::TarsTreeHandle};
+use crate::{
+    action::Action,
+    components::Component,
+    tree::{TarsKind, TarsTreeHandle},
+};
 
 use super::TarsText;
 
@@ -27,6 +31,7 @@ pub struct GroupComponent<'a> {
     client: TarsClient,
     command_tx: Option<UnboundedSender<Action>>,
     tree_handle: TarsTreeHandle,
+    on_update: OnUpdate,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -37,29 +42,51 @@ enum EditMode {
     Color,
 }
 
+#[derive(Debug)]
+enum OnUpdate {
+    NoOp,
+    ReRender,
+}
+
+struct ReactiveDrawInfo<'a> {
+    name: TarsText<'a>,
+    color: TarsText<'a>,
+}
+
+impl From<&Group> for ReactiveDrawInfo<'_> {
+    fn from(value: &Group) -> Self {
+        let name = TarsText::new(
+            &value.name,
+            Block::new()
+                .title_top("[N]ame")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded),
+        );
+
+        let color = TarsText::new(
+            value.color.as_str(),
+            Block::new()
+                .title_top("[C]olor")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded)
+                .border_style(Style::new().fg(value.color.clone().into())),
+        );
+
+        ReactiveDrawInfo { name, color }
+    }
+}
 impl<'a> GroupComponent<'a> {
     pub fn new(group: &Group, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+        let reactive_draw_info = ReactiveDrawInfo::from(group);
         let comp = Self {
-            name: TarsText::new(
-                &group.name,
-                Block::new()
-                    .title_top("[N]ame")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
-            ),
-            color: TarsText::new(
-                group.color.as_str(),
-                Block::new()
-                    .title_top("[C]olor")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded)
-                    .border_style(Style::new().fg(group.color.clone().into())),
-            ),
+            name: reactive_draw_info.name,
+            color: reactive_draw_info.color,
             group: group.clone(),
             edit_mode: EditMode::Inactive,
             client,
             command_tx: None,
             tree_handle,
+            on_update: OnUpdate::NoOp,
         };
         Ok(comp)
     }
@@ -78,6 +105,7 @@ impl<'a> GroupComponent<'a> {
         }
 
         self.group.sync(&self.client).await?;
+        self.on_update = OnUpdate::ReRender;
 
         Ok(())
     }
@@ -95,9 +123,42 @@ impl Component for GroupComponent<'_> {
     }
 
     async fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        if let Action::SwitchTo(_) = action {
-            self.name.deactivate()
+        match action {
+            Action::Select(id) => {
+                let tree = self.tree_handle.read().await;
+                let node = tree.get(&id)?;
+
+                if let TarsKind::Group(ref group) = node.data().kind {
+                    self.group = group.clone();
+
+                    let reactive_draw_info = ReactiveDrawInfo::from(group);
+                    self.color = reactive_draw_info.color;
+                    self.name = reactive_draw_info.name;
+                }
+            }
+
+            Action::Update => match self.on_update {
+                OnUpdate::ReRender => {
+                    let tree = self.tree_handle.read().await;
+                    let node = tree
+                        .get_by_tars_id(self.group.id.clone())
+                        .expect("should exist");
+
+                    if let TarsKind::Group(ref group) = node.data().kind {
+                        self.group = group.clone();
+
+                        let reactive_draw_info = ReactiveDrawInfo::from(group);
+                        self.color = reactive_draw_info.color;
+                        self.name = reactive_draw_info.name;
+                    }
+
+                    self.on_update = OnUpdate::NoOp;
+                }
+                OnUpdate::NoOp => {}
+            },
+            _ => {}
         }
+
         Ok(None)
     }
 
@@ -182,8 +243,6 @@ impl Component for GroupComponent<'_> {
     }
 
     fn draw(&mut self, frame: &mut ratatui::Frame, area: ratatui::prelude::Rect) -> Result<()> {
-        frame.render_widget(Paragraph::new("lol"), area);
-
         let group_layout = Layout::new(
             Direction::Vertical,
             [
@@ -198,18 +257,7 @@ impl Component for GroupComponent<'_> {
         frame.render_widget(&self.name.textarea, group_layout[0]);
 
         // Group color:
-        //
         frame.render_widget(&self.color.textarea, group_layout[1]);
-        // frame.render_widget(
-        //     Paragraph::new(self.group.color.as_str()).block(
-        //         Block::new()
-        //             .title_top("Color")
-        //             .borders(Borders::all())
-        //             .border_type(BorderType::Rounded)
-        //             .style(Style::new().fg(self.group.color.clone().into())),
-        //     ),
-        //     group_layout[1],
-        // );
         Ok(())
     }
 }
