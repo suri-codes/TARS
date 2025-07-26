@@ -14,7 +14,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
 use tui_textarea::{Input, Key};
 
-use crate::{action::Action, components::Component};
+use crate::{action::Action, components::Component, tree::TarsTreeHandle};
 
 use super::TarsText;
 
@@ -26,6 +26,7 @@ pub struct GroupComponent<'a> {
     edit_mode: EditMode,
     client: TarsClient,
     command_tx: Option<UnboundedSender<Action>>,
+    tree_handle: TarsTreeHandle,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -37,7 +38,7 @@ enum EditMode {
 }
 
 impl<'a> GroupComponent<'a> {
-    pub fn new(group: &Group, client: TarsClient) -> Result<Self> {
+    pub fn new(group: &Group, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let comp = Self {
             name: TarsText::new(
                 &group.name,
@@ -58,6 +59,7 @@ impl<'a> GroupComponent<'a> {
             edit_mode: EditMode::Inactive,
             client,
             command_tx: None,
+            tree_handle,
         };
         Ok(comp)
     }
@@ -106,6 +108,7 @@ impl Component for GroupComponent<'_> {
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        //TODO: if someone presses t on a group, it just creates a task and they can start editing it
         match self.edit_mode {
             EditMode::Inactive => {
                 if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {

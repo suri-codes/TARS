@@ -82,6 +82,8 @@ impl App {
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
 
+        
+
         let app = Self {
             tick_rate,
             frame_rate,

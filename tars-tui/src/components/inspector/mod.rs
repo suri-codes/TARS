@@ -1,9 +1,6 @@
 use async_trait::async_trait;
 use color_eyre::Result;
-use common::{
-    TarsClient,
-    types::{Task, TaskFetchOptions},
-};
+use common::TarsClient;
 use crossterm::event::KeyEvent;
 use group_component::GroupComponent;
 use ratatui::{
@@ -36,16 +33,21 @@ pub struct Inspector<'a> {
     client: TarsClient,
     active: bool,
     tree_handle: TarsTreeHandle,
-
-    // task_component: Option<TaskComponent<'a>>,
-    // group_component: Option<GroupComponent<'a>>,
-    active_component: Option<ActiveComponent<'a>>,
+    rendered_component: RenderedComponent<'a>,
 }
 
 #[derive(Debug)]
-enum ActiveComponent<'a> {
-    TaskComponent(Box<TaskComponent<'a>>),
-    GroupComponent(Box<GroupComponent<'a>>),
+struct RenderedComponent<'a> {
+    active_component: RenderedComponentKind,
+    task_component: Option<Box<TaskComponent<'a>>>,
+    group_component: Option<Box<GroupComponent<'a>>>,
+}
+
+#[derive(Debug)]
+enum RenderedComponentKind {
+    Task,
+    Group,
+    Blank,
 }
 
 #[derive(Debug)]
@@ -81,9 +83,6 @@ impl<'a> TarsText<'a> {
             .set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
     }
 }
-// let mut textarea = TextArea::default();
-// textarea.set_cursor_line_style(Style::default());
-// textarea.set_placeholder_text("Enter a valid float (e.g. 1.56)");
 
 impl<'a> Inspector<'a> {
     pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
@@ -93,9 +92,12 @@ impl<'a> Inspector<'a> {
             // selection: None,
             client: client.clone(),
             active: false,
-            // task_component: None,
-            // group_component: None,
-            active_component: None,
+            rendered_component: RenderedComponent {
+                active_component: RenderedComponentKind::Blank,
+                task_component: None,
+                group_component: None,
+            },
+
             tree_handle,
         })
     }
@@ -136,16 +138,27 @@ impl<'a> Component for Inspector<'a> {
             return Ok(None);
         }
 
-        match self.active_component.as_mut() {
-            Some(ActiveComponent::TaskComponent(c)) => c.handle_key_event(key).await,
-            Some(ActiveComponent::GroupComponent(c)) => c.handle_key_event(key).await,
-            None => Ok(None),
-        }
-        // if let Some(task_component) = self.task_component.as_mut() {
-        //     return task_component.handle_key_event(key).await;
-        // }
+        let rendered_component = &mut self.rendered_component;
 
-        // Ok(None)
+        match rendered_component.active_component {
+            RenderedComponentKind::Task => {
+                rendered_component
+                    .task_component
+                    .as_mut()
+                    .unwrap()
+                    .handle_key_event(key)
+                    .await
+            }
+            RenderedComponentKind::Group => {
+                rendered_component
+                    .group_component
+                    .as_mut()
+                    .unwrap()
+                    .handle_key_event(key)
+                    .await
+            }
+            _ => Ok(None),
+        }
     }
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
@@ -154,64 +167,68 @@ impl<'a> Component for Inspector<'a> {
             Action::Render => {}
             Action::SwitchTo(Mode::Inspector) => self.active = true,
             Action::SwitchTo(_) => self.active = false,
-            Action::Select(id) => {
+            Action::Select(ref id) => {
+                // on first select
+                // we make sure that we carry the task and group components
+
+                // we can use this id to determine what we should be using
                 let tree = self.tree_handle.read().await;
-
-                let node = tree.get(&id)?;
-
+                let node = tree.get(id)?;
                 match node.data().kind {
                     TarsKind::Task(ref t) => {
-                        let mut new_task_component = TaskComponent::new(t, self.client.clone())?;
-                        new_task_component.register_action_handler(
-                            self.command_tx.as_ref().expect("should exist").clone(),
-                        )?;
-                        self.active_component =
-                            Some(ActiveComponent::TaskComponent(Box::new(new_task_component)));
+                        if self.rendered_component.task_component.is_none() {
+                            let task_component = TaskComponent::new(
+                                t,
+                                self.client.clone(),
+                                self.tree_handle.clone(),
+                            )?;
+
+                            self.rendered_component.task_component = Some(Box::new(task_component));
+                        }
+
+                        self.rendered_component.active_component = RenderedComponentKind::Task;
                     }
 
                     TarsKind::Group(ref g) => {
-                        let mut new_group_component = GroupComponent::new(g, self.client.clone())?;
-                        new_group_component.register_action_handler(
-                            self.command_tx.as_ref().expect("should exit").clone(),
-                        )?;
+                        if self.rendered_component.group_component.is_none() {
+                            let group_component = GroupComponent::new(
+                                g,
+                                self.client.clone(),
+                                self.tree_handle.clone(),
+                            )?;
 
-                        self.active_component = Some(ActiveComponent::GroupComponent(Box::new(
-                            new_group_component,
-                        )));
+                            self.rendered_component.group_component =
+                                Some(Box::new(group_component));
+                        }
+
+                        self.rendered_component.active_component = RenderedComponentKind::Group;
                     }
 
                     _ => {}
                 }
             }
-
-            Action::Refresh => match self.active_component {
-                None => {}
-                Some(ActiveComponent::TaskComponent(ref t)) => {
-                    let task = t.task.clone();
-                    //TODO: make task fetch by id an actual call
-                    let all_tasks = Task::fetch(&self.client, TaskFetchOptions::All).await?;
-                    let Some(task) = all_tasks.iter().find(|t| t.id == task.id) else {
-                        self.active_component = None;
-                        return Ok(None);
-                    };
-
-                    let mut selected_task = TaskComponent::new(task, self.client.clone())?;
-
-                    selected_task.register_action_handler(
-                        self.command_tx.as_ref().expect("should exist").clone(),
-                    )?;
-
-                    self.active_component =
-                        Some(ActiveComponent::TaskComponent(Box::new(selected_task)));
-                }
-                Some(ActiveComponent::GroupComponent(ref _g)) => {
-                    //TODO: write refresh code once we have a group_component too.
-                    return Ok(None);
-                }
-            },
             _ => {}
         }
-        Ok(None)
+
+        return match self.rendered_component.active_component {
+            RenderedComponentKind::Task => {
+                self.rendered_component
+                    .task_component
+                    .as_mut()
+                    .unwrap()
+                    .update(action)
+                    .await
+            }
+            RenderedComponentKind::Group => {
+                self.rendered_component
+                    .group_component
+                    .as_mut()
+                    .unwrap()
+                    .update(action)
+                    .await
+            }
+            _ => Ok(None),
+        };
     }
 
     fn draw(
@@ -226,14 +243,20 @@ impl<'a> Component for Inspector<'a> {
             .vertical_margin(2)
             .split(area)[0];
 
-        match self.active_component.as_mut() {
-            Some(ActiveComponent::TaskComponent(t)) => {
-                t.draw(frame, area)?;
-            }
-            Some(ActiveComponent::GroupComponent(g)) => {
-                g.draw(frame, area)?;
-            }
-            None => {
+        let rendered_component = &mut self.rendered_component;
+
+        match rendered_component.active_component {
+            RenderedComponentKind::Task => rendered_component
+                .task_component
+                .as_mut()
+                .unwrap()
+                .draw(frame, area)?,
+            RenderedComponentKind::Group => rendered_component
+                .group_component
+                .as_mut()
+                .unwrap()
+                .draw(frame, area)?,
+            RenderedComponentKind::Blank => {
                 frame.render_widget(Paragraph::new("Please perform a Selection!"), area);
             }
         }

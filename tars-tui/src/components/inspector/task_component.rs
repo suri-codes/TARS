@@ -17,7 +17,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
 use tui_textarea::{Input, Key};
 
-use crate::{action::Action, components::Component};
+use crate::{action::Action, components::Component, tree::TarsTreeHandle};
 
 use super::TarsText;
 
@@ -31,6 +31,7 @@ pub struct TaskComponent<'a> {
     edit_mode: EditMode,
     client: TarsClient,
     command_tx: Option<UnboundedSender<Action>>,
+    tree_handle: TarsTreeHandle,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -43,7 +44,7 @@ enum EditMode {
 }
 
 impl<'a> TaskComponent<'a> {
-    pub fn new(task: &Task, client: TarsClient) -> Result<Self> {
+    pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         // let desc_path = format!("/tmp/tars/{}.md", *task.name);
 
         // mkdir(path, mode)
@@ -85,10 +86,11 @@ impl<'a> TaskComponent<'a> {
             ),
             task: task.clone(),
             command_tx: None,
+            tree_handle,
         })
     }
 
-    pub async fn sync(&mut self) -> Result<()> {
+    async fn sync(&mut self) -> Result<()> {
         let new_name = self.name.textarea.lines()[0].clone();
 
         if !new_name.is_empty() {
