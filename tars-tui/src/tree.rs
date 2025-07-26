@@ -365,6 +365,10 @@ impl TarsTree {
                     .get(&id)
                     .expect("should exist")
                     .clone();
+
+                let map = self.inverted_map();
+                info!("map: {map:#?}");
+
                 self.recur_delete(id)?;
                 let _ = self.remove_node(node_id, RemoveBehavior::DropChildren)?;
             }
@@ -390,9 +394,8 @@ impl TarsTree {
                 .id()
                 .expect("node should eist");
 
+            self.recur_delete(node.clone())?;
             let _ = self.inverted_map_mut().remove(&node);
-
-            self.recur_delete(node)?;
         }
 
         let _ = self.inverted_map_mut().remove(&id);

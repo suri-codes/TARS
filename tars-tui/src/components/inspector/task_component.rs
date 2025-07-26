@@ -1,5 +1,3 @@
-use std::{fs, process::Command};
-
 use async_trait::async_trait;
 use color_eyre::Result;
 use common::{
@@ -16,7 +14,11 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
 use tui_textarea::{Input, Key};
 
-use crate::{action::Action, components::Component};
+use crate::{
+    action::Action,
+    components::Component,
+    tree::{TarsKind, TarsTreeHandle},
+};
 
 use super::TarsText;
 
@@ -30,8 +32,16 @@ pub struct TaskComponent<'a> {
     edit_mode: EditMode,
     client: TarsClient,
     command_tx: Option<UnboundedSender<Action>>,
+    tree_handle: TarsTreeHandle,
+    static_draw_info: StaticDrawInfo<'a>,
+    on_update: OnUpdate,
 }
 
+#[derive(Debug)]
+enum OnUpdate {
+    NoOp,
+    ReRender,
+}
 #[derive(Debug, Default, PartialEq, Eq)]
 enum EditMode {
     #[default]
@@ -41,51 +51,151 @@ enum EditMode {
     Due,
 }
 
+struct ReactiveDrawInfo<'a> {
+    name: TarsText<'a>,
+    due: TarsText<'a>,
+    priority: TarsText<'a>,
+}
+
+impl From<&Task> for ReactiveDrawInfo<'_> {
+    fn from(value: &Task) -> Self {
+        let name = TarsText::new(
+            &value.name,
+            Block::new()
+                .title_top("[N]ame")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded),
+        );
+        let priority = TarsText::new(
+            Into::<String>::into(value.priority).as_str(),
+            value.priority.into(),
+        );
+
+        let due = TarsText::new(
+            Into::<String>::into(
+                value
+                    .due
+                    .map(|d| d.format("%m/%d/%Y %I:%M:%S %p").to_string())
+                    .unwrap_or_else(|| "None".to_string()),
+            )
+            .as_str(),
+            Block::new()
+                .title_top("D[u]e")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded),
+        );
+
+        ReactiveDrawInfo {
+            name,
+            due,
+            priority,
+        }
+    }
+}
+
+/// static draw info
+#[derive(Debug)]
+struct StaticDrawInfo<'a> {
+    task_layout: Layout,
+    group_priority_layout: Layout,
+    group: Paragraph<'a>,
+    description: Paragraph<'a>,
+    completion_due_layout: Layout,
+    completion: Paragraph<'a>,
+}
+
+impl From<&Task> for StaticDrawInfo<'_> {
+    fn from(value: &Task) -> Self {
+        let task_layout = Layout::new(
+            Direction::Vertical,
+            [
+                Constraint::Percentage(15), // name
+                Constraint::Percentage(15), // group | Priority
+                Constraint::Percentage(50), // Description
+                Constraint::Percentage(15), // completion | Due
+            ],
+        );
+
+        let group_priority_layout = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(50), Constraint::Percentage(50)],
+        );
+
+        let group = Paragraph::new((*value.group.name).clone()).block(
+            Block::new()
+                .title_top("Group")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded)
+                .style(Style::new().fg((&value.group.color).into())),
+        );
+
+        let description = Paragraph::new(value.description.clone()).block(
+            Block::new()
+                .title_top("[D]escription")
+                .borders(Borders::all())
+                .border_type(BorderType::Rounded),
+        );
+
+        let completion_due_layout = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Percentage(50), Constraint::Percentage(50)],
+        );
+
+        let completion = {
+            let completion_symbol = if value.completed {
+                " ✅ Awesome"
+            } else {
+                " ❌ Get to work cornball"
+            };
+
+            Paragraph::new(completion_symbol).block({
+                let block = Block::new()
+                    .title_top("[C]ompleted")
+                    .borders(Borders::all())
+                    .border_type(BorderType::Rounded);
+
+                let style = if value.completed {
+                    Style::new().fg(Color::Green)
+                } else {
+                    Style::new().fg(Color::Red)
+                };
+
+                block.style(style)
+            })
+        };
+
+        StaticDrawInfo {
+            task_layout,
+            group_priority_layout,
+            group,
+            description,
+            completion_due_layout,
+            completion,
+        }
+    }
+}
+
 impl<'a> TaskComponent<'a> {
-    pub fn new(task: &Task, client: TarsClient) -> Result<Self> {
-        let desc_path = format!("/tmp/tars/{}.md", *task.name);
-
-        fs::write(&desc_path, task.description.clone())?;
-
-        let output = Command::new("glow").arg(desc_path.as_str()).output()?;
-
-        let rendered_desc = String::from_utf8(output.stdout)?;
-
-        fs::remove_file(&desc_path)?;
-
+    pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+        let reactive_draw_info = ReactiveDrawInfo::from(task);
+        let static_draw_info = StaticDrawInfo::from(task);
         Ok(Self {
-            name: TarsText::new(
-                &task.name,
-                Block::new()
-                    .title_top("[N]ame")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
-            ),
-            priority: TarsText::new(
-                Into::<String>::into(task.priority).as_str(),
-                task.priority.into(),
-            ),
-            edit_mode: EditMode::Inactive,
+            name: reactive_draw_info.name,
+            priority: reactive_draw_info.priority,
             client,
-            description: rendered_desc,
-            due: TarsText::new(
-                Into::<String>::into(
-                    task.due
-                        .map(|d| d.format("%m/%d/%Y %I:%M:%S %p").to_string())
-                        .unwrap_or_else(|| "None".to_string()),
-                )
-                .as_str(),
-                Block::new()
-                    .title_top("D[u]e")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
-            ),
+            description: task.description.clone(),
+            due: reactive_draw_info.due,
             task: task.clone(),
+            edit_mode: EditMode::Inactive,
             command_tx: None,
+            static_draw_info,
+
+            on_update: OnUpdate::NoOp,
+            tree_handle,
         })
     }
 
-    pub async fn sync(&mut self) -> Result<()> {
+    async fn sync(&mut self) -> Result<()> {
         let new_name = self.name.textarea.lines()[0].clone();
 
         if !new_name.is_empty() {
@@ -93,6 +203,8 @@ impl<'a> TaskComponent<'a> {
         };
 
         self.task.sync(&self.client).await?;
+
+        self.on_update = OnUpdate::ReRender;
 
         Ok(())
     }
@@ -110,9 +222,48 @@ impl Component for TaskComponent<'_> {
     }
 
     async fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        if let Action::SwitchTo(_) = action {
-            self.name.deactivate()
+        match action {
+            Action::Select(id) => {
+                let tree = self.tree_handle.read().await;
+                let node = tree.get(&id)?;
+
+                if let TarsKind::Task(ref task) = node.data().kind {
+                    self.task = task.clone();
+                    self.description = task.description.clone();
+                    self.static_draw_info = StaticDrawInfo::from(task);
+
+                    let reactive_draw_info = ReactiveDrawInfo::from(task);
+                    self.priority = reactive_draw_info.priority;
+                    self.due = reactive_draw_info.due;
+                    self.name = reactive_draw_info.name;
+                }
+            }
+
+            Action::Update => match self.on_update {
+                OnUpdate::ReRender => {
+                    let tree = self.tree_handle.read().await;
+                    let node = tree
+                        .get_by_tars_id(self.task.id.clone())
+                        .expect("should exist");
+
+                    if let TarsKind::Task(ref task) = node.data().kind {
+                        self.task = task.clone();
+                        self.description = task.description.clone();
+                        self.static_draw_info = StaticDrawInfo::from(task);
+
+                        let reactive_draw_info = ReactiveDrawInfo::from(task);
+                        self.priority = reactive_draw_info.priority;
+                        self.due = reactive_draw_info.due;
+                        self.name = reactive_draw_info.name;
+                    }
+
+                    self.on_update = OnUpdate::NoOp;
+                }
+                OnUpdate::NoOp => {}
+            },
+            _ => {}
         }
+
         Ok(None)
     }
 
@@ -270,83 +421,27 @@ impl Component for TaskComponent<'_> {
         frame: &mut ratatui::Frame,
         area: ratatui::prelude::Rect,
     ) -> color_eyre::eyre::Result<()> {
-        let task_layout = Layout::new(
-            Direction::Vertical,
-            [
-                Constraint::Percentage(15), // name
-                Constraint::Percentage(15), // group | Priority
-                Constraint::Percentage(50), // Description
-                Constraint::Percentage(15), // completion | Due
-            ],
-        )
-        .split(area);
+        let draw_info = &self.static_draw_info;
+        let task_rects = draw_info.task_layout.split(area);
 
         // Task name:
-        frame.render_widget(&self.name.textarea, task_layout[0]);
+        frame.render_widget(&self.name.textarea, task_rects[0]);
 
         // group | priority
-        let group_priority = Layout::new(
-            Direction::Horizontal,
-            [Constraint::Percentage(50), Constraint::Percentage(50)],
-        )
-        .split(task_layout[1]);
+        let group_priority = draw_info.group_priority_layout.split(task_rects[1]);
 
         // Group name:
-        frame.render_widget(
-            Paragraph::new(self.task.group.name.as_str()).block(
-                Block::new()
-                    .title_top("Group")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded)
-                    .style(Style::new().fg((&self.task.group.color).into())),
-            ),
-            group_priority[0],
-        );
+        frame.render_widget(&draw_info.group, group_priority[0]);
 
         // Priority
         frame.render_widget(&self.priority.textarea, group_priority[1]);
 
         // Description
-        frame.render_widget(
-            Paragraph::new(self.description.clone()).block(
-                Block::new()
-                    .title_top("[D]escription")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded),
-            ),
-            task_layout[2],
-        );
+        frame.render_widget(&draw_info.description, task_rects[2]);
 
-        let completion_due = Layout::new(
-            Direction::Horizontal,
-            [Constraint::Percentage(50), Constraint::Percentage(50)],
-        )
-        .split(task_layout[3]);
-
-        let completion_symbol = if self.task.completed {
-            " ✅ Awesome"
-        } else {
-            " ❌ Get to work cornball"
-        };
-
+        let completion_due = draw_info.completion_due_layout.split(task_rects[3]);
         // Completion status
-        frame.render_widget(
-            Paragraph::new(completion_symbol).block({
-                let block = Block::new()
-                    .title_top("[C]ompleted")
-                    .borders(Borders::all())
-                    .border_type(BorderType::Rounded);
-
-                let style = if self.task.completed {
-                    Style::new().fg(Color::Green)
-                } else {
-                    Style::new().fg(Color::Red)
-                };
-
-                block.style(style)
-            }),
-            completion_due[0],
-        );
+        frame.render_widget(&draw_info.completion, completion_due[0]);
 
         // Due Date
         frame.render_widget(&self.due.textarea, completion_due[1]);
