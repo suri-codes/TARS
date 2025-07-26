@@ -386,8 +386,6 @@ impl TarsTree {
 
         // first remove all the children from the map
         for child in children {
-            let map = self.inverted_map();
-
             let node = self
                 .get(&child)
                 .expect("should exist")

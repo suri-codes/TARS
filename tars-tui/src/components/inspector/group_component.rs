@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use color_eyre::eyre::Result;
 use common::{
     TarsClient,
-    types::{Color as MyColor, Group, Task},
+    types::{Color as MyColor, Group},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders},
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;

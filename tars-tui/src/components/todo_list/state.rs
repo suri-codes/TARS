@@ -5,7 +5,6 @@ use ratatui::{
     style::{Color, Style},
     widgets::Paragraph,
 };
-use tracing::info;
 
 use crate::tree::{TarsKind, TarsTreeHandle};
 
