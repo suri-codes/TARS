@@ -77,11 +77,9 @@ impl<'a> State<'a> {
         let mut tasks_in_scope: Vec<(NodeId, Task)> = pot
             .iter()
             .filter_map(|(id, node)| {
-                if let TarsKind::Task(ref t) = node.data().kind {
-                    info!(
-                        "evaluated task: {t:#?} to have evaluation: {}",
-                        t.evaluate()
-                    );
+                if let TarsKind::Task(ref t) = node.data().kind
+                    && !t.completed
+                {
                     return Some((id.clone(), t.clone()));
                 }
 

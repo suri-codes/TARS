@@ -7,6 +7,7 @@ use common::{
     types::{Priority, Task, parse_date_time},
 };
 use crossterm::event::{KeyCode, KeyEvent};
+use libc::mkdir;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -43,15 +44,17 @@ enum EditMode {
 
 impl<'a> TaskComponent<'a> {
     pub fn new(task: &Task, client: TarsClient) -> Result<Self> {
-        let desc_path = format!("/tmp/tars/{}.md", *task.name);
+        // let desc_path = format!("/tmp/tars/{}.md", *task.name);
 
-        fs::write(&desc_path, task.description.clone())?;
+        // mkdir(path, mode)
 
-        let output = Command::new("glow").arg(desc_path.as_str()).output()?;
+        // fs::write(&desc_path, task.description.clone())?;
 
-        let rendered_desc = String::from_utf8(output.stdout)?;
+        // let output = Command::new("glow").arg(desc_path.as_str()).output()?;
 
-        fs::remove_file(&desc_path)?;
+        // let rendered_desc = String::from_utf8(output.stdout)?;
+
+        // fs::remove_file(&desc_path)?;
 
         Ok(Self {
             name: TarsText::new(
@@ -67,7 +70,7 @@ impl<'a> TaskComponent<'a> {
             ),
             edit_mode: EditMode::Inactive,
             client,
-            description: rendered_desc,
+            description: task.description.clone(),
             due: TarsText::new(
                 Into::<String>::into(
                     task.due
