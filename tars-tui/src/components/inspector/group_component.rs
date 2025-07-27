@@ -140,9 +140,7 @@ impl Component for GroupComponent<'_> {
             Action::Update => match self.on_update {
                 OnUpdate::ReRender => {
                     let tree = self.tree_handle.read().await;
-                    let node = tree
-                        .get_by_tars_id(self.group.id.clone())
-                        .expect("should exist");
+                    let node = tree.get_by_tars_id(&self.group.id).expect("should exist");
 
                     if let TarsKind::Group(ref group) = node.data().kind {
                         self.group = group.clone();

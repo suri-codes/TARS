@@ -1,11 +1,12 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
 
-use color_eyre::Result;
+use color_eyre::{Result, eyre::OptionExt};
 use common::{
     Diff, DiffInner, TarsClient,
     types::{Group, Id, Task, TaskFetchOptions},
@@ -228,14 +229,12 @@ impl TarsTree {
             Diff::Added(DiffInner::Task(t)) => {
                 let group_id = &t.group.id;
                 let group_node_id = self
-                    .inverted_map_mut()
-                    .get(group_id)
-                    .expect("group_id should exist")
-                    .clone();
+                    .translate_id_to_node_id(group_id)
+                    .ok_or_eyre("group id node should exist in tree")?;
 
                 let group_depth = self
-                    .get(&group_node_id)
-                    .expect("node should exist")
+                    .get_by_tars_id(group_id)
+                    .expect("group should exist")
                     .data()
                     .depth;
 
@@ -247,6 +246,8 @@ impl TarsTree {
                     )),
                     InsertBehavior::UnderNode(&group_node_id),
                 )?;
+
+                self.reorder_children(&group_node_id)?;
 
                 self.inverted_map_mut().insert(t.id, inserted);
             }
@@ -270,14 +271,17 @@ impl TarsTree {
 
                     let parent_depth = self.get(&parent_node_id)?.data().depth;
 
-                    self.insert(
+                    let inserted = self.insert(
                         Node::new(TarsNode::new(
                             TarsKind::Group(g.clone()),
                             Some(parent_node_id.clone()),
                             parent_depth + 1,
                         )),
                         InsertBehavior::UnderNode(&parent_node_id),
-                    )?
+                    )?;
+                    self.reorder_children(&parent_node_id)?;
+
+                    inserted
                 };
                 self.inverted_map_mut().insert(g.id, inserted);
             }
@@ -307,6 +311,8 @@ impl TarsTree {
                     )),
                     InsertBehavior::UnderNode(&parent_node_id),
                 )?;
+
+                self.reorder_children(&parent_node_id)?;
             }
             Diff::Updated(DiffInner::Group(g)) => {
                 let curr_node_id = self
@@ -335,7 +341,8 @@ impl TarsTree {
                             .clone(),
                     };
 
-                    self.move_node(&curr_node_id, MoveBehavior::ToParent(&new_parent_node_id))?
+                    self.move_node(&curr_node_id, MoveBehavior::ToParent(&new_parent_node_id))?;
+                    self.reorder_children(&new_parent_node_id)?;
                 } else {
                     // only the node data has changed
                     let curr_node = self.get_mut(&curr_node_id)?;
@@ -365,9 +372,6 @@ impl TarsTree {
                     .get(&id)
                     .expect("should exist")
                     .clone();
-
-                let map = self.inverted_map();
-                info!("map: {map:#?}");
 
                 self.recur_delete(id)?;
                 let _ = self.remove_node(node_id, RemoveBehavior::DropChildren)?;
@@ -428,8 +432,8 @@ impl TarsTree {
     }
 
     #[allow(dead_code)]
-    pub fn get_by_tars_id(&self, id: Id) -> Option<&Node<TarsNode>> {
-        let node_id = self.inverted_map().get(&id)?;
+    pub fn get_by_tars_id(&self, id: &Id) -> Option<&Node<TarsNode>> {
+        let node_id = self.inverted_map().get(id)?;
 
         let node = self.get(node_id).ok()?;
         Some(node)
@@ -448,5 +452,30 @@ impl TarsTree {
             TarsKind::Group(ref g) => Some(g.id.clone()),
             TarsKind::Task(ref t) => Some(t.id.clone()),
         }
+    }
+
+    pub fn reorder_children(&mut self, node_id: &NodeId) -> Result<()> {
+        // now we have to sort this properly?
+        let node = self.get_mut(node_id)?;
+        info!("parent group of added node: {node:#?}");
+
+        let mut children = node.children_mut().clone();
+
+        children.sort_by(|a, b| {
+            let node_a = self.get(a).unwrap();
+            let node_b = self.get(b).unwrap();
+
+            match (&node_a.data().kind, &node_b.data().kind) {
+                (TarsKind::Task(_), TarsKind::Group(_)) => Ordering::Less,
+                (TarsKind::Group(_), TarsKind::Task(_)) => Ordering::Greater,
+                _ => Ordering::Equal,
+            }
+        });
+
+        let node = self.get_mut(node_id)?;
+
+        node.set_children(children);
+
+        Ok(())
     }
 }
