@@ -159,7 +159,7 @@ impl<'a> State<'a> {
                     let layout = Layout::new(
                         Direction::Horizontal,
                         [
-                            Constraint::Min(entry.data().depth.saturating_sub(rel_depth)),
+                            Constraint::Min((entry.data().depth * 2).saturating_sub(rel_depth)),
                             Constraint::Percentage(100),
                         ],
                     );

@@ -177,11 +177,14 @@ impl<'a> Component for Inspector<'a> {
                 match node.data().kind {
                     TarsKind::Task(ref t) => {
                         if self.rendered_component.task_component.is_none() {
-                            let task_component = TaskComponent::new(
+                            let mut task_component = TaskComponent::new(
                                 t,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
                             )?;
+                            task_component
+                                .register_action_handler(self.command_tx.clone().unwrap())?;
+                            task_component.register_config_handler(self.config.clone())?;
 
                             self.rendered_component.task_component = Some(Box::new(task_component));
                         }
@@ -191,11 +194,15 @@ impl<'a> Component for Inspector<'a> {
 
                     TarsKind::Group(ref g) => {
                         if self.rendered_component.group_component.is_none() {
-                            let group_component = GroupComponent::new(
+                            let mut group_component = GroupComponent::new(
                                 g,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
                             )?;
+
+                            group_component
+                                .register_action_handler(self.command_tx.clone().unwrap())?;
+                            group_component.register_config_handler(self.config.clone())?;
 
                             self.rendered_component.group_component =
                                 Some(Box::new(group_component));
