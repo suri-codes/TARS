@@ -32,11 +32,4 @@ fn prompt_user(prompt: &str) -> Result<String> {
     let colored_prompt = format!("{}: ", prompt.green());
     let response = rl.readline(&colored_prompt)?;
     Ok(response)
-    // print!("{}: ", prompt.green());
-    // stdout().flush()?;
-    // let mut input = String::new();
-    // stdin().read_line(&mut input)?;
-
-    // let input = input.trim();
-    // Ok(input.to_owned())
 }
