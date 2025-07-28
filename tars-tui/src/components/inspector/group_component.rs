@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{OptionExt, Result};
 use common::{
     TarsClient,
-    types::{Color as MyColor, Group},
+    types::{Color as MyColor, Group, Id, Task},
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -46,6 +46,7 @@ enum EditMode {
 enum OnUpdate {
     NoOp,
     ReRender,
+    NewTask(Id),
 }
 
 struct ReactiveDrawInfo<'a> {
@@ -140,9 +141,7 @@ impl Component for GroupComponent<'_> {
             Action::Update => match self.on_update {
                 OnUpdate::ReRender => {
                     let tree = self.tree_handle.read().await;
-                    let node = tree
-                        .get_by_tars_id(self.group.id.clone())
-                        .expect("should exist");
+                    let node = tree.get_by_tars_id(&self.group.id).expect("should exist");
 
                     if let TarsKind::Group(ref group) = node.data().kind {
                         self.group = group.clone();
@@ -151,6 +150,21 @@ impl Component for GroupComponent<'_> {
                         self.color = reactive_draw_info.color;
                         self.name = reactive_draw_info.name;
                     }
+
+                    self.on_update = OnUpdate::NoOp;
+                }
+                OnUpdate::NewTask(ref id) => {
+                    let tree = self.tree_handle.read().await;
+
+                    let node_id = tree
+                        .translate_id_to_node_id(id)
+                        .ok_or_eyre("node should exist in here")?;
+
+                    self.command_tx
+                        .as_mut()
+                        .ok_or_eyre("command tx should exist")?
+                        .send(Action::Select(node_id))
+                        .unwrap();
 
                     self.on_update = OnUpdate::NoOp;
                 }
@@ -182,27 +196,44 @@ impl Component for GroupComponent<'_> {
                     self.edit_mode = EditMode::Color;
                     return Ok(Some(Action::RawText));
                 }
-            }
-            EditMode::Name => {
-                match key.into() {
-                    Input { key: Key::Esc, .. }
-                    | Input {
-                        key: Key::Enter, ..
-                    } => {
-                        self.name.deactivate();
-                        self.sync().await?;
-                        self.edit_mode = EditMode::Inactive;
-                        return Ok(Some(Action::Refresh));
-                    }
-                    input => {
-                        self.name.textarea.input(input);
-                        // TextArea::input returns if the input modified its text
-                        // if textarea.input(input) {
-                        //     is_valid = validate(&mut textarea);
-                        // }
-                    }
+
+                if let KeyCode::Char('t') | KeyCode::Char('T') = key.code {
+                    let id = Task::new(
+                        &self.client,
+                        &self.group,
+                        "new task",
+                        common::types::Priority::Medium,
+                        "",
+                        None,
+                    )
+                    .await?
+                    .id;
+
+                    self.on_update = OnUpdate::NewTask(id);
+                }
+
+                if let KeyCode::Char('r') | KeyCode::Char('R') = key.code {
+                    let new_color = MyColor::random();
+
+                    self.group.color = new_color;
+
+                    self.sync().await?;
                 }
             }
+            EditMode::Name => match key.into() {
+                Input { key: Key::Esc, .. }
+                | Input {
+                    key: Key::Enter, ..
+                } => {
+                    self.name.deactivate();
+                    self.sync().await?;
+                    self.edit_mode = EditMode::Inactive;
+                    return Ok(Some(Action::Refresh));
+                }
+                input => {
+                    self.name.textarea.input(input);
+                }
+            },
 
             EditMode::Color => match key.into() {
                 Input { key: Key::Esc, .. }

@@ -242,9 +242,7 @@ impl Component for TaskComponent<'_> {
             Action::Update => match self.on_update {
                 OnUpdate::ReRender => {
                     let tree = self.tree_handle.read().await;
-                    let node = tree
-                        .get_by_tars_id(self.task.id.clone())
-                        .expect("should exist");
+                    let node = tree.get_by_tars_id(&self.task.id).expect("should exist");
 
                     if let TarsKind::Task(ref task) = node.data().kind {
                         self.task = task.clone();

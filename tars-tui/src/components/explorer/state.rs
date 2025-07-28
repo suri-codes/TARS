@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Constraint, Direction},
     style::{Color as RatColor, Style, Stylize},
 };
-use tracing::info;
+use tracing::debug;
 
 use crate::tree::TarsKind;
 use crate::tree::TarsTreeHandle;
@@ -159,7 +159,7 @@ impl<'a> State<'a> {
                     let layout = Layout::new(
                         Direction::Horizontal,
                         [
-                            Constraint::Min(entry.data().depth.saturating_sub(rel_depth)),
+                            Constraint::Min((entry.data().depth * 2).saturating_sub(rel_depth)),
                             Constraint::Percentage(100),
                         ],
                     );
@@ -181,7 +181,7 @@ impl<'a> State<'a> {
             entries_layout,
         });
 
-        info!("updated draw info! {:#?}", self.draw_info);
+        debug!("updated draw info! {:#?}", self.draw_info);
     }
 
     pub fn get_scope(&self) -> &NodeId {
