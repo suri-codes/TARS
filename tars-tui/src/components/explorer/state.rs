@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use async_recursion::async_recursion;
 use common::types::Color;
 use id_tree::{Node, NodeId};
+use std::collections::HashMap;
 
 use ratatui::style::Modifier;
 use ratatui::{layout::Layout, text::Text, widgets::Paragraph};
@@ -251,6 +250,7 @@ impl<'a> State<'a> {
         pot
     }
 
+    //TODO:: this doesnt work as expected
     #[async_recursion]
     async fn render_group(&self, group_id: &NodeId, memo: &mut HashMap<NodeId, bool>) -> bool {
         if let Some(result) = memo.get(group_id) {
@@ -260,23 +260,29 @@ impl<'a> State<'a> {
 
         let group = tree.get(group_id).unwrap();
 
-        let mut exists_uncompleted_task = false;
+        let mut exists_uncompleted_task = Some(false);
 
-        let mut group_doesnt_have_task = true;
+        let children = group.children();
+
+        if children.is_empty() {
+            exists_uncompleted_task = None;
+        }
 
         for child_id in group.children() {
             let child = tree.get(child_id).unwrap();
 
             match child.data().kind {
                 TarsKind::Task(ref t) => {
-                    exists_uncompleted_task = !t.completed;
-                    group_doesnt_have_task = false;
+                    if !t.completed {
+                        exists_uncompleted_task = Some(true);
+                    }
                 }
 
                 TarsKind::Group(ref g) => {
-                    exists_uncompleted_task = self
-                        .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
-                        .await
+                    exists_uncompleted_task = Some(
+                        self.render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
+                            .await,
+                    )
                 }
                 TarsKind::Root(_) => {
                     panic!("should be an impossible sptate")
@@ -284,7 +290,9 @@ impl<'a> State<'a> {
             }
         }
 
-        let res = group_doesnt_have_task || exists_uncompleted_task;
+        let res = exists_uncompleted_task.unwrap_or(true);
+
+        // we want to show if this group doesnt have a task but there exists a sub task
 
         memo.insert(group_id.clone(), res);
         res
