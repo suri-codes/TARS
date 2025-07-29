@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use async_recursion::async_recursion;
 use common::types::Color;
 use id_tree::{Node, NodeId};
 
@@ -220,28 +223,102 @@ impl<'a> State<'a> {
     pub async fn generate_render_list(&self) -> Vec<(NodeId, Node<TarsNode>)> {
         let tree = self.tree_handle.read().await;
 
-        let pot: Vec<_> = tree
-            .traverse(&self.scope)
-            .into_iter()
-            .filter_map(|(id, node)| {
-                match node.data().kind {
-                    // we dont want to render the node
-                    TarsKind::Root(_) => None,
-                    TarsKind::Task(ref t) => {
-                        if !self.show_completed && t.completed {
-                            return None;
-                        }
+        let mut memo = HashMap::new();
 
-                        Some((id, node.clone()))
+        // let pot: Vec<_> = tree
+        //     .traverse(&self.scope)
+        //     .into_iter()
+        //     .filter_map(|(id, node)| {
+        //         match node.data().kind {
+        //             // we dont want to render the node
+        //             TarsKind::Root(_) => None,
+        //             TarsKind::Task(ref t) => {
+        //                 if !self.show_completed && t.completed {
+        //                     return None;
+        //                 }
+
+        //                 Some((id, node.clone()))
+        //             }
+        //             TarsKind::Group(ref g) => {
+        //                 if self
+        //                     .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), &mut memo)
+        //                     .await
+        //                 {
+        //                     Some((id, node.clone()))
+        //                 } else {
+        //                     None
+        //                 }
+        //             }
+        //         }
+        //     })
+        //     // .enumerate()
+        //     //
+        //     // for
+        //     .collect();
+
+        let mut pot = Vec::new();
+
+        for (id, node) in tree.traverse(&self.scope) {
+            match node.data().kind {
+                // we dont want to render the node
+                TarsKind::Root(_) => {}
+                TarsKind::Task(ref t) => {
+                    if self.show_completed || !t.completed {
+                        pot.push((id, node.clone()));
                     }
-                    // we want to see
-                    TarsKind::Group(_) => Some((id, node.clone())),
                 }
-            })
-            // .enumerate()
-            .collect();
+                TarsKind::Group(ref g) => {
+                    if self.show_completed
+                        || self
+                            .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), &mut memo)
+                            .await
+                    {
+                        pot.push((id, node.clone()));
+                    };
+                }
+            }
+        }
 
         pot
+    }
+
+    #[async_recursion]
+    async fn render_group(&self, group_id: &NodeId, memo: &mut HashMap<NodeId, bool>) -> bool {
+        if let Some(result) = memo.get(group_id) {
+            return *result;
+        };
+        let tree = self.tree_handle.read().await;
+
+        let group = tree.get(group_id).unwrap();
+
+        let mut exists_uncompleted_task = false;
+
+        let mut group_doesnt_have_task = true;
+
+        for child_id in group.children() {
+            let child = tree.get(child_id).unwrap();
+
+            match child.data().kind {
+                TarsKind::Task(ref t) => {
+                    exists_uncompleted_task = !t.completed;
+                    group_doesnt_have_task = false;
+                }
+
+                TarsKind::Group(ref g) => {
+                    exists_uncompleted_task = self
+                        .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
+                        .await
+                }
+                TarsKind::Root(_) => {
+                    panic!("should be an impossible sptate")
+                }
+            }
+        }
+
+        let res = group_doesnt_have_task || exists_uncompleted_task;
+
+        memo.insert(group_id.clone(), res);
+        res
     }
 
     pub fn get_draw_info(&self) -> &DrawInfo<'a> {

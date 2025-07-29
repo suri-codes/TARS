@@ -4618,6 +4618,7 @@ name = "tars-tui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "async-trait",
  "better-panic",
  "clap",
