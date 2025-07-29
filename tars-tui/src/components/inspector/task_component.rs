@@ -285,6 +285,8 @@ impl Component for TaskComponent<'_> {
                     return Ok(Some(Action::RawText));
                 }
                 if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
+                    self.on_update = OnUpdate::ReRender;
+
                     return Ok(Some(Action::EditDescription(self.task.clone())));
                 }
 

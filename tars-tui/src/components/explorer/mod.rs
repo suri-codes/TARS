@@ -149,16 +149,8 @@ impl<'a> Component for Explorer<'a> {
 
         let tree = self.tree_handle.read().await;
 
-        let pot = tree.traverse(self.state.get_scope());
-
-        //TODO: just use the idx inside of selection instead of having to do an entire tree traversal lol
-        let Some((curr_idx, (_, _))) = pot
-            .iter()
-            .enumerate()
-            .find(|(_, (id, _))| *self.state.get_selected_id() == *id)
-        else {
-            return Ok(None);
-        };
+        let render_list = self.state.generate_render_list().await;
+        let curr_idx = self.state.get_selected_idx();
 
         match key.code {
             KeyCode::Enter => {
@@ -167,6 +159,11 @@ impl<'a> Component for Explorer<'a> {
                     .unwrap()
                     .send(Action::SwitchTo(Mode::Inspector))?;
                 Ok(None)
+            }
+
+            KeyCode::Char('c') => {
+                self.state.toggle_show_completed().await;
+                return Ok(None);
             }
 
             KeyCode::Char('x') => {
@@ -238,7 +235,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('j') => {
-                if let Some((next_id, _)) = pot.get(curr_idx + 1) {
+                if let Some((next_id, _)) = render_list.get(curr_idx + 1) {
                     self.state.set_selection(next_id.clone()).await;
                     return Ok(Some(Action::Select(next_id.clone())));
                 }
@@ -247,7 +244,7 @@ impl<'a> Component for Explorer<'a> {
             }
 
             KeyCode::Char('k') => {
-                if let Some((prev_id, _)) = pot.get({
+                if let Some((prev_id, _)) = render_list.get({
                     let Some(i) = curr_idx.checked_sub(1) else {
                         return Ok(None);
                     };
@@ -266,7 +263,7 @@ impl<'a> Component for Explorer<'a> {
 
             KeyCode::Char('l') => {
                 // all we do here is change the scope to be this new one
-                let (curr_id, curr_node) = pot.get(curr_idx).unwrap();
+                let (curr_id, curr_node) = render_list.get(*curr_idx).unwrap();
 
                 if let TarsKind::Group(_) = curr_node.data().kind {
                     self.state.set_scope(curr_id.clone()).await;

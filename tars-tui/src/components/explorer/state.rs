@@ -1,6 +1,10 @@
-use common::types::Color;
-use id_tree::NodeId;
+use std::collections::HashMap;
 
+use async_recursion::async_recursion;
+use common::types::Color;
+use id_tree::{Node, NodeId};
+
+use ratatui::style::Modifier;
 use ratatui::{layout::Layout, text::Text, widgets::Paragraph};
 use ratatui::{
     layout::{Constraint, Direction},
@@ -8,16 +12,18 @@ use ratatui::{
 };
 use tracing::debug;
 
-use crate::tree::TarsKind;
 use crate::tree::TarsTreeHandle;
+use crate::tree::{TarsKind, TarsNode};
 
 #[derive(Debug, Clone)]
 pub struct State<'a> {
     pub active: bool,
+    show_completed: bool,
     scope: NodeId,
     selection: Selection,
     pub tree_handle: TarsTreeHandle,
     draw_info: Option<DrawInfo<'a>>,
+    // pot: Vec<(NodeId, &'a Node<TarsNode>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +38,7 @@ pub struct DrawInfo<'a> {
 #[derive(Debug, Clone)]
 struct Selection {
     id: NodeId,
-    idx: u32,
+    idx: usize,
 }
 
 impl<'a> State<'a> {
@@ -54,6 +60,8 @@ impl<'a> State<'a> {
             selection,
             tree_handle,
             draw_info: None,
+            show_completed: false,
+            // pot,
         };
 
         state.calculate_draw_info().await;
@@ -112,30 +120,25 @@ impl<'a> State<'a> {
             .collect();
 
         let entries: Vec<(Paragraph<'_>, Layout)> = {
-            let root_node_id = tree.root_node_id().expect("root node id should exist");
+            let raw_render_list = self.generate_render_list().await;
 
-            let traverse = tree.traverse(&self.scope);
-
-            let pot: Vec<_> = traverse
-                .iter()
-                .enumerate()
-                // if the scope is the root scope AND the element is the first one, we drop it cuz we dont want to render the root
-                .filter(|(i, _)| !(self.scope == *root_node_id && *i == 0))
-                .collect();
+            let render_list: Vec<(usize, &(NodeId, Node<TarsNode>))> =
+                raw_render_list.iter().enumerate().collect();
 
             // now we validate selection
             if tree.get(self.get_selected_id()).is_err() {
-                let (_, (id, _)) = pot
-                    .get(self.selection.idx.saturating_sub(1) as usize)
-                    .unwrap_or(pot.last().expect("why is there nothing to render"));
+                let (_, (id, _)) = render_list
+                    .get(self.selection.idx.saturating_sub(1))
+                    .unwrap_or(render_list.last().expect("why is there nothing to render"));
 
                 self.selection.id = id.clone();
             };
 
-            pot.iter()
+            render_list
+                .iter()
                 .map(|(i, (entry_id, entry))| {
-                    let (style, postfix) = if self.selection.id == entry_id.clone() {
-                        self.selection.idx = *i as u32;
+                    let (mut style, postfix) = if self.selection.id == entry_id.clone() {
+                        self.selection.idx = *i;
                         (Style::new().bold().italic(), "*")
                     } else {
                         (Style::new(), "")
@@ -144,6 +147,10 @@ impl<'a> State<'a> {
                     let widget = match entry.data().kind {
                         TarsKind::Root(_) => Paragraph::new("SHOULDNTBEPOSSIBLE"),
                         TarsKind::Task(ref t) => {
+                            if t.completed {
+                                style = style.add_modifier(Modifier::CROSSED_OUT);
+                            }
+
                             Paragraph::new(format!("{}    {postfix}", *t.name))
                                 .style(style.fg(t.group.color.as_ref().into()))
                         }
@@ -188,6 +195,11 @@ impl<'a> State<'a> {
         &self.scope
     }
 
+    pub async fn toggle_show_completed(&mut self) {
+        self.show_completed = !self.show_completed;
+        self.calculate_draw_info().await;
+    }
+
     pub async fn set_scope(&mut self, scope: NodeId) {
         self.scope = scope;
         self.calculate_draw_info().await;
@@ -198,7 +210,7 @@ impl<'a> State<'a> {
     }
 
     #[allow(unused)]
-    pub fn get_selected_idx(&self) -> &u32 {
+    pub fn get_selected_idx(&self) -> &usize {
         &self.selection.idx
     }
 
@@ -206,6 +218,76 @@ impl<'a> State<'a> {
         self.selection.id = selection;
 
         self.calculate_draw_info().await;
+    }
+
+    pub async fn generate_render_list(&self) -> Vec<(NodeId, Node<TarsNode>)> {
+        let tree = self.tree_handle.read().await;
+
+        let mut memo = HashMap::new();
+
+        let mut pot = Vec::new();
+
+        for (id, node) in tree.traverse(&self.scope) {
+            match node.data().kind {
+                // we dont want to render the node
+                TarsKind::Root(_) => {}
+                TarsKind::Task(ref t) => {
+                    if self.show_completed || !t.completed {
+                        pot.push((id, node.clone()));
+                    }
+                }
+                TarsKind::Group(ref g) => {
+                    if self.show_completed
+                        || self
+                            .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), &mut memo)
+                            .await
+                    {
+                        pot.push((id, node.clone()));
+                    };
+                }
+            }
+        }
+
+        pot
+    }
+
+    #[async_recursion]
+    async fn render_group(&self, group_id: &NodeId, memo: &mut HashMap<NodeId, bool>) -> bool {
+        if let Some(result) = memo.get(group_id) {
+            return *result;
+        };
+        let tree = self.tree_handle.read().await;
+
+        let group = tree.get(group_id).unwrap();
+
+        let mut exists_uncompleted_task = false;
+
+        let mut group_doesnt_have_task = true;
+
+        for child_id in group.children() {
+            let child = tree.get(child_id).unwrap();
+
+            match child.data().kind {
+                TarsKind::Task(ref t) => {
+                    exists_uncompleted_task = !t.completed;
+                    group_doesnt_have_task = false;
+                }
+
+                TarsKind::Group(ref g) => {
+                    exists_uncompleted_task = self
+                        .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
+                        .await
+                }
+                TarsKind::Root(_) => {
+                    panic!("should be an impossible sptate")
+                }
+            }
+        }
+
+        let res = group_doesnt_have_task || exists_uncompleted_task;
+
+        memo.insert(group_id.clone(), res);
+        res
     }
 
     pub fn get_draw_info(&self) -> &DrawInfo<'a> {

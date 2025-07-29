@@ -290,7 +290,7 @@ impl App {
                                 "-l",
                                 "-c",
                                 &format!(
-                                    "source ~/.zshrc && glow -t {}",
+                                    "source ~/.zshrc && glow -t \"{}\"",
                                     tmp_file_path_glow.to_string_lossy()
                                 ),
                             ])
