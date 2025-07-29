@@ -179,7 +179,25 @@ impl<'a> Component for Explorer<'a> {
                     TarsKind::Root(_) => return Ok(None),
                 };
 
-                return Ok(Some(Action::Refresh));
+                let (next_node, _) = {
+                    let next_node =
+                        render_list.get(self.state.get_selected_idx().saturating_add(1));
+
+                    match next_node {
+                        Some(id) => id,
+                        None => {
+                            match render_list.get(self.state.get_selected_idx().saturating_sub(1)) {
+                                Some(id) => id,
+                                None => return Ok(None),
+                            }
+                        }
+                    }
+                };
+
+                self.state.set_selection(next_node.clone()).await;
+                // self.on_update = OnUpdate::Select(id)
+
+                return Ok(None);
             }
 
             KeyCode::Char('t') => {
