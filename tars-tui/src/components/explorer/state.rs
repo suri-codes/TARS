@@ -279,10 +279,12 @@ impl<'a> State<'a> {
                 }
 
                 TarsKind::Group(ref g) => {
-                    exists_uncompleted_task = Some(
-                        self.render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
-                            .await,
-                    )
+                    if !exists_uncompleted_task.unwrap() {
+                        exists_uncompleted_task = Some(
+                            self.render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), memo)
+                                .await,
+                        )
+                    }
                 }
                 TarsKind::Root(_) => {
                     panic!("should be an impossible sptate")
@@ -291,8 +293,6 @@ impl<'a> State<'a> {
         }
 
         let res = exists_uncompleted_task.unwrap_or(true);
-
-        // we want to show if this group doesnt have a task but there exists a sub task
 
         memo.insert(group_id.clone(), res);
         res
