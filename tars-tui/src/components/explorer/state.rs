@@ -250,7 +250,6 @@ impl<'a> State<'a> {
         pot
     }
 
-    //TODO:: this doesnt work as expected
     #[async_recursion]
     async fn render_group(&self, group_id: &NodeId, memo: &mut HashMap<NodeId, bool>) -> bool {
         if let Some(result) = memo.get(group_id) {
