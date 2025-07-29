@@ -223,13 +223,6 @@ impl Component for TaskComponent<'_> {
 
     async fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
-            // Action::Refresh => {
-            //     self.static_draw_info = StaticDrawInfo::from(&self.task);
-            //     let reactive_draw_info = ReactiveDrawInfo::from(&self.task);
-            //     self.priority = reactive_draw_info.priority;
-            //     self.due = reactive_draw_info.due;
-            //     self.name = reactive_draw_info.name;
-            // }
             Action::Select(id) => {
                 let tree = self.tree_handle.read().await;
                 let node = tree.get(&id)?;

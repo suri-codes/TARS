@@ -225,37 +225,6 @@ impl<'a> State<'a> {
 
         let mut memo = HashMap::new();
 
-        // let pot: Vec<_> = tree
-        //     .traverse(&self.scope)
-        //     .into_iter()
-        //     .filter_map(|(id, node)| {
-        //         match node.data().kind {
-        //             // we dont want to render the node
-        //             TarsKind::Root(_) => None,
-        //             TarsKind::Task(ref t) => {
-        //                 if !self.show_completed && t.completed {
-        //                     return None;
-        //                 }
-
-        //                 Some((id, node.clone()))
-        //             }
-        //             TarsKind::Group(ref g) => {
-        //                 if self
-        //                     .render_group(&tree.translate_id_to_node_id(&g.id).unwrap(), &mut memo)
-        //                     .await
-        //                 {
-        //                     Some((id, node.clone()))
-        //                 } else {
-        //                     None
-        //                 }
-        //             }
-        //         }
-        //     })
-        //     // .enumerate()
-        //     //
-        //     // for
-        //     .collect();
-
         let mut pot = Vec::new();
 
         for (id, node) in tree.traverse(&self.scope) {
