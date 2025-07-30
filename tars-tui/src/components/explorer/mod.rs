@@ -211,7 +211,7 @@ impl<'a> Component for Explorer<'a> {
                     &self.client,
                     parent,
                     "new task",
-                    common::types::Priority::Far,
+                    common::types::Priority::Medium,
                     "",
                     None,
                 )
