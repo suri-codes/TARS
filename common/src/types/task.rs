@@ -186,8 +186,7 @@ impl Task {
         // (e/3)^(delta) + prio
 
         let today = today.fixed_offset();
-
-        let difference = (due - today).num_nanoseconds().unwrap() as f64 / 8.64E13;
+        let difference = (due - today).num_minutes() as f64 / 8.64E13;
 
         let e = f64::consts::E / 3.0;
 
