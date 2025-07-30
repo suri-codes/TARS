@@ -184,7 +184,6 @@ impl Task {
             .unwrap();
 
         // (e/3)^(delta) + prio
-
         let today = today.fixed_offset();
         let difference = (due - today).num_minutes() as f64 / 8.64E13;
 
