@@ -133,41 +133,16 @@ impl<'a> Component for Explorer<'a> {
                 self.state.calculate_draw_info().await;
                 Ok(None)
             }
-            _ => Ok(None),
-        }
-    }
-
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        // vim bindings
-        // j would move selection down
-        // k would move selection up
-        // l would move into a new scope
-        // h would move into the outer scope
-        if !self.state.active {
-            return Ok(None);
-        }
-
-        let tree = self.tree_handle.read().await;
-
-        let render_list = self.state.generate_render_list().await;
-        let curr_idx = self.state.get_selected_idx();
-
-        match key.code {
-            KeyCode::Enter => {
-                self.command_tx
-                    .as_ref()
-                    .unwrap()
-                    .send(Action::SwitchTo(Mode::Inspector))?;
+            Action::ToggleShowCompleted => {
+                self.state.toggle_show_completed().await;
                 Ok(None)
             }
 
-            KeyCode::Char('c') => {
-                self.state.toggle_show_completed().await;
-                return Ok(None);
-            }
-
-            KeyCode::Char('x') => {
+            Action::Delete => {
+                let tree = self.tree_handle.read().await;
                 let selected = tree.get(self.state.get_selected_id())?.data();
+                let render_list = self.state.generate_render_list().await;
+                let curr_idx = self.state.get_selected_idx();
 
                 match selected.kind {
                     TarsKind::Task(ref t) => {
@@ -200,7 +175,8 @@ impl<'a> Component for Explorer<'a> {
                 return Ok(None);
             }
 
-            KeyCode::Char('t') => {
+            Action::NewTask => {
+                let tree = self.tree_handle.read().await;
                 let parent = match tree.get(self.state.get_selected_id())?.data().kind {
                     TarsKind::Task(ref t) => &t.group,
                     TarsKind::Group(ref g) => g,
@@ -222,8 +198,9 @@ impl<'a> Component for Explorer<'a> {
                 Ok(Some(Action::Refresh))
             }
 
-            // this will make a group in the current scope
-            KeyCode::Char('G') => {
+            Action::NewGroup => {
+                let tree = self.tree_handle.read().await;
+
                 let parent_group = match tree.get(self.state.get_scope())?.data().kind {
                     TarsKind::Root(_) => None,
                     TarsKind::Group(ref g) => Some(g.id.clone()),
@@ -237,8 +214,8 @@ impl<'a> Component for Explorer<'a> {
                 Ok(Some(Action::Refresh))
             }
 
-            // this will make a child of the currently selected group
-            KeyCode::Char('g') => {
+            Action::NewSubGroup => {
+                let tree = self.tree_handle.read().await;
                 let curr_node_id = match tree.get(self.state.get_selected_id())?.data().kind {
                     TarsKind::Task(ref t) => Some(t.group.id.clone()),
                     TarsKind::Group(ref g) => Some(g.id.clone()),
@@ -252,7 +229,9 @@ impl<'a> Component for Explorer<'a> {
                 Ok(Some(Action::Refresh))
             }
 
-            KeyCode::Char('j') => {
+            Action::MoveDown => {
+                let render_list = self.state.generate_render_list().await;
+                let curr_idx = self.state.get_selected_idx();
                 if let Some((next_id, _)) = render_list.get(curr_idx + 1) {
                     self.state.set_selection(next_id.clone()).await;
                     return Ok(Some(Action::Select(next_id.clone())));
@@ -260,8 +239,10 @@ impl<'a> Component for Explorer<'a> {
 
                 Ok(None)
             }
-
-            KeyCode::Char('k') => {
+            Action::MoveUp => {
+                let render_list = self.state.generate_render_list().await;
+                let tree = self.tree_handle.read().await;
+                let curr_idx = self.state.get_selected_idx();
                 if let Some((prev_id, _)) = render_list.get({
                     let Some(i) = curr_idx.checked_sub(1) else {
                         return Ok(None);
@@ -278,8 +259,9 @@ impl<'a> Component for Explorer<'a> {
 
                 Ok(None)
             }
-
-            KeyCode::Char('l') => {
+            Action::MoveInto => {
+                let render_list = self.state.generate_render_list().await;
+                let curr_idx = self.state.get_selected_idx();
                 // all we do here is change the scope to be this new one
                 let (curr_id, curr_node) = render_list.get(*curr_idx).unwrap();
 
@@ -291,7 +273,8 @@ impl<'a> Component for Explorer<'a> {
 
                 Ok(None)
             }
-            KeyCode::Char('h') => {
+            Action::MoveOutOf => {
+                let tree = self.tree_handle.read().await;
                 // now we need the ancestors of this guy
                 let ancestors: Vec<&NodeId> = tree.ancestor_ids(self.state.get_scope())?.collect();
                 if let Some(parent) = ancestors.first() {
@@ -299,6 +282,28 @@ impl<'a> Component for Explorer<'a> {
 
                     return Ok(Some(Action::ScopeUpdate((*parent).clone())));
                 };
+                Ok(None)
+            }
+            _ => Ok(None),
+        }
+    }
+
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        // vim bindings
+        // j would move selection down
+        // k would move selection up
+        // l would move into a new scope
+        // h would move into the outer scope
+        if !self.state.active {
+            return Ok(None);
+        }
+
+        match key.code {
+            KeyCode::Enter => {
+                self.command_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(Action::SwitchTo(Mode::Inspector))?;
                 Ok(None)
             }
 

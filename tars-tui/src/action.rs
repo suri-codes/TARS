@@ -27,4 +27,13 @@ pub enum Action {
     RawText,
     EditDescription(Task),
     Diff(Diff),
+    ToggleShowCompleted,
+    Delete,
+    NewTask,
+    NewGroup,
+    NewSubGroup,
+    MoveDown,
+    MoveUp,
+    MoveInto,
+    MoveOutOf,
 }
