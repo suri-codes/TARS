@@ -195,13 +195,19 @@ impl App {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let action_tx = self.action_tx.clone();
+
+        info!("key event: {key:?}");
+
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
 
+        info!("keymap: {keymap:#?}");
+
         match keymap.get(&vec![key]) {
             Some(action) => {
                 if !self.raw_text {
+                    info!("sending key action: {action}");
                     action_tx.send(action.clone())?;
                 }
             }

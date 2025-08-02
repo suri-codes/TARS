@@ -286,6 +286,8 @@ impl<'a> Component for Explorer<'a> {
             }
             _ => Ok(None),
         }
+
+        // do the same thing here
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {

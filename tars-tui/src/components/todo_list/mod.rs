@@ -70,7 +70,7 @@ impl Component for TodoList<'_> {
     }
 
     async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
-        match action {
+        let res = match action.clone() {
             Action::Tick => Ok(None),
             Action::Render => Ok(None),
             Action::SwitchTo(Mode::TodoList) => {
@@ -98,15 +98,16 @@ impl Component for TodoList<'_> {
             }
 
             _ => Ok(None),
-        }
-    }
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        if !self.state.active {
-            return Ok(None);
-        }
+        };
 
-        match key.code {
-            KeyCode::Char('j') => {
+        if !self.state.active {
+            return res;
+        } else if let Some(action) = res? {
+            self.command_tx.as_mut().unwrap().send(action)?;
+        }
+        // key dependent actions
+        match action {
+            Action::MoveDown => {
                 if let Some((next_id, _)) = self
                     .state
                     .get_tasks()
@@ -117,7 +118,8 @@ impl Component for TodoList<'_> {
 
                 Ok(None)
             }
-            KeyCode::Char('k') => {
+
+            Action::MoveUp => {
                 if let Some((prev_id, _)) = self
                     .state
                     .get_tasks()
@@ -128,7 +130,15 @@ impl Component for TodoList<'_> {
 
                 Ok(None)
             }
+            _ => Ok(None),
+        }
+    }
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        if !self.state.active {
+            return Ok(None);
+        }
 
+        match key.code {
             KeyCode::Enter => {
                 self.command_tx
                     .as_ref()

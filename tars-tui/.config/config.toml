@@ -9,7 +9,7 @@
 "x" = "Delete"
 "t" = "NewTask"
 "g" = "NewSubGroup"
-"G" = "NewGroup"
+"<Shift-g>" = "NewGroup"
 "j" = "MoveDown"
 "k" = "MoveUp"
 "l" = "MoveInto"
@@ -22,6 +22,9 @@
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<1>" = { SwitchTo = "Explorer" }
 "<3>" = { SwitchTo = "Inspector" }
+"j" = "MoveDown"
+"k" = "MoveUp"
+
 [keybindings.Inspector]
 "<q>" = "Quit"  # Quit the application
 "<Ctrl-d>" = "Quit"  # Another way to quit

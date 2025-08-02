@@ -9,7 +9,7 @@ use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, de::Deserializer};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{action::Action, app::Mode};
 
@@ -48,6 +48,10 @@ lazy_static! {
 impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
         let default_config: Config = toml::from_str(CONFIG).unwrap();
+
+        info!("default_config_str: {CONFIG}");
+        info!("default_config: {default_config:#?}");
+
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
         let mut builder = config::Config::builder()
@@ -147,6 +151,7 @@ impl<'de> Deserialize<'de> for KeyBindings {
 }
 
 fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
+    //TODO: make this support capital letters too i think
     let raw_lower = raw.to_ascii_lowercase();
     let (remaining, modifiers) = extract_modifiers(&raw_lower);
     parse_key_code_with_modifiers(remaining, modifiers)
