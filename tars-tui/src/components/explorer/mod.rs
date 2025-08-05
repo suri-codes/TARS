@@ -142,7 +142,6 @@ impl<'a> Component for Explorer<'a> {
                 let tree = self.tree_handle.read().await;
                 let selected = tree.get(self.state.get_selected_id())?.data();
                 let render_list = self.state.generate_render_list().await;
-                let curr_idx = self.state.get_selected_idx();
 
                 match selected.kind {
                     TarsKind::Task(ref t) => {
@@ -170,7 +169,6 @@ impl<'a> Component for Explorer<'a> {
                 };
 
                 self.state.set_selection(next_node.clone()).await;
-                // self.on_update = OnUpdate::Select(id)
 
                 return Ok(None);
             }

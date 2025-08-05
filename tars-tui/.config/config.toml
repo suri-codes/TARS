@@ -32,3 +32,6 @@
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<1>" = { SwitchTo = "Explorer" }
 "<2>" = { SwitchTo = "TodoList" }
+"n" = "EditName"
+"r" = "RandomColor"
+"c" = "EditColor"

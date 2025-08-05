@@ -36,4 +36,7 @@ pub enum Action {
     MoveUp,
     MoveInto,
     MoveOutOf,
+    EditName,
+    EditColor,
+    RandomColor,
 }
