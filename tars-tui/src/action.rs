@@ -25,7 +25,7 @@ pub enum Action {
     // this will also clear raw text
     Refresh,
     RawText,
-    EditDescription(Task),
+    EditDescriptionForTask(Task),
     Diff(Diff),
     ToggleShowCompleted,
     Delete,
@@ -38,5 +38,9 @@ pub enum Action {
     MoveOutOf,
     EditName,
     EditColor,
+    EditDue,
+    EditDescription,
     RandomColor,
+    EditPriority,
+    FinishTask,
 }

@@ -4,7 +4,7 @@ use common::{
     ParseError, TarsClient,
     types::{Priority, Task, parse_date_time},
 };
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -150,7 +150,7 @@ impl From<&Task> for StaticDrawInfo<'_> {
 
             Paragraph::new(completion_symbol).block({
                 let block = Block::new()
-                    .title_top("[C]ompleted")
+                    .title_top("[F]inished")
                     .borders(Borders::all())
                     .border_type(BorderType::Rounded);
 
@@ -259,6 +259,30 @@ impl Component for TaskComponent<'_> {
                 }
                 OnUpdate::NoOp => {}
             },
+            Action::EditName => {
+                self.name.activate();
+                self.edit_mode = EditMode::Name;
+                return Ok(Some(Action::RawText));
+            }
+            Action::EditPriority => {
+                self.priority.activate();
+                self.edit_mode = EditMode::Priority;
+                return Ok(Some(Action::RawText));
+            }
+            Action::EditDescription => {
+                self.on_update = OnUpdate::ReRender;
+                return Ok(Some(Action::EditDescriptionForTask(self.task.clone())));
+            }
+
+            Action::FinishTask => {
+                self.task.completed = !self.task.completed;
+                return self.sync().await.map(|_| None);
+            }
+            Action::EditDue => {
+                self.due.activate();
+                self.edit_mode = EditMode::Due;
+                return Ok(Some(Action::RawText));
+            }
             _ => {}
         }
 
@@ -273,33 +297,7 @@ impl Component for TaskComponent<'_> {
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match self.edit_mode {
-            EditMode::Inactive => {
-                if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {
-                    self.name.activate();
-                    self.edit_mode = EditMode::Name;
-                    return Ok(Some(Action::RawText));
-                }
-                if let KeyCode::Char('p') | KeyCode::Char('P') = key.code {
-                    self.priority.activate();
-                    self.edit_mode = EditMode::Priority;
-                    return Ok(Some(Action::RawText));
-                }
-                if let KeyCode::Char('d') | KeyCode::Char('D') = key.code {
-                    self.on_update = OnUpdate::ReRender;
-
-                    return Ok(Some(Action::EditDescription(self.task.clone())));
-                }
-
-                if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
-                    self.task.completed = !self.task.completed;
-                    return self.sync().await.map(|_| None);
-                }
-                if let KeyCode::Char('u') | KeyCode::Char('U') = key.code {
-                    self.due.activate();
-                    self.edit_mode = EditMode::Due;
-                    return Ok(Some(Action::RawText));
-                }
-            }
+            EditMode::Inactive => {}
             EditMode::Name => {
                 match key.into() {
                     Input { key: Key::Esc, .. }

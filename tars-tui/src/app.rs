@@ -257,7 +257,7 @@ impl App {
                     self.action_tx.send(Action::Update)?;
                     self.action_tx.send(Action::Refresh)?
                 }
-                Action::EditDescription(ref task) => {
+                Action::EditDescriptionForTask(ref task) => {
                     tui.exit()?;
 
                     let mut task = task.clone();
