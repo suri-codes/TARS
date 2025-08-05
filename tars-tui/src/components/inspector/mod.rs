@@ -13,7 +13,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tui_textarea::TextArea;
 
 use crate::{
-    action::Action,
+    action::Signal,
     app::Mode,
     config::Config,
     tree::{TarsKind, TarsTreeHandle},
@@ -27,7 +27,7 @@ use super::{Component, frame_block};
 /// Inspector component that shows detailed information about groups and tasks,
 /// and allows them to be modified.
 pub struct Inspector<'a> {
-    command_tx: Option<UnboundedSender<Action>>,
+    command_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     // selection: Option<Selection>,
     client: TarsClient,
@@ -122,7 +122,7 @@ impl<'a> Component for Inspector<'a> {
     }
     fn register_action_handler(
         &mut self,
-        tx: UnboundedSender<Action>,
+        tx: UnboundedSender<Signal>,
     ) -> color_eyre::eyre::Result<()> {
         self.command_tx = Some(tx.clone());
         Ok(())
@@ -133,7 +133,7 @@ impl<'a> Component for Inspector<'a> {
         Ok(())
     }
 
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
         if !self.active {
             return Ok(None);
         }
@@ -161,13 +161,13 @@ impl<'a> Component for Inspector<'a> {
         }
     }
 
-    async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
+    async fn update(&mut self, action: Signal) -> color_eyre::eyre::Result<Option<Signal>> {
         match action {
-            Action::Tick => {}
-            Action::Render => {}
-            Action::SwitchTo(Mode::Inspector) => self.active = true,
-            Action::SwitchTo(_) => self.active = false,
-            Action::Select(ref id) => {
+            Signal::Tick => {}
+            Signal::Render => {}
+            Signal::SwitchTo(Mode::Inspector) => self.active = true,
+            Signal::SwitchTo(_) => self.active = false,
+            Signal::Select(ref id) => {
                 // on first select
                 // we make sure that we carry the task and group components
 
@@ -181,12 +181,24 @@ impl<'a> Component for Inspector<'a> {
                                 t,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
+                                true,
                             )?;
                             task_component
                                 .register_action_handler(self.command_tx.clone().unwrap())?;
                             task_component.register_config_handler(self.config.clone())?;
 
                             self.rendered_component.task_component = Some(Box::new(task_component));
+                        }
+
+                        self.rendered_component
+                            .task_component
+                            .as_mut()
+                            .unwrap()
+                            .active = true;
+
+                        if let Some(group_component) = &mut self.rendered_component.group_component
+                        {
+                            group_component.active = false;
                         }
 
                         self.rendered_component.active_component = RenderedComponentKind::Task;
@@ -198,6 +210,7 @@ impl<'a> Component for Inspector<'a> {
                                 g,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
+                                true,
                             )?;
 
                             group_component
@@ -207,7 +220,15 @@ impl<'a> Component for Inspector<'a> {
                             self.rendered_component.group_component =
                                 Some(Box::new(group_component));
                         }
+                        self.rendered_component
+                            .group_component
+                            .as_mut()
+                            .unwrap()
+                            .active = true;
 
+                        if let Some(task_component) = &mut self.rendered_component.task_component {
+                            task_component.active = false;
+                        }
                         self.rendered_component.active_component = RenderedComponentKind::Group;
                     }
 

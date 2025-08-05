@@ -4,7 +4,12 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, app::Mode, config::Config, tree::TarsTreeHandle};
+use crate::{
+    action::{Action, Signal},
+    app::Mode,
+    config::Config,
+    tree::TarsTreeHandle,
+};
 use color_eyre::Result;
 
 use super::{Component, frame_block};
@@ -14,7 +19,7 @@ mod state;
 #[derive(Debug)]
 /// Component that shows all the tasks within the current scope, ordered by priority.
 pub struct TodoList<'a> {
-    command_tx: Option<UnboundedSender<Action>>,
+    command_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     state: State<'a>,
     _tree_handle: TarsTreeHandle,
@@ -58,7 +63,7 @@ impl Component for TodoList<'_> {
     }
     fn register_action_handler(
         &mut self,
-        tx: UnboundedSender<Action>,
+        tx: UnboundedSender<Signal>,
     ) -> color_eyre::eyre::Result<()> {
         self.command_tx = Some(tx);
         Ok(())
@@ -69,71 +74,65 @@ impl Component for TodoList<'_> {
         Ok(())
     }
 
-    async fn update(&mut self, action: Action) -> color_eyre::eyre::Result<Option<Action>> {
-        let res = match action.clone() {
-            Action::Tick => Ok(None),
-            Action::Render => Ok(None),
-            Action::SwitchTo(Mode::TodoList) => {
+    async fn update(&mut self, action: Signal) -> color_eyre::eyre::Result<Option<Signal>> {
+        match action.clone() {
+            Signal::Tick => Ok(None),
+            Signal::Render => Ok(None),
+            Signal::SwitchTo(Mode::TodoList) => {
                 self.state.active = true;
 
-                Ok(Some(Action::Select(self.state.get_selected_id().clone())))
+                Ok(Some(Signal::Select(self.state.get_selected_id().clone())))
             }
-            Action::SwitchTo(_) => {
+            Signal::SwitchTo(_) => {
                 self.state.active = false;
                 Ok(None)
             }
-            Action::ScopeUpdate(scope) => {
+            Signal::ScopeUpdate(scope) => {
                 self.state.set_scope(scope).await;
                 Ok(None)
             }
 
-            Action::Refresh => {
+            Signal::Refresh => {
                 self.state.calculate_draw_info().await;
                 Ok(None)
             }
 
-            Action::Select(id) => {
+            Signal::Select(id) => {
                 self.state.set_selection(id).await;
                 Ok(None)
             }
 
-            _ => Ok(None),
-        };
-
-        if !self.state.active {
-            return res;
-        } else if let Some(action) = res? {
-            self.command_tx.as_mut().unwrap().send(action)?;
-        }
-        // key dependent actions
-        match action {
-            Action::MoveDown => {
-                if let Some((next_id, _)) = self
-                    .state
-                    .get_tasks()
-                    .get(*self.state.get_selected_idx() + 1)
-                {
-                    return Ok(Some(Action::Select(next_id.clone())));
+            Signal::Action(action) => {
+                if !self.state.active {
+                    return Ok(None);
                 }
 
-                Ok(None)
-            }
+                let tasks = self.state.get_tasks();
+                let sel_idx = *self.state.get_selected_idx();
+                match action {
+                    Action::MoveDown => {
+                        if let Some((next_id, _)) = tasks.get(sel_idx + 1) {
+                            return Ok(Some(Signal::Select(next_id.clone())));
+                        }
 
-            Action::MoveUp => {
-                if let Some((prev_id, _)) = self
-                    .state
-                    .get_tasks()
-                    .get((*self.state.get_selected_idx()).saturating_sub(1))
-                {
-                    return Ok(Some(Action::Select(prev_id.clone())));
+                        Ok(None)
+                    }
+
+                    Action::MoveUp => {
+                        if let Some((prev_id, _)) = tasks.get(sel_idx.saturating_sub(1)) {
+                            return Ok(Some(Signal::Select(prev_id.clone())));
+                        }
+
+                        Ok(None)
+                    }
+                    _ => Ok(None),
                 }
-
-                Ok(None)
             }
+
             _ => Ok(None),
         }
     }
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
         if !self.state.active {
             return Ok(None);
         }
@@ -143,7 +142,7 @@ impl Component for TodoList<'_> {
                 self.command_tx
                     .as_ref()
                     .unwrap()
-                    .send(Action::SwitchTo(Mode::Inspector))?;
+                    .send(Signal::SwitchTo(Mode::Inspector))?;
                 Ok(None)
             }
 

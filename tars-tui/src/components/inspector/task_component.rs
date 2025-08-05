@@ -15,7 +15,7 @@ use tracing::info;
 use tui_textarea::{Input, Key};
 
 use crate::{
-    action::Action,
+    action::{Action, Signal},
     components::Component,
     tree::{TarsKind, TarsTreeHandle},
 };
@@ -31,10 +31,11 @@ pub struct TaskComponent<'a> {
     priority: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
-    command_tx: Option<UnboundedSender<Action>>,
+    command_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
     static_draw_info: StaticDrawInfo<'a>,
     on_update: OnUpdate,
+    pub active: bool,
 }
 
 #[derive(Debug)]
@@ -176,7 +177,12 @@ impl From<&Task> for StaticDrawInfo<'_> {
 }
 
 impl<'a> TaskComponent<'a> {
-    pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+    pub fn new(
+        task: &Task,
+        client: TarsClient,
+        tree_handle: TarsTreeHandle,
+        active: bool,
+    ) -> Result<Self> {
         let reactive_draw_info = ReactiveDrawInfo::from(task);
         let static_draw_info = StaticDrawInfo::from(task);
         Ok(Self {
@@ -189,9 +195,9 @@ impl<'a> TaskComponent<'a> {
             edit_mode: EditMode::Inactive,
             command_tx: None,
             static_draw_info,
-
             on_update: OnUpdate::NoOp,
             tree_handle,
+            active,
         })
     }
 
@@ -221,9 +227,9 @@ impl Component for TaskComponent<'_> {
         Ok(())
     }
 
-    async fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
-            Action::Select(id) => {
+    async fn update(&mut self, signal: Signal) -> Result<Option<Signal>> {
+        match signal {
+            Signal::Select(id) => {
                 let tree = self.tree_handle.read().await;
                 let node = tree.get(&id)?;
 
@@ -237,9 +243,10 @@ impl Component for TaskComponent<'_> {
                     self.due = reactive_draw_info.due;
                     self.name = reactive_draw_info.name;
                 }
+                Ok(None)
             }
 
-            Action::Update => match self.on_update {
+            Signal::Update => match self.on_update {
                 OnUpdate::ReRender => {
                     let tree = self.tree_handle.read().await;
                     let node = tree.get_by_tars_id(&self.task.id).expect("should exist");
@@ -256,46 +263,55 @@ impl Component for TaskComponent<'_> {
                     }
 
                     self.on_update = OnUpdate::NoOp;
+                    Ok(None)
                 }
-                OnUpdate::NoOp => {}
+                OnUpdate::NoOp => Ok(None),
             },
-            Action::EditName => {
-                self.name.activate();
-                self.edit_mode = EditMode::Name;
-                return Ok(Some(Action::RawText));
-            }
-            Action::EditPriority => {
-                self.priority.activate();
-                self.edit_mode = EditMode::Priority;
-                return Ok(Some(Action::RawText));
-            }
-            Action::EditDescription => {
-                self.on_update = OnUpdate::ReRender;
-                return Ok(Some(Action::EditDescriptionForTask(self.task.clone())));
-            }
 
-            Action::FinishTask => {
-                self.task.completed = !self.task.completed;
-                return self.sync().await.map(|_| None);
+            Signal::Action(action) => {
+                if !self.active {
+                    return Ok(None);
+                }
+
+                match action {
+                    Action::EditName => {
+                        self.name.activate();
+                        self.edit_mode = EditMode::Name;
+                        Ok(Some(Signal::RawText))
+                    }
+                    Action::EditPriority => {
+                        self.priority.activate();
+                        self.edit_mode = EditMode::Priority;
+                        Ok(Some(Signal::RawText))
+                    }
+                    Action::EditDescription => {
+                        self.on_update = OnUpdate::ReRender;
+                        Ok(Some(Signal::EditDescriptionForTask(self.task.clone())))
+                    }
+
+                    Action::FinishTask => {
+                        self.task.completed = !self.task.completed;
+                        self.sync().await.map(|_| None)
+                    }
+                    Action::EditDue => {
+                        self.due.activate();
+                        self.edit_mode = EditMode::Due;
+                        Ok(Some(Signal::RawText))
+                    }
+                    _ => Ok(None),
+                }
             }
-            Action::EditDue => {
-                self.due.activate();
-                self.edit_mode = EditMode::Due;
-                return Ok(Some(Action::RawText));
-            }
-            _ => {}
+            _ => Ok(None),
         }
-
-        Ok(None)
     }
 
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+    fn register_action_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
         self.command_tx = Some(tx.clone());
         info!("received action handler");
         Ok(())
     }
 
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
         match self.edit_mode {
             EditMode::Inactive => {}
             EditMode::Name => {
@@ -307,7 +323,7 @@ impl Component for TaskComponent<'_> {
                         self.name.deactivate();
                         self.sync().await?;
                         self.edit_mode = EditMode::Inactive;
-                        return Ok(Some(Action::Refresh));
+                        return Ok(Some(Signal::Refresh));
                         // can validate here
                     }
                     input => {
@@ -333,7 +349,7 @@ impl Component for TaskComponent<'_> {
                             .textarea
                             .set_placeholder_text(self.task.priority);
                         self.edit_mode = EditMode::Inactive;
-                        return Ok(Some(Action::Refresh));
+                        return Ok(Some(Signal::Refresh));
                     }
                     input => {
                         if self.priority.textarea.input(input) {
@@ -371,7 +387,7 @@ impl Component for TaskComponent<'_> {
                             self.sync().await?;
                         }
                         self.edit_mode = EditMode::Inactive;
-                        return Ok(Some(Action::Refresh));
+                        return Ok(Some(Signal::Refresh));
                     }
                     input => {
                         if self.due.textarea.input(input) {

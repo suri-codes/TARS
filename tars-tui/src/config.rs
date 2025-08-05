@@ -49,7 +49,7 @@ impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
         let default_config: Config = toml::from_str(CONFIG).unwrap();
 
-        info!("default_config_str: {CONFIG}");
+        info!("default_config_str: {default_config:#?}");
         info!("default_config: {default_config:#?}");
 
         let data_dir = get_data_dir();
@@ -151,7 +151,6 @@ impl<'de> Deserialize<'de> for KeyBindings {
 }
 
 fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
-    //TODO: make this support capital letters too i think
     let raw_lower = raw.to_ascii_lowercase();
     let (remaining, modifiers) = extract_modifiers(&raw_lower);
     parse_key_code_with_modifiers(remaining, modifiers)

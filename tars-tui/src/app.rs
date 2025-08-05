@@ -30,7 +30,7 @@ use tokio::{
 use tracing::{debug, error, info};
 
 use crate::{
-    action::Action,
+    action::{Action, Signal},
     components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
     config::Config,
     tree::{TarsTree, TarsTreeHandle},
@@ -46,8 +46,8 @@ pub struct App {
     should_suspend: bool,
     mode: Mode,
     last_tick_key_events: Vec<KeyEvent>,
-    action_tx: mpsc::UnboundedSender<Action>,
-    action_rx: mpsc::UnboundedReceiver<Action>,
+    signal_tx: mpsc::UnboundedSender<Signal>,
+    signal_rx: mpsc::UnboundedReceiver<Signal>,
 
     client: TarsClient,
 
@@ -97,8 +97,8 @@ impl App {
             mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
             _diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
-            action_tx,
-            action_rx,
+            signal_tx: action_tx,
+            signal_rx: action_rx,
             raw_text: false,
             client,
         };
@@ -108,7 +108,7 @@ impl App {
 
     pub fn spawn_diff_handler(
         client: &TarsClient,
-        action_tx: UnboundedSender<Action>,
+        action_tx: UnboundedSender<Signal>,
     ) -> JoinHandle<()> {
         let url = client.base_path.clone();
         let url = url.join("/subscribe").unwrap();
@@ -125,7 +125,7 @@ impl App {
                         debug!("message received: {data:?}");
 
                         action_tx
-                            .send(Action::Diff(data))
+                            .send(Signal::Diff(data))
                             .expect("sending action should not fail");
                     }
                     Err(e) => error!("error!: {e:#?}"),
@@ -142,7 +142,7 @@ impl App {
         tui.enter()?;
 
         for component in self.components.iter_mut() {
-            component.register_action_handler(self.action_tx.clone())?;
+            component.register_action_handler(self.signal_tx.clone())?;
         }
         for component in self.components.iter_mut() {
             component.register_config_handler(self.config.clone())?;
@@ -151,15 +151,15 @@ impl App {
             component.init(tui.size()?, self.mode).await?;
         }
 
-        let action_tx = self.action_tx.clone();
+        let action_tx = self.signal_tx.clone();
         loop {
             self.handle_events(&mut tui).await?;
             self.handle_actions(&mut tui).await?;
             if self.should_suspend {
                 tui.suspend()?;
 
-                action_tx.send(Action::Resume)?;
-                action_tx.send(Action::ClearScreen)?;
+                action_tx.send(Signal::Resume)?;
+                action_tx.send(Signal::ClearScreen)?;
                 // tui.mouse(true);
                 tui.enter()?;
             } else if self.should_quit {
@@ -175,12 +175,12 @@ impl App {
         let Some(event) = tui.next_event().await else {
             return Ok(());
         };
-        let action_tx = self.action_tx.clone();
+        let action_tx = self.signal_tx.clone();
         match event {
-            Event::Quit => action_tx.send(Action::Quit)?,
-            Event::Tick => action_tx.send(Action::Tick)?,
-            Event::Render => action_tx.send(Action::Render)?,
-            Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
+            Event::Quit => action_tx.send(Signal::Action(Action::Quit))?,
+            Event::Tick => action_tx.send(Signal::Tick)?,
+            Event::Render => action_tx.send(Signal::Render)?,
+            Event::Resize(x, y) => action_tx.send(Signal::Resize(x, y))?,
             Event::Key(key) => self.handle_key_event(key)?,
 
             _ => {}
@@ -194,7 +194,7 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        let action_tx = self.action_tx.clone();
+        let signal_tx = self.signal_tx.clone();
 
         info!("key event: {key:?}");
 
@@ -208,7 +208,7 @@ impl App {
             Some(action) => {
                 if !self.raw_text {
                     info!("sending key action: {action}");
-                    action_tx.send(action.clone())?;
+                    signal_tx.send(Signal::Action(action.clone()))?;
                 }
             }
             _ => {
@@ -219,7 +219,7 @@ impl App {
                 // Check for multi-key combinations
                 if let Some(action) = keymap.get(&self.last_tick_key_events) {
                     if !self.raw_text {
-                        action_tx.send(action.clone())?;
+                        signal_tx.send(Signal::Action(action.clone()))?;
                     }
                 }
             }
@@ -228,36 +228,36 @@ impl App {
     }
 
     async fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
-        while let Ok(action) = self.action_rx.try_recv() {
-            if action != Action::Tick && action != Action::Render {
+        while let Ok(action) = self.signal_rx.try_recv() {
+            if action != Signal::Tick && action != Signal::Render {
                 debug!("{action:?}");
             }
             match action {
-                Action::Tick => {
+                Signal::Tick => {
                     self.last_tick_key_events.drain(..);
                 }
 
-                Action::Quit => self.should_quit = true,
+                Signal::Action(Action::Quit) => self.should_quit = true,
 
-                Action::Suspend => self.should_suspend = true,
-                Action::Resume => self.should_suspend = false,
-                Action::ClearScreen => tui.terminal.clear()?,
-                Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
-                Action::Render => self.render(tui)?,
-                Action::SwitchTo(mode) => self.mode = mode,
-                Action::RawText => self.raw_text = true,
-                Action::Refresh => {
+                Signal::Suspend => self.should_suspend = true,
+                Signal::Resume => self.should_suspend = false,
+                Signal::ClearScreen => tui.terminal.clear()?,
+                Signal::Resize(w, h) => self.handle_resize(tui, w, h)?,
+                Signal::Render => self.render(tui)?,
+                Signal::SwitchTo(mode) => self.mode = mode,
+                Signal::RawText => self.raw_text = true,
+                Signal::Refresh => {
                     self.raw_text = false;
                 }
 
-                Action::Diff(ref diff) => {
+                Signal::Diff(ref diff) => {
                     info!("received diff");
                     self.tree.write().await.apply_diff(diff.clone())?;
                     info!("applied diff");
-                    self.action_tx.send(Action::Update)?;
-                    self.action_tx.send(Action::Refresh)?
+                    self.signal_tx.send(Signal::Update)?;
+                    self.signal_tx.send(Signal::Refresh)?
                 }
-                Action::EditDescriptionForTask(ref task) => {
+                Signal::EditDescriptionForTask(ref task) => {
                     tui.exit()?;
 
                     let mut task = task.clone();
@@ -343,13 +343,13 @@ impl App {
                     tui.terminal.clear()?;
                     tui.enter()?;
 
-                    self.action_tx.send(Action::Refresh)?;
+                    self.signal_tx.send(Signal::Refresh)?;
                 }
                 _ => {}
             }
             for component in self.components.iter_mut() {
                 if let Some(action) = component.update(action.clone()).await? {
-                    self.action_tx.send(action)?
+                    self.signal_tx.send(action)?
                 };
             }
         }
@@ -381,8 +381,8 @@ impl App {
             for (component, rect) in self.components.iter_mut().zip(layout.iter()) {
                 if let Err(err) = component.draw(frame, *rect) {
                     let _ = self
-                        .action_tx
-                        .send(Action::Error(format!("Failed to draw: {err:?}")));
+                        .signal_tx
+                        .send(Signal::Error(format!("Failed to draw: {err:?}")));
                 }
             }
         })?;
