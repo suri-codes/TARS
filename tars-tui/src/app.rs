@@ -195,13 +195,19 @@ impl App {
 
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let action_tx = self.action_tx.clone();
+
+        info!("key event: {key:?}");
+
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
 
+        info!("keymap: {keymap:#?}");
+
         match keymap.get(&vec![key]) {
             Some(action) => {
                 if !self.raw_text {
+                    info!("sending key action: {action}");
                     action_tx.send(action.clone())?;
                 }
             }
@@ -251,7 +257,7 @@ impl App {
                     self.action_tx.send(Action::Update)?;
                     self.action_tx.send(Action::Refresh)?
                 }
-                Action::EditDescription(ref task) => {
+                Action::EditDescriptionForTask(ref task) => {
                     tui.exit()?;
 
                     let mut task = task.clone();

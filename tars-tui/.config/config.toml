@@ -5,6 +5,16 @@
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<2>" = { SwitchTo = "TodoList" }
 "<3>" = { SwitchTo = "Inspector" }
+"c" = "ToggleShowCompleted"
+"x" = "Delete"
+"t" = "NewTask"
+"g" = "NewSubGroup"
+"<Shift-g>" = "NewGroup"
+"j" = "MoveDown"
+"k" = "MoveUp"
+"l" = "MoveInto"
+"h" = "MoveOutOf"
+
 [keybindings.TodoList]
 "<q>" = "Quit"  # Quit the application
 "<Ctrl-d>" = "Quit"  # Another way to quit
@@ -12,6 +22,9 @@
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<1>" = { SwitchTo = "Explorer" }
 "<3>" = { SwitchTo = "Inspector" }
+"j" = "MoveDown"
+"k" = "MoveUp"
+
 [keybindings.Inspector]
 "<q>" = "Quit"  # Quit the application
 "<Ctrl-d>" = "Quit"  # Another way to quit
@@ -19,3 +32,10 @@
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<1>" = { SwitchTo = "Explorer" }
 "<2>" = { SwitchTo = "TodoList" }
+"r" = "RandomColor"
+"n" = "EditName"
+"c" = "EditColor"
+"p" = "EditPriority"
+"u" = "EditDue"
+"d" = "EditDescription"
+"f" = "FinishTask"

@@ -4,7 +4,7 @@ use common::{
     TarsClient,
     types::{Color as MyColor, Group, Id, Task},
 };
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
@@ -170,6 +170,40 @@ impl Component for GroupComponent<'_> {
                 }
                 OnUpdate::NoOp => {}
             },
+            Action::EditName => {
+                self.name.activate();
+                self.edit_mode = EditMode::Name;
+                return Ok(Some(Action::RawText));
+            }
+            Action::EditColor => {
+                self.color.activate();
+                self.edit_mode = EditMode::Color;
+                return Ok(Some(Action::RawText));
+            }
+
+            Action::NewTask => {
+                let id = Task::new(
+                    &self.client,
+                    &self.group,
+                    "new task",
+                    common::types::Priority::Medium,
+                    "",
+                    None,
+                )
+                .await?
+                .id;
+
+                self.on_update = OnUpdate::NewTask(id);
+            }
+
+            Action::RandomColor => {
+                let new_color = MyColor::random();
+
+                self.group.color = new_color;
+
+                self.sync().await?;
+            }
+
             _ => {}
         }
 
@@ -185,41 +219,7 @@ impl Component for GroupComponent<'_> {
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         //TODO: if someone presses t on a group, it just creates a task and they can start editing it
         match self.edit_mode {
-            EditMode::Inactive => {
-                if let KeyCode::Char('n') | KeyCode::Char('N') = key.code {
-                    self.name.activate();
-                    self.edit_mode = EditMode::Name;
-                    return Ok(Some(Action::RawText));
-                }
-                if let KeyCode::Char('c') | KeyCode::Char('C') = key.code {
-                    self.color.activate();
-                    self.edit_mode = EditMode::Color;
-                    return Ok(Some(Action::RawText));
-                }
-
-                if let KeyCode::Char('t') | KeyCode::Char('T') = key.code {
-                    let id = Task::new(
-                        &self.client,
-                        &self.group,
-                        "new task",
-                        common::types::Priority::Medium,
-                        "",
-                        None,
-                    )
-                    .await?
-                    .id;
-
-                    self.on_update = OnUpdate::NewTask(id);
-                }
-
-                if let KeyCode::Char('r') | KeyCode::Char('R') = key.code {
-                    let new_color = MyColor::random();
-
-                    self.group.color = new_color;
-
-                    self.sync().await?;
-                }
-            }
+            EditMode::Inactive => {}
             EditMode::Name => match key.into() {
                 Input { key: Key::Esc, .. }
                 | Input {
