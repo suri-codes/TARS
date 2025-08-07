@@ -383,14 +383,6 @@ impl<'a> Component for Explorer<'a> {
 
         let scroll_area = scroll_view.area();
 
-        // let entries_rects = draw_info.entries_layout.split(entries_area);
-
-        // for ((entry, depth_offset_layout), entry_rect) in
-        //     draw_info.entries.iter().zip(entries_rects.iter())
-        // {
-        //     frame.render_widget(entry, depth_offset_layout.split(*entry_rect)[1]);
-        // }
-
         let entries_rects = draw_info.entries_layout.split(scroll_area);
 
         for ((entry, depth_offset_layout), entry_rect) in
