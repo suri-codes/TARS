@@ -178,7 +178,7 @@ impl<'a> Component for Inspector<'a> {
                     }
                     RenderedComponentKind::Group => {
                         self.rendered_component
-                            .task_component
+                            .group_component
                             .as_mut()
                             .unwrap()
                             .active = true;
@@ -217,6 +217,7 @@ impl<'a> Component for Inspector<'a> {
 
                             self.rendered_component.task_component = Some(Box::new(task_component));
                         }
+
                         if let Some(group_component) = &mut self.rendered_component.group_component
                         {
                             group_component.active = false;
