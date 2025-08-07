@@ -31,7 +31,7 @@ pub struct TaskComponent<'a> {
     priority: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
-    command_tx: Option<UnboundedSender<Signal>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
     static_draw_info: StaticDrawInfo<'a>,
     on_update: OnUpdate,
@@ -188,7 +188,7 @@ impl<'a> TaskComponent<'a> {
             due: reactive_draw_info.due,
             task: task.clone(),
             edit_mode: EditMode::Inactive,
-            command_tx: None,
+            signal_tx: None,
             static_draw_info,
             on_update: OnUpdate::NoOp,
             tree_handle,
@@ -301,8 +301,8 @@ impl Component for TaskComponent<'_> {
         }
     }
 
-    fn register_action_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
-        self.command_tx = Some(tx.clone());
+    fn register_signal_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
+        self.signal_tx = Some(tx.clone());
         info!("received action handler");
         Ok(())
     }

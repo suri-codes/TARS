@@ -19,7 +19,7 @@ mod state;
 #[derive(Debug)]
 /// Component that shows all the tasks within the current scope, ordered by priority.
 pub struct TodoList<'a> {
-    command_tx: Option<UnboundedSender<Signal>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     state: State<'a>,
     _tree_handle: TarsTreeHandle,
@@ -36,7 +36,7 @@ impl<'a> TodoList<'a> {
         let state = State::new(false, scope, selection, tree_handle.clone()).await;
 
         Ok(Self {
-            command_tx: Default::default(),
+            signal_tx: Default::default(),
             config: Default::default(),
             _tree_handle: tree_handle.clone(),
             state,
@@ -61,11 +61,11 @@ impl Component for TodoList<'_> {
 
         Ok(())
     }
-    fn register_action_handler(
+    fn register_signal_handler(
         &mut self,
         tx: UnboundedSender<Signal>,
     ) -> color_eyre::eyre::Result<()> {
-        self.command_tx = Some(tx);
+        self.signal_tx = Some(tx);
         Ok(())
     }
 
@@ -139,7 +139,7 @@ impl Component for TodoList<'_> {
 
         match key.code {
             KeyCode::Enter => {
-                self.command_tx
+                self.signal_tx
                     .as_ref()
                     .unwrap()
                     .send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;

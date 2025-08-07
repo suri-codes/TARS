@@ -10,7 +10,6 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 use tui_textarea::TextArea;
 
 use crate::{
@@ -28,7 +27,7 @@ use super::{Component, frame_block};
 /// Inspector component that shows detailed information about groups and tasks,
 /// and allows them to be modified.
 pub struct Inspector<'a> {
-    command_tx: Option<UnboundedSender<Signal>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     // selection: Option<Selection>,
     client: TarsClient,
@@ -88,7 +87,7 @@ impl<'a> TarsText<'a> {
 impl<'a> Inspector<'a> {
     pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         Ok(Self {
-            command_tx: Default::default(),
+            signal_tx: Default::default(),
             config: Default::default(),
             // selection: None,
             client: client.clone(),
@@ -121,11 +120,11 @@ impl<'a> Component for Inspector<'a> {
 
         Ok(())
     }
-    fn register_action_handler(
+    fn register_signal_handler(
         &mut self,
         tx: UnboundedSender<Signal>,
     ) -> color_eyre::eyre::Result<()> {
-        self.command_tx = Some(tx.clone());
+        self.signal_tx = Some(tx.clone());
         Ok(())
     }
 
@@ -212,7 +211,7 @@ impl<'a> Component for Inspector<'a> {
                                 self.tree_handle.clone(),
                             )?;
                             task_component
-                                .register_action_handler(self.command_tx.clone().unwrap())?;
+                                .register_signal_handler(self.signal_tx.clone().unwrap())?;
                             task_component.register_config_handler(self.config.clone())?;
 
                             self.rendered_component.task_component = Some(Box::new(task_component));
@@ -235,7 +234,7 @@ impl<'a> Component for Inspector<'a> {
                             )?;
 
                             group_component
-                                .register_action_handler(self.command_tx.clone().unwrap())?;
+                                .register_signal_handler(self.signal_tx.clone().unwrap())?;
                             group_component.register_config_handler(self.config.clone())?;
 
                             self.rendered_component.group_component =

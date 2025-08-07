@@ -25,7 +25,7 @@ mod state;
 #[derive(Debug)]
 /// Explorer component that allows you to navigate between different groups (scopes).
 pub struct Explorer<'a> {
-    command_tx: Option<UnboundedSender<Signal>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     client: TarsClient,
     state: State<'a>,
@@ -50,7 +50,7 @@ impl<'a> Explorer<'a> {
         let state = State::new(false, scope, selection, tree_handle.clone()).await;
 
         let explorer = Self {
-            command_tx: Default::default(),
+            signal_tx: Default::default(),
             config: Default::default(),
             client: client.clone(),
             state,
@@ -79,11 +79,11 @@ impl<'a> Component for Explorer<'a> {
 
         Ok(())
     }
-    fn register_action_handler(
+    fn register_signal_handler(
         &mut self,
         tx: UnboundedSender<Signal>,
     ) -> color_eyre::eyre::Result<()> {
-        self.command_tx = Some(tx);
+        self.signal_tx = Some(tx);
         Ok(())
     }
 
@@ -110,7 +110,7 @@ impl<'a> Component for Explorer<'a> {
                         .translate_id_to_node_id(id)
                         .ok_or_eyre("missing node id")?;
 
-                    let command_tx = self.command_tx.as_ref().expect("should exist");
+                    let command_tx = self.signal_tx.as_ref().expect("should exist");
 
                     command_tx.send(Signal::Select(node_id.clone()))?;
                     self.on_update = OnUpdate::None;
@@ -317,7 +317,7 @@ impl<'a> Component for Explorer<'a> {
 
         match key.code {
             KeyCode::Enter => {
-                self.command_tx
+                self.signal_tx
                     .as_ref()
                     .unwrap()
                     .send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;

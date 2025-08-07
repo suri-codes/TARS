@@ -29,7 +29,7 @@ pub struct GroupComponent<'a> {
     color: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
-    command_tx: Option<UnboundedSender<Signal>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
     on_update: OnUpdate,
     pub active: bool,
@@ -86,7 +86,7 @@ impl<'a> GroupComponent<'a> {
             group: group.clone(),
             edit_mode: EditMode::Inactive,
             client,
-            command_tx: None,
+            signal_tx: None,
             tree_handle,
             on_update: OnUpdate::NoOp,
             active: false,
@@ -164,7 +164,7 @@ impl Component for GroupComponent<'_> {
                         .translate_id_to_node_id(id)
                         .ok_or_eyre("node should exist in here")?;
 
-                    self.command_tx
+                    self.signal_tx
                         .as_mut()
                         .ok_or_eyre("command tx should exist")?
                         .send(Signal::Select(node_id))
@@ -227,8 +227,8 @@ impl Component for GroupComponent<'_> {
         }
     }
 
-    fn register_action_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
-        self.command_tx = Some(tx.clone());
+    fn register_signal_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
+        self.signal_tx = Some(tx.clone());
         info!("received action handler");
         Ok(())
     }

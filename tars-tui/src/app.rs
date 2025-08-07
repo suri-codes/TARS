@@ -77,7 +77,7 @@ impl From<Mode> for u8 {
 
 impl App {
     pub async fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
-        let (action_tx, action_rx) = mpsc::unbounded_channel();
+        let (signal_tx, signal_rx) = mpsc::unbounded_channel();
         let client = TarsClient::default().await.unwrap();
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
@@ -96,9 +96,9 @@ impl App {
             config: Config::new()?,
             mode: Mode::Explorer,
             last_tick_key_events: Vec::new(),
-            _diff_handle: Self::spawn_diff_handler(&client, action_tx.clone()),
-            signal_tx: action_tx,
-            signal_rx: action_rx,
+            _diff_handle: Self::spawn_diff_handler(&client, signal_tx.clone()),
+            signal_tx,
+            signal_rx,
             raw_text: false,
             client,
         };
@@ -142,7 +142,7 @@ impl App {
         tui.enter()?;
 
         for component in self.components.iter_mut() {
-            component.register_action_handler(self.signal_tx.clone())?;
+            component.register_signal_handler(self.signal_tx.clone())?;
         }
         for component in self.components.iter_mut() {
             component.register_config_handler(self.config.clone())?;

@@ -33,7 +33,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn register_action_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
+    fn register_signal_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
         let _ = tx; // to appease clippy
         Ok(())
     }
