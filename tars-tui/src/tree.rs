@@ -13,7 +13,7 @@ use common::{
 };
 use id_tree::{InsertBehavior, MoveBehavior, Node, NodeId, RemoveBehavior, Tree, TreeBuilder};
 use tokio::sync::RwLock;
-use tracing::{error, info};
+use tracing::error;
 
 #[derive(Debug)]
 pub struct TarsTree(Tree<TarsNode>);
@@ -151,7 +151,7 @@ impl TarsTree {
             *map = inverted_map
         }
 
-        info!("{tree:#?}");
+        // info!("{tree:#?}");
         Ok(tree)
     }
 
@@ -457,7 +457,6 @@ impl TarsTree {
     pub fn reorder_children(&mut self, node_id: &NodeId) -> Result<()> {
         // now we have to sort this properly?
         let node = self.get_mut(node_id)?;
-        info!("parent group of added node: {node:#?}");
 
         let mut children = node.children_mut().clone();
 

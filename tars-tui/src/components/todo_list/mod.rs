@@ -78,12 +78,12 @@ impl Component for TodoList<'_> {
         match action.clone() {
             Signal::Tick => Ok(None),
             Signal::Render => Ok(None),
-            Signal::SwitchTo(Mode::TodoList) => {
+            Signal::Action(Action::SwitchTo(Mode::TodoList)) => {
                 self.state.active = true;
 
                 Ok(Some(Signal::Select(self.state.get_selected_id().clone())))
             }
-            Signal::SwitchTo(_) => {
+            Signal::Action(Action::SwitchTo(_)) => {
                 self.state.active = false;
                 Ok(None)
             }
@@ -142,7 +142,7 @@ impl Component for TodoList<'_> {
                 self.command_tx
                     .as_ref()
                     .unwrap()
-                    .send(Signal::SwitchTo(Mode::Inspector))?;
+                    .send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;
                 Ok(None)
             }
 

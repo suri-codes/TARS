@@ -196,13 +196,9 @@ impl App {
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let signal_tx = self.signal_tx.clone();
 
-        info!("key event: {key:?}");
-
         let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
-
-        info!("keymap: {keymap:#?}");
 
         match keymap.get(&vec![key]) {
             Some(action) => {
@@ -239,12 +235,12 @@ impl App {
 
                 Signal::Action(Action::Quit) => self.should_quit = true,
 
-                Signal::Suspend => self.should_suspend = true,
+                Signal::Action(Action::Suspend) => self.should_suspend = true,
                 Signal::Resume => self.should_suspend = false,
                 Signal::ClearScreen => tui.terminal.clear()?,
                 Signal::Resize(w, h) => self.handle_resize(tui, w, h)?,
                 Signal::Render => self.render(tui)?,
-                Signal::SwitchTo(mode) => self.mode = mode,
+                Signal::Action(Action::SwitchTo(mode)) => self.mode = mode,
                 Signal::RawText => self.raw_text = true,
                 Signal::Refresh => {
                     self.raw_text = false;

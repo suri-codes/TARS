@@ -10,11 +10,9 @@ pub enum Signal {
     Tick,
     Render,
     Resize(u16, u16),
-    Suspend,
     Resume,
     ClearScreen,
     Error(String),
-    SwitchTo(Mode),
     Select(NodeId),
     ScopeUpdate(NodeId),
     Update,
@@ -31,6 +29,8 @@ pub enum Signal {
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum Action {
+    SwitchTo(Mode),
+    Suspend,
     Help,
     Quit,
     ToggleShowCompleted,

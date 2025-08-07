@@ -177,12 +177,7 @@ impl From<&Task> for StaticDrawInfo<'_> {
 }
 
 impl<'a> TaskComponent<'a> {
-    pub fn new(
-        task: &Task,
-        client: TarsClient,
-        tree_handle: TarsTreeHandle,
-        active: bool,
-    ) -> Result<Self> {
+    pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let reactive_draw_info = ReactiveDrawInfo::from(task);
         let static_draw_info = StaticDrawInfo::from(task);
         Ok(Self {
@@ -197,7 +192,7 @@ impl<'a> TaskComponent<'a> {
             static_draw_info,
             on_update: OnUpdate::NoOp,
             tree_handle,
-            active,
+            active: false,
         })
     }
 
@@ -272,6 +267,7 @@ impl Component for TaskComponent<'_> {
                 if !self.active {
                     return Ok(None);
                 }
+                info!("Processing {}", action);
 
                 match action {
                     Action::EditName => {

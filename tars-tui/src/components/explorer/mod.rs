@@ -9,6 +9,7 @@ use id_tree::NodeId;
 use ratatui::layout::{Constraint, Direction, Layout};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 
 use crate::{
     action::{Action, Signal},
@@ -114,22 +115,21 @@ impl<'a> Component for Explorer<'a> {
                     command_tx.send(Signal::Select(node_id.clone()))?;
                     self.on_update = OnUpdate::None;
 
-                    Ok(Some(Signal::SwitchTo(Mode::Inspector)))
+                    Ok(Some(Signal::Action(Action::SwitchTo(Mode::Inspector))))
                 }
                 OnUpdate::None => Ok(None),
             },
 
-            Signal::SwitchTo(Mode::Explorer) => {
+            Signal::Action(Action::SwitchTo(Mode::Explorer)) => {
                 self.state.active = true;
 
                 Ok(Some(Signal::Select(self.state.get_selected_id().clone())))
             }
-            Signal::SwitchTo(_) => {
+            Signal::Action(Action::SwitchTo(_)) => {
                 self.state.active = false;
                 Ok(None)
             }
             Signal::Refresh => {
-                // haha not this simple haha!
                 self.state.calculate_draw_info().await;
                 Ok(None)
             }
@@ -138,6 +138,8 @@ impl<'a> Component for Explorer<'a> {
                 if !self.state.active {
                     return Ok(None);
                 }
+
+                info!("Processing {}", action);
 
                 match action {
                     Action::ToggleShowCompleted => {
@@ -318,7 +320,7 @@ impl<'a> Component for Explorer<'a> {
                 self.command_tx
                     .as_ref()
                     .unwrap()
-                    .send(Signal::SwitchTo(Mode::Inspector))?;
+                    .send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;
                 Ok(None)
             }
 

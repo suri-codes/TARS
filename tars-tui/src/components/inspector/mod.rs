@@ -10,10 +10,11 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 use tui_textarea::TextArea;
 
 use crate::{
-    action::Signal,
+    action::{Action, Signal},
     app::Mode,
     config::Config,
     tree::{TarsKind, TarsTreeHandle},
@@ -165,8 +166,36 @@ impl<'a> Component for Inspector<'a> {
         match action {
             Signal::Tick => {}
             Signal::Render => {}
-            Signal::SwitchTo(Mode::Inspector) => self.active = true,
-            Signal::SwitchTo(_) => self.active = false,
+            Signal::Action(Action::SwitchTo(Mode::Inspector)) => {
+                self.active = true;
+                match self.rendered_component.active_component {
+                    RenderedComponentKind::Task => {
+                        self.rendered_component
+                            .task_component
+                            .as_mut()
+                            .unwrap()
+                            .active = true;
+                    }
+                    RenderedComponentKind::Group => {
+                        self.rendered_component
+                            .task_component
+                            .as_mut()
+                            .unwrap()
+                            .active = true;
+                    }
+                    RenderedComponentKind::Blank => {}
+                }
+            }
+
+            Signal::Action(Action::SwitchTo(_)) => {
+                self.active = false;
+                if let Some(group_component) = &mut self.rendered_component.group_component {
+                    group_component.active = false;
+                }
+                if let Some(task_component) = &mut self.rendered_component.task_component {
+                    task_component.active = false;
+                }
+            }
             Signal::Select(ref id) => {
                 // on first select
                 // we make sure that we carry the task and group components
@@ -181,7 +210,6 @@ impl<'a> Component for Inspector<'a> {
                                 t,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
-                                true,
                             )?;
                             task_component
                                 .register_action_handler(self.command_tx.clone().unwrap())?;
@@ -189,13 +217,6 @@ impl<'a> Component for Inspector<'a> {
 
                             self.rendered_component.task_component = Some(Box::new(task_component));
                         }
-
-                        self.rendered_component
-                            .task_component
-                            .as_mut()
-                            .unwrap()
-                            .active = true;
-
                         if let Some(group_component) = &mut self.rendered_component.group_component
                         {
                             group_component.active = false;
@@ -210,7 +231,6 @@ impl<'a> Component for Inspector<'a> {
                                 g,
                                 self.client.clone(),
                                 self.tree_handle.clone(),
-                                true,
                             )?;
 
                             group_component
@@ -220,15 +240,11 @@ impl<'a> Component for Inspector<'a> {
                             self.rendered_component.group_component =
                                 Some(Box::new(group_component));
                         }
-                        self.rendered_component
-                            .group_component
-                            .as_mut()
-                            .unwrap()
-                            .active = true;
 
                         if let Some(task_component) = &mut self.rendered_component.task_component {
                             task_component.active = false;
                         }
+
                         self.rendered_component.active_component = RenderedComponentKind::Group;
                     }
 

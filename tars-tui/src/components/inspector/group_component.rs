@@ -78,12 +78,7 @@ impl From<&Group> for ReactiveDrawInfo<'_> {
     }
 }
 impl<'a> GroupComponent<'a> {
-    pub fn new(
-        group: &Group,
-        client: TarsClient,
-        tree_handle: TarsTreeHandle,
-        active: bool,
-    ) -> Result<Self> {
+    pub fn new(group: &Group, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let reactive_draw_info = ReactiveDrawInfo::from(group);
         let comp = Self {
             name: reactive_draw_info.name,
@@ -94,7 +89,7 @@ impl<'a> GroupComponent<'a> {
             command_tx: None,
             tree_handle,
             on_update: OnUpdate::NoOp,
-            active,
+            active: false,
         };
         Ok(comp)
     }
@@ -186,6 +181,7 @@ impl Component for GroupComponent<'_> {
                 if !self.active {
                     return Ok(None);
                 }
+                info!("Processing {}", action);
 
                 match action {
                     Action::EditName => {
