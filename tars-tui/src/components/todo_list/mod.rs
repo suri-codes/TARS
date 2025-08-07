@@ -4,7 +4,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
-use tui_scrollview::ScrollView;
+use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
     action::{Action, Signal},
@@ -87,6 +87,7 @@ impl Component for TodoList<'_> {
             }
             Signal::Action(Action::SwitchTo(_)) => {
                 self.state.active = false;
+                self.state.calculate_draw_info().await;
                 Ok(None)
             }
             Signal::ScopeUpdate(scope) => {
@@ -100,7 +101,9 @@ impl Component for TodoList<'_> {
             }
 
             Signal::Select(id) => {
-                self.state.set_selection(id).await;
+                if self.state.active {
+                    self.state.set_selection(id).await;
+                }
                 Ok(None)
             }
 
@@ -115,14 +118,9 @@ impl Component for TodoList<'_> {
                     Action::MoveDown => {
                         if let Some((next_id, _)) = tasks.get(sel_idx + 1) {
                             let next_id = next_id.clone();
+                            let offset = self.state.scroll_state.offset().y as usize;
 
-                            let offset = self.state.scroll_state.offset();
-
-                            info!(
-                                "frame_height: {}, idx: {sel_idx}, offset:{offset:?}",
-                                self.state.frame_height,
-                            );
-                            if sel_idx - offset.y as usize + 3 >= self.state.frame_height as usize {
+                            if sel_idx - offset + 3 >= self.state.frame_height as usize {
                                 self.state.scroll_state.scroll_down();
                             }
 
@@ -135,13 +133,8 @@ impl Component for TodoList<'_> {
                     Action::MoveUp => {
                         if let Some((prev_id, _)) = tasks.get(sel_idx.saturating_sub(1)) {
                             let prev_id = prev_id.clone();
-
-                            let offset = self.state.scroll_state.offset();
-                            info!(
-                                "frame_height: {}, idx: {sel_idx}, offset:{offset:?}",
-                                self.state.frame_height,
-                            );
-                            if sel_idx - (offset.y as usize) < 3 {
+                            let offset = self.state.scroll_state.offset().y as usize;
+                            if sel_idx - offset < 3 {
                                 self.state.scroll_state.scroll_up();
                             }
 
@@ -190,8 +183,8 @@ impl Component for TodoList<'_> {
         self.state.frame_height = area.height;
 
         let mut scroll_view =
-            ScrollView::new(Size::new(area.x, self.state.get_tasks().len() as u16))
-                .horizontal_scrollbar_visibility(tui_scrollview::ScrollbarVisibility::Never);
+            ScrollView::new(Size::new(area.width, self.state.get_tasks().len() as u16))
+                .horizontal_scrollbar_visibility(ScrollbarVisibility::Never);
 
         let scroll_area = scroll_view.area();
 
@@ -206,9 +199,6 @@ impl Component for TodoList<'_> {
             let group_rect = parts[1];
             let prio_date_rect = parts[2];
 
-            // frame.render_widget(&line.task, task_rect);
-            // frame.render_widget(&line.group, group_rect);
-            // frame.render_widget(&line.prio_date, prio_date_rect);
             scroll_view.render_widget(&line.task, task_rect);
             scroll_view.render_widget(&line.group, group_rect);
             scroll_view.render_widget(&line.prio_date, prio_date_rect);
