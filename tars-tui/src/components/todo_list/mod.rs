@@ -119,7 +119,9 @@ impl Component for TodoList<'_> {
                             let next_id = next_id.clone();
                             let offset = self.state.scroll_state.offset().y as usize;
 
-                            if sel_idx - offset + 3 >= self.state.frame_height as usize {
+                            if sel_idx - offset + self.config.config.scroll_offset as usize
+                                >= self.state.frame_height as usize
+                            {
                                 self.state.scroll_state.scroll_down();
                             }
 
@@ -133,7 +135,7 @@ impl Component for TodoList<'_> {
                         if let Some((prev_id, _)) = tasks.get(sel_idx.saturating_sub(1)) {
                             let prev_id = prev_id.clone();
                             let offset = self.state.scroll_state.offset().y as usize;
-                            if sel_idx - offset < 3 {
+                            if sel_idx - offset < self.config.config.scroll_offset as usize {
                                 self.state.scroll_state.scroll_up();
                             }
 

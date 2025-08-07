@@ -111,7 +111,9 @@ impl<'a> Component for Explorer<'a> {
 
                     let sel_idx = *self.state.get_selected_idx();
                     let offset = self.state.scroll_state.offset().y as usize;
-                    if sel_idx - offset + 3 >= self.state.frame_height as usize {
+                    if sel_idx - offset + self.config.config.scroll_offset as usize
+                        >= self.state.frame_height as usize
+                    {
                         self.state.scroll_state.scroll_down();
                     }
 
@@ -255,7 +257,15 @@ impl<'a> Component for Explorer<'a> {
                         let sel_idx = *self.state.get_selected_idx();
                         if let Some((next_id, _)) = render_list.get(sel_idx + 1) {
                             let offset = self.state.scroll_state.offset().y as usize;
-                            if sel_idx - offset + 3 >= self.state.frame_height as usize {
+
+                            info!(
+                                "configured scroll offset: {}",
+                                self.config.config.scroll_offset
+                            );
+
+                            if sel_idx - offset + self.config.config.scroll_offset as usize
+                                >= self.state.frame_height as usize
+                            {
                                 self.state.scroll_state.scroll_down();
                             }
 
@@ -271,7 +281,7 @@ impl<'a> Component for Explorer<'a> {
                         let sel_idx = *self.state.get_selected_idx();
                         if let Some((prev_id, _)) = render_list.get({
                             let offset = self.state.scroll_state.offset().y as usize;
-                            if sel_idx - offset < 3 {
+                            if sel_idx - offset < self.config.config.scroll_offset as usize {
                                 self.state.scroll_state.scroll_up();
                             }
 
