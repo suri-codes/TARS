@@ -3,7 +3,6 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
@@ -184,7 +183,8 @@ impl Component for TodoList<'_> {
 
         let mut scroll_view =
             ScrollView::new(Size::new(area.width, self.state.get_tasks().len() as u16))
-                .horizontal_scrollbar_visibility(ScrollbarVisibility::Never);
+                .horizontal_scrollbar_visibility(ScrollbarVisibility::Never)
+                .vertical_scrollbar_visibility(ScrollbarVisibility::Automatic);
 
         let scroll_area = scroll_view.area();
 
