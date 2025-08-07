@@ -82,6 +82,9 @@ impl App {
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
 
+        let config = Config::new()?;
+        info!("using config: {config:#?}");
+
         let app = Self {
             tick_rate,
             frame_rate,

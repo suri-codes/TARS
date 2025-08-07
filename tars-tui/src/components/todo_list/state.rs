@@ -5,6 +5,7 @@ use ratatui::{
     style::{Color, Style},
     widgets::Paragraph,
 };
+use tui_scrollview::ScrollViewState;
 
 use crate::tree::{TarsKind, TarsTreeHandle};
 
@@ -15,8 +16,9 @@ pub struct State<'a> {
     selection: Selection,
     pub tree_handle: TarsTreeHandle,
     draw_info: Option<DrawInfo<'a>>,
-
     tasks: Vec<(NodeId, Task)>,
+    pub scroll_state: ScrollViewState,
+    pub frame_height: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +59,8 @@ impl<'a> State<'a> {
             tree_handle,
             draw_info: None,
             tasks: vec![],
+            scroll_state: Default::default(),
+            frame_height: 50,
         };
 
         state.calculate_draw_info().await;

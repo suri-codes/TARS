@@ -6,10 +6,11 @@ use common::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::NodeId;
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
+use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
     action::{Action, Signal},
@@ -97,7 +98,9 @@ impl<'a> Component for Explorer<'a> {
             Signal::Tick => Ok(None),
             Signal::Render => Ok(None),
             Signal::Select(id) => {
-                self.state.set_selection(id).await;
+                if self.state.active {
+                    self.state.set_selection(id).await;
+                }
 
                 Ok(None)
             }
@@ -105,6 +108,14 @@ impl<'a> Component for Explorer<'a> {
             Signal::Update => match self.on_update {
                 OnUpdate::Select(ref id) => {
                     let tree = self.tree_handle.read().await;
+
+                    let sel_idx = *self.state.get_selected_idx();
+                    let offset = self.state.scroll_state.offset().y as usize;
+                    if sel_idx - offset + self.config.config.scroll_offset as usize
+                        >= self.state.frame_height as usize
+                    {
+                        self.state.scroll_state.scroll_down();
+                    }
 
                     let node_id = tree
                         .translate_id_to_node_id(id)
@@ -243,8 +254,21 @@ impl<'a> Component for Explorer<'a> {
 
                     Action::MoveDown => {
                         let render_list = self.state.generate_render_list().await;
-                        let curr_idx = self.state.get_selected_idx();
-                        if let Some((next_id, _)) = render_list.get(curr_idx + 1) {
+                        let sel_idx = *self.state.get_selected_idx();
+                        if let Some((next_id, _)) = render_list.get(sel_idx + 1) {
+                            let offset = self.state.scroll_state.offset().y as usize;
+
+                            info!(
+                                "configured scroll offset: {}",
+                                self.config.config.scroll_offset
+                            );
+
+                            if sel_idx - offset + self.config.config.scroll_offset as usize
+                                >= self.state.frame_height as usize
+                            {
+                                self.state.scroll_state.scroll_down();
+                            }
+
                             self.state.set_selection(next_id.clone()).await;
                             return Ok(Some(Signal::Select(next_id.clone())));
                         }
@@ -254,9 +278,14 @@ impl<'a> Component for Explorer<'a> {
                     Action::MoveUp => {
                         let render_list = self.state.generate_render_list().await;
                         let tree = self.tree_handle.read().await;
-                        let curr_idx = self.state.get_selected_idx();
+                        let sel_idx = *self.state.get_selected_idx();
                         if let Some((prev_id, _)) = render_list.get({
-                            let Some(i) = curr_idx.checked_sub(1) else {
+                            let offset = self.state.scroll_state.offset().y as usize;
+                            if sel_idx - offset < self.config.config.scroll_offset as usize {
+                                self.state.scroll_state.scroll_up();
+                            }
+
+                            let Some(i) = sel_idx.checked_sub(1) else {
                                 return Ok(None);
                             };
                             i
@@ -347,6 +376,8 @@ impl<'a> Component for Explorer<'a> {
 
         let breadcrumbs_area = areas[1];
 
+        self.state.frame_height = entries_area.height;
+
         let draw_info = self.state.get_draw_info();
 
         let crumb_rects = draw_info.breadcrumb_layout.split(breadcrumbs_area);
@@ -355,13 +386,22 @@ impl<'a> Component for Explorer<'a> {
             frame.render_widget(crumb, *crumb_rect);
         }
 
-        let entries_rects = draw_info.entries_layout.split(entries_area);
+        let mut scroll_view =
+            ScrollView::new(Size::new(area.width, draw_info.entries.len() as u16))
+                .horizontal_scrollbar_visibility(ScrollbarVisibility::Never)
+                .vertical_scrollbar_visibility(ScrollbarVisibility::Automatic);
+
+        let scroll_area = scroll_view.area();
+
+        let entries_rects = draw_info.entries_layout.split(scroll_area);
 
         for ((entry, depth_offset_layout), entry_rect) in
             draw_info.entries.iter().zip(entries_rects.iter())
         {
-            frame.render_widget(entry, depth_offset_layout.split(*entry_rect)[1]);
+            scroll_view.render_widget(entry, depth_offset_layout.split(*entry_rect)[1]);
         }
+
+        frame.render_stateful_widget(scroll_view, entries_area, &mut self.state.scroll_state);
 
         Ok(())
     }

@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
+use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
     action::{Action, Signal},
@@ -85,6 +86,7 @@ impl Component for TodoList<'_> {
             }
             Signal::Action(Action::SwitchTo(_)) => {
                 self.state.active = false;
+                self.state.calculate_draw_info().await;
                 Ok(None)
             }
             Signal::ScopeUpdate(scope) => {
@@ -98,7 +100,9 @@ impl Component for TodoList<'_> {
             }
 
             Signal::Select(id) => {
-                self.state.set_selection(id).await;
+                if self.state.active {
+                    self.state.set_selection(id).await;
+                }
                 Ok(None)
             }
 
@@ -112,7 +116,16 @@ impl Component for TodoList<'_> {
                 match action {
                     Action::MoveDown => {
                         if let Some((next_id, _)) = tasks.get(sel_idx + 1) {
-                            return Ok(Some(Signal::Select(next_id.clone())));
+                            let next_id = next_id.clone();
+                            let offset = self.state.scroll_state.offset().y as usize;
+
+                            if sel_idx - offset + self.config.config.scroll_offset as usize
+                                >= self.state.frame_height as usize
+                            {
+                                self.state.scroll_state.scroll_down();
+                            }
+
+                            return Ok(Some(Signal::Select(next_id)));
                         }
 
                         Ok(None)
@@ -120,7 +133,17 @@ impl Component for TodoList<'_> {
 
                     Action::MoveUp => {
                         if let Some((prev_id, _)) = tasks.get(sel_idx.saturating_sub(1)) {
-                            return Ok(Some(Signal::Select(prev_id.clone())));
+                            let prev_id = prev_id.clone();
+                            let offset = self.state.scroll_state.offset().y as usize;
+                            if sel_idx - offset < self.config.config.scroll_offset as usize {
+                                self.state.scroll_state.scroll_up();
+                            }
+
+                            return Ok(Some(Signal::Select(prev_id)));
+                        }
+
+                        if sel_idx + 10 >= self.state.frame_height as usize {
+                            self.state.scroll_state.scroll_down();
                         }
 
                         Ok(None)
@@ -157,9 +180,19 @@ impl Component for TodoList<'_> {
             .horizontal_margin(2)
             .vertical_margin(1)
             .split(area)[0];
+
+        self.state.frame_height = area.height;
+
+        let mut scroll_view =
+            ScrollView::new(Size::new(area.width, self.state.get_tasks().len() as u16))
+                .horizontal_scrollbar_visibility(ScrollbarVisibility::Never)
+                .vertical_scrollbar_visibility(ScrollbarVisibility::Automatic);
+
+        let scroll_area = scroll_view.area();
+
         let draw_info = self.state.get_draw_info();
 
-        let rects = draw_info.line_layout.split(area);
+        let rects = draw_info.line_layout.split(scroll_area);
 
         for (line, rect) in draw_info.lines.iter().zip(rects.iter()) {
             let parts = line.layout.split(*rect);
@@ -168,10 +201,12 @@ impl Component for TodoList<'_> {
             let group_rect = parts[1];
             let prio_date_rect = parts[2];
 
-            frame.render_widget(&line.task, task_rect);
-            frame.render_widget(&line.group, group_rect);
-            frame.render_widget(&line.prio_date, prio_date_rect);
+            scroll_view.render_widget(&line.task, task_rect);
+            scroll_view.render_widget(&line.group, group_rect);
+            scroll_view.render_widget(&line.prio_date, prio_date_rect);
         }
+
+        frame.render_stateful_widget(scroll_view, area, &mut self.state.scroll_state);
 
         Ok(())
     }

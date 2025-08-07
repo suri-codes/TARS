@@ -1,3 +1,5 @@
+scroll_offset = 4
+
 [keybindings.Explorer]
 "<q>" = "Quit"  # Quit the application
 "<Ctrl-d>" = "Quit"  # Another way to quit

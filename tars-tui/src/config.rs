@@ -9,7 +9,7 @@ use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, de::Deserializer};
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{action::Action, app::Mode};
 
@@ -21,6 +21,12 @@ pub struct AppConfig {
     pub data_dir: PathBuf,
     #[serde(default)]
     pub config_dir: PathBuf,
+    #[serde(default = "default_scroll_offset")]
+    pub scroll_offset: u16,
+}
+
+fn default_scroll_offset() -> u16 {
+    1
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -49,9 +55,6 @@ impl Config {
     pub fn new() -> Result<Self, config::ConfigError> {
         let default_config: Config = toml::from_str(CONFIG).unwrap();
 
-        info!("default_config_str: {default_config:#?}");
-        info!("default_config: {default_config:#?}");
-
         let data_dir = get_data_dir();
         let config_dir = get_config_dir();
         let mut builder = config::Config::builder()
@@ -75,12 +78,13 @@ impl Config {
                 found_config = true
             }
         }
-        // TODO: if config file not found, just write default config
-        if !found_config {
-            error!("No configuration file found. Application may not behave as expected");
-        }
 
-        let mut cfg: Self = builder.build()?.try_deserialize()?;
+        let mut cfg = if !found_config {
+            error!("No configuration file found. Application may not behave as expected");
+            default_config.clone()
+        } else {
+            builder.build()?.try_deserialize()?
+        };
 
         for (mode, default_bindings) in default_config.keybindings.iter() {
             let user_bindings = cfg.keybindings.entry(*mode).or_default();
@@ -122,7 +126,7 @@ pub fn get_config_dir() -> PathBuf {
 }
 
 fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
+    ProjectDirs::from("com", "suricodes", env!("CARGO_PKG_NAME"))
 }
 
 #[derive(Clone, Debug, Default, Deref, DerefMut)]

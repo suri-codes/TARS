@@ -2,6 +2,7 @@ use async_recursion::async_recursion;
 use common::types::Color;
 use id_tree::{Node, NodeId};
 use std::collections::HashMap;
+use tui_scrollview::ScrollViewState;
 
 use ratatui::style::Modifier;
 use ratatui::{layout::Layout, text::Text, widgets::Paragraph};
@@ -23,6 +24,8 @@ pub struct State<'a> {
     pub tree_handle: TarsTreeHandle,
     draw_info: Option<DrawInfo<'a>>,
     // pot: Vec<(NodeId, &'a Node<TarsNode>)>,
+    pub scroll_state: ScrollViewState,
+    pub frame_height: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +63,8 @@ impl<'a> State<'a> {
             tree_handle,
             draw_info: None,
             show_completed: false,
-            // pot,
+            frame_height: 80,
+            scroll_state: Default::default(), // pot,
         };
 
         state.calculate_draw_info().await;
