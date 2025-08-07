@@ -10,7 +10,7 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, app::Mode, config::Config, tui::Event};
+use crate::{action::Signal, app::Mode, config::Config, tui::Event};
 
 // pub mod fps;
 // pub mod home;
@@ -33,7 +33,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<()>` - An Ok result or an error.
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+    fn register_signal_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
         let _ = tx; // to appease clippy
         Ok(())
     }
@@ -69,7 +69,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    async fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
+    async fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Signal>> {
         let action = match event {
             Some(Event::Key(key_event)) => self.handle_key_event(key_event).await?,
             Some(Event::Mouse(mouse_event)) => self.handle_mouse_event(mouse_event)?,
@@ -86,7 +86,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
         let _ = key; // to appease clippy
         Ok(None)
     }
@@ -99,7 +99,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
+    fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Signal>> {
         let _ = mouse; // to appease clippy
         Ok(None)
     }
@@ -112,7 +112,7 @@ pub trait Component: Send + Sync {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    async fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    async fn update(&mut self, action: Signal) -> Result<Option<Signal>> {
         let _ = action; // to appease clippy
         Ok(None)
     }

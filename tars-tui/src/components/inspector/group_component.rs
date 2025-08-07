@@ -15,7 +15,7 @@ use tracing::info;
 use tui_textarea::{Input, Key};
 
 use crate::{
-    action::Action,
+    action::{Action, Signal},
     components::Component,
     tree::{TarsKind, TarsTreeHandle},
 };
@@ -29,9 +29,10 @@ pub struct GroupComponent<'a> {
     color: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
-    command_tx: Option<UnboundedSender<Action>>,
+    signal_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
     on_update: OnUpdate,
+    pub active: bool,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -85,9 +86,10 @@ impl<'a> GroupComponent<'a> {
             group: group.clone(),
             edit_mode: EditMode::Inactive,
             client,
-            command_tx: None,
+            signal_tx: None,
             tree_handle,
             on_update: OnUpdate::NoOp,
+            active: false,
         };
         Ok(comp)
     }
@@ -123,9 +125,9 @@ impl Component for GroupComponent<'_> {
         Ok(())
     }
 
-    async fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    async fn update(&mut self, action: Signal) -> Result<Option<Signal>> {
         match action {
-            Action::Select(id) => {
+            Signal::Select(id) => {
                 let tree = self.tree_handle.read().await;
                 let node = tree.get(&id)?;
 
@@ -136,9 +138,10 @@ impl Component for GroupComponent<'_> {
                     self.color = reactive_draw_info.color;
                     self.name = reactive_draw_info.name;
                 }
+                Ok(None)
             }
 
-            Action::Update => match self.on_update {
+            Signal::Update => match self.on_update {
                 OnUpdate::ReRender => {
                     let tree = self.tree_handle.read().await;
                     let node = tree.get_by_tars_id(&self.group.id).expect("should exist");
@@ -152,6 +155,7 @@ impl Component for GroupComponent<'_> {
                     }
 
                     self.on_update = OnUpdate::NoOp;
+                    Ok(None)
                 }
                 OnUpdate::NewTask(ref id) => {
                     let tree = self.tree_handle.read().await;
@@ -160,63 +164,76 @@ impl Component for GroupComponent<'_> {
                         .translate_id_to_node_id(id)
                         .ok_or_eyre("node should exist in here")?;
 
-                    self.command_tx
+                    self.signal_tx
                         .as_mut()
                         .ok_or_eyre("command tx should exist")?
-                        .send(Action::Select(node_id))
+                        .send(Signal::Select(node_id))
                         .unwrap();
 
                     self.on_update = OnUpdate::NoOp;
+
+                    Ok(None)
                 }
-                OnUpdate::NoOp => {}
+                OnUpdate::NoOp => Ok(None),
             },
-            Action::EditName => {
-                self.name.activate();
-                self.edit_mode = EditMode::Name;
-                return Ok(Some(Action::RawText));
+
+            Signal::Action(action) => {
+                if !self.active {
+                    return Ok(None);
+                }
+                info!("Processing {}", action);
+
+                match action {
+                    Action::EditName => {
+                        self.name.activate();
+                        self.edit_mode = EditMode::Name;
+                        Ok(Some(Signal::RawText))
+                    }
+                    Action::EditColor => {
+                        self.color.activate();
+                        self.edit_mode = EditMode::Color;
+                        Ok(Some(Signal::RawText))
+                    }
+
+                    Action::NewTask => {
+                        let id = Task::new(
+                            &self.client,
+                            &self.group,
+                            "new task",
+                            common::types::Priority::Medium,
+                            "",
+                            None,
+                        )
+                        .await?
+                        .id;
+
+                        self.on_update = OnUpdate::NewTask(id);
+                        Ok(None)
+                    }
+
+                    Action::RandomColor => {
+                        let new_color = MyColor::random();
+
+                        self.group.color = new_color;
+
+                        self.sync().await?;
+                        Ok(None)
+                    }
+                    _ => Ok(None),
+                }
             }
-            Action::EditColor => {
-                self.color.activate();
-                self.edit_mode = EditMode::Color;
-                return Ok(Some(Action::RawText));
-            }
 
-            Action::NewTask => {
-                let id = Task::new(
-                    &self.client,
-                    &self.group,
-                    "new task",
-                    common::types::Priority::Medium,
-                    "",
-                    None,
-                )
-                .await?
-                .id;
-
-                self.on_update = OnUpdate::NewTask(id);
-            }
-
-            Action::RandomColor => {
-                let new_color = MyColor::random();
-
-                self.group.color = new_color;
-
-                self.sync().await?;
-            }
-
-            _ => {}
+            _ => Ok(None),
         }
-
-        Ok(None)
     }
 
-    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
-        self.command_tx = Some(tx.clone());
+    fn register_signal_handler(&mut self, tx: UnboundedSender<Signal>) -> Result<()> {
+        self.signal_tx = Some(tx.clone());
         info!("received action handler");
         Ok(())
     }
 
-    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
         //TODO: if someone presses t on a group, it just creates a task and they can start editing it
         match self.edit_mode {
             EditMode::Inactive => {}
@@ -228,7 +245,7 @@ impl Component for GroupComponent<'_> {
                     self.name.deactivate();
                     self.sync().await?;
                     self.edit_mode = EditMode::Inactive;
-                    return Ok(Some(Action::Refresh));
+                    return Ok(Some(Signal::Refresh));
                 }
                 input => {
                     self.name.textarea.input(input);
@@ -246,7 +263,7 @@ impl Component for GroupComponent<'_> {
                         self.sync().await?;
                     }
                     self.edit_mode = EditMode::Inactive;
-                    return Ok(Some(Action::Refresh));
+                    return Ok(Some(Signal::Refresh));
                 }
 
                 input => {

@@ -6,17 +6,13 @@ use strum::Display;
 use crate::app::Mode;
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
-pub enum Action {
+pub enum Signal {
     Tick,
     Render,
     Resize(u16, u16),
-    Suspend,
     Resume,
-    Quit,
     ClearScreen,
     Error(String),
-    Help,
-    SwitchTo(Mode),
     Select(NodeId),
     ScopeUpdate(NodeId),
     Update,
@@ -27,6 +23,16 @@ pub enum Action {
     RawText,
     EditDescriptionForTask(Task),
     Diff(Diff),
+    // actions that the user inputs
+    Action(Action),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+pub enum Action {
+    SwitchTo(Mode),
+    Suspend,
+    Help,
+    Quit,
     ToggleShowCompleted,
     Delete,
     NewTask,
