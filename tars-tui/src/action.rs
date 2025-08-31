@@ -33,7 +33,7 @@ pub enum Action {
     Suspend,
     Help,
     Quit,
-    ToggleShowCompleted,
+    ToggleShowFinished,
     Delete,
     NewTask,
     NewGroup,

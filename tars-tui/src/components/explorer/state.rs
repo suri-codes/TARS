@@ -25,6 +25,8 @@ pub struct State<'a> {
     draw_info: Option<DrawInfo<'a>>,
     // pot: Vec<(NodeId, &'a Node<TarsNode>)>,
     pub scroll_state: ScrollViewState,
+
+    //TODO: scroll_state cache
     pub frame_height: u16,
 }
 
@@ -200,6 +202,8 @@ impl<'a> State<'a> {
 
     pub async fn toggle_show_completed(&mut self) {
         self.show_completed = !self.show_completed;
+        //TODO: move selection to nearest uncompleted entry when coming out of show_completed
+        // or actually just show groups whose tasks have all been completed
         self.calculate_draw_info().await;
     }
 

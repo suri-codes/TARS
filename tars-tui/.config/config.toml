@@ -7,7 +7,7 @@ scroll_offset = 4
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<2>" = { SwitchTo = "TodoList" }
 "<3>" = { SwitchTo = "Inspector" }
-"c" = "ToggleShowCompleted"
+"f" = "ToggleShowFinished"
 "x" = "Delete"
 "t" = "NewTask"
 "g" = "NewSubGroup"

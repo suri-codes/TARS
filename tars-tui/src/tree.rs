@@ -255,34 +255,36 @@ impl TarsTree {
             Diff::Added(DiffInner::Group(g)) => {
                 let parent_group_id = g.parent_id.clone();
 
-                let inserted = if parent_group_id.is_none() {
-                    // its a new root group
-                    let root = self.root_node_id().cloned().unwrap();
-                    self.insert(
-                        Node::new(TarsNode::new(TarsKind::Group(g.clone()), None, 0)),
-                        InsertBehavior::UnderNode(&root),
-                    )?
-                } else {
-                    let parent_node_id = self
-                        .inverted_map_mut()
-                        .get(&parent_group_id.unwrap())
-                        .expect("group should exist")
-                        .clone();
+                let inserted = {
+                    if let Some(id) = parent_group_id {
+                        let parent_node_id = self
+                            .inverted_map_mut()
+                            .get(&id)
+                            .expect("group should exist")
+                            .clone();
 
-                    let parent_depth = self.get(&parent_node_id)?.data().depth;
+                        let parent_depth = self.get(&parent_node_id)?.data().depth;
 
-                    let inserted = self.insert(
-                        Node::new(TarsNode::new(
-                            TarsKind::Group(g.clone()),
-                            Some(parent_node_id.clone()),
-                            parent_depth + 1,
-                        )),
-                        InsertBehavior::UnderNode(&parent_node_id),
-                    )?;
-                    self.reorder_children(&parent_node_id)?;
+                        let inserted = self.insert(
+                            Node::new(TarsNode::new(
+                                TarsKind::Group(g.clone()),
+                                Some(parent_node_id.clone()),
+                                parent_depth + 1,
+                            )),
+                            InsertBehavior::UnderNode(&parent_node_id),
+                        )?;
+                        self.reorder_children(&parent_node_id)?;
 
-                    inserted
+                        inserted
+                    } else {
+                        let root = self.root_node_id().cloned().unwrap();
+                        self.insert(
+                            Node::new(TarsNode::new(TarsKind::Group(g.clone()), None, 0)),
+                            InsertBehavior::UnderNode(&root),
+                        )?
+                    }
                 };
+
                 self.inverted_map_mut().insert(g.id, inserted);
             }
             Diff::Updated(DiffInner::Task(t)) => {

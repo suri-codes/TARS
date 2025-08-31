@@ -216,10 +216,10 @@ impl App {
                 self.last_tick_key_events.push(key);
 
                 // Check for multi-key combinations
-                if let Some(action) = keymap.get(&self.last_tick_key_events) {
-                    if !self.raw_text {
-                        signal_tx.send(Signal::Action(action.clone()))?;
-                    }
+                if let Some(action) = keymap.get(&self.last_tick_key_events)
+                    && !self.raw_text
+                {
+                    signal_tx.send(Signal::Action(action.clone()))?;
                 }
             }
         }

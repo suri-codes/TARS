@@ -34,7 +34,6 @@ impl IntoResponse for TarsError {
         let status = match self {
             TarsError::Reqwest(_) => StatusCode::INTERNAL_SERVER_ERROR,
             TarsError::Sqlx(ref e) => match e {
-                //TODO: actually match over the sqlx errors
                 sqlx::Error::InvalidArgument(_) => StatusCode::BAD_REQUEST,
                 sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,

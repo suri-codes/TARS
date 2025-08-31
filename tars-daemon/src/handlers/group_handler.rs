@@ -4,10 +4,8 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
-use common::{
-    Diff, DiffInner, TarsError,
-    types::{Color, Group, Id, Name},
-};
+use common::{Diff, DiffInner, TarsError, types::*};
+
 use tracing::{info, instrument};
 
 /// Returns a router with all the group specific endpoints

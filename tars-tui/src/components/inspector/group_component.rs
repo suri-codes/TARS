@@ -234,7 +234,6 @@ impl Component for GroupComponent<'_> {
     }
 
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Signal>> {
-        //TODO: if someone presses t on a group, it just creates a task and they can start editing it
         match self.edit_mode {
             EditMode::Inactive => {}
             EditMode::Name => match key.into() {
