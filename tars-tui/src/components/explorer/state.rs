@@ -11,7 +11,7 @@ use ratatui::{
     layout::{Constraint, Direction},
     style::{Color as RatColor, Style, Stylize},
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 use crate::tree::TarsTreeHandle;
 use crate::tree::{TarsKind, TarsNode};
