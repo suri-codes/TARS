@@ -236,20 +236,10 @@ impl<'a> State<'a> {
                 .await
             }
         } {
-            //NOTE: debug
-            let tree = self.tree_handle.read().await;
-
-            let sel_node = tree.get(&new_sel).expect("LOL");
-
-            info!("unfinished node found: {sel_node:#?}");
-
-            drop(tree);
-
             self.set_selection(new_sel).await;
         }
 
         // there are some stuff to do with setting scroll with the component thingy
-
         // i guess now we can set the offset for the thingy
         let sel_idx = self.get_selected_idx();
 
