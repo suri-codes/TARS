@@ -1,6 +1,7 @@
 use async_recursion::async_recursion;
 use common::types::Color;
 use id_tree::{Node, NodeId};
+use ratatui::layout::Position;
 use std::collections::HashMap;
 use tui_scrollview::ScrollViewState;
 
@@ -10,7 +11,7 @@ use ratatui::{
     layout::{Constraint, Direction},
     style::{Color as RatColor, Style, Stylize},
 };
-use tracing::debug;
+use tracing::{debug, error, info};
 
 use crate::tree::TarsTreeHandle;
 use crate::tree::{TarsKind, TarsNode};
@@ -132,6 +133,7 @@ impl<'a> State<'a> {
 
             // now we validate selection
             if tree.get(self.get_selected_id()).is_err() {
+                error!("why are we overwriting it");
                 let (_, (id, _)) = render_list
                     .get(self.selection.idx.saturating_sub(1))
                     .unwrap_or(render_list.last().expect("why is there nothing to render"));
@@ -144,6 +146,7 @@ impl<'a> State<'a> {
                 .map(|(i, (entry_id, entry))| {
                     let (mut style, postfix) = if self.selection.id == entry_id.clone() {
                         self.selection.idx = *i;
+
                         (Style::new().bold().italic(), "*")
                     } else {
                         (Style::new(), "")
@@ -200,11 +203,156 @@ impl<'a> State<'a> {
         &self.scope
     }
 
-    pub async fn toggle_show_completed(&mut self) {
+    pub async fn toggle_show_finished(&mut self) {
         self.show_completed = !self.show_completed;
-        //TODO: move selection to nearest uncompleted entry when coming out of show_completed
-        // or actually just show groups whose tasks have all been completed
+
+        let curr_node = {
+            let tree = self.tree_handle.read().await;
+
+            tree.get(self.get_selected_id())
+                .expect("tree should hold this")
+                .clone()
+        };
+
+        let Some(current_parent_group) = curr_node.data().parent.as_ref() else {
+            // we dont care about this, because only the root wouldnt have a parent
+            self.calculate_draw_info().await;
+            return;
+        };
+
+        if let Some(new_sel) = {
+            if let Some(unfinished_task) = group_child_has_unfinished_task(
+                current_parent_group.clone(),
+                self.tree_handle.clone(),
+            )
+            .await
+            {
+                Some(unfinished_task)
+            } else {
+                group_parent_has_unfinished_task(
+                    current_parent_group.clone(),
+                    self.tree_handle.clone(),
+                )
+                .await
+            }
+        } {
+            //NOTE: debug
+            let tree = self.tree_handle.read().await;
+
+            let sel_node = tree.get(&new_sel).expect("LOL");
+
+            info!("unfinished node found: {sel_node:#?}");
+
+            drop(tree);
+
+            self.set_selection(new_sel).await;
+        }
+
+        // there are some stuff to do with setting scroll with the component thingy
+
+        // i guess now we can set the offset for the thingy
+        let sel_idx = self.get_selected_idx();
+
+        let new_offset = Position {
+            x: 0,
+            y: sel_idx.saturating_sub(self.frame_height as usize) as u16,
+        };
+
+        self.scroll_state.set_offset(new_offset);
+
         self.calculate_draw_info().await;
+
+        #[async_recursion]
+        async fn group_parent_has_unfinished_task(
+            node_id: NodeId,
+            tree_handle: TarsTreeHandle,
+        ) -> Option<NodeId> {
+            let tree = tree_handle.read().await;
+
+            let node = tree.get(&node_id).expect("tree should contain it");
+
+            match node.data().kind {
+                TarsKind::Root(_) => {
+                    return None;
+                }
+
+                TarsKind::Group(ref g) => {
+                    let parent_id = g.parent_id.as_ref()?;
+
+                    let parent_node = tree.get_by_tars_id(parent_id)?;
+
+                    let mut id = None;
+                    for child in parent_node.children().iter().rev() {
+                        let child_node = tree.get(child).expect("child should exist");
+
+                        if let TarsKind::Task(ref t) = child_node.data().kind
+                            && !t.completed
+                        {
+                            id = Some(child.clone())
+                        };
+                    }
+
+                    match (&id, parent_node.parent()) {
+                        (Some(_), _) => return id,
+
+                        (None, Some(parent_parent_id)) => {
+                            group_parent_has_unfinished_task(
+                                parent_parent_id.clone(),
+                                tree_handle.clone(),
+                            )
+                            .await
+                        }
+                        _ => {
+                            return None;
+                        }
+                    }
+                }
+
+                _ => panic!("this should never be the case"),
+            }
+        }
+
+        #[async_recursion]
+        // if a groupeeee an unfinished task, this will return its NodeId
+        async fn group_child_has_unfinished_task(
+            node_id: NodeId,
+            tree_handle: TarsTreeHandle,
+            // if the map exists, maps a group node id to its unfinished task, no matter how deep
+        ) -> Option<NodeId> {
+            let tree = tree_handle.read().await;
+
+            let node = tree.get(&node_id).expect("tree should contain it");
+
+            if let TarsKind::Group(_) = node.data().kind {
+                let mut id = None;
+
+                for child in node.children().iter().rev() {
+                    let child_node = tree.get(child).expect("child should exist");
+
+                    match child_node.data().kind {
+                        TarsKind::Task(ref t) => {
+                            if !t.completed {
+                                id = Some(child.clone());
+                            }
+                        }
+
+                        TarsKind::Group(_) => {
+                            id =
+                                group_child_has_unfinished_task(child.clone(), tree_handle.clone())
+                                    .await;
+                        }
+
+                        TarsKind::Root(_) => {
+                            return None;
+                        }
+                    }
+                }
+
+                return id;
+            } else {
+                None
+            }
+        }
     }
 
     pub async fn set_scope(&mut self, scope: NodeId) {

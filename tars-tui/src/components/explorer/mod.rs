@@ -154,7 +154,7 @@ impl<'a> Component for Explorer<'a> {
 
                 match action {
                     Action::ToggleShowFinished => {
-                        self.state.toggle_show_completed().await;
+                        self.state.toggle_show_finished().await;
                         Ok(None)
                     }
 
