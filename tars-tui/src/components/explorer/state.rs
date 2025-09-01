@@ -132,8 +132,11 @@ impl<'a> State<'a> {
                 raw_render_list.iter().enumerate().collect();
 
             // now we validate selection
+
             if tree.get(self.get_selected_id()).is_err() {
-                error!("why are we overwriting it");
+                error!(
+                    "unable to find selected id in the tree, choosing selection based off index"
+                );
                 let (_, (id, _)) = render_list
                     .get(self.selection.idx.saturating_sub(1))
                     .unwrap_or(render_list.last().expect("why is there nothing to render"));
@@ -303,7 +306,6 @@ impl<'a> State<'a> {
         }
 
         #[async_recursion]
-        // if a groupeeee an unfinished task, this will return its NodeId
         async fn group_child_has_unfinished_task(
             node_id: NodeId,
             tree_handle: TarsTreeHandle,
