@@ -17,7 +17,7 @@ pub struct Task {
     pub group: Group,
     pub priority: Priority,
     pub description: String,
-    pub completed: bool,
+    pub finished_at: Option<NaiveDateTime>,
     pub due: Option<NaiveDateTime>,
 }
 
@@ -43,7 +43,7 @@ impl Task {
         name: impl Into<Name>,
         priority: Priority,
         description: String,
-        completed: bool,
+        finished_at: Option<NaiveDateTime>,
         due: Option<NaiveDateTime>,
     ) -> Self {
         Self {
@@ -52,7 +52,7 @@ impl Task {
             name: name.into(),
             priority,
             description,
-            completed,
+            finished_at,
             due,
         }
     }
@@ -77,7 +77,7 @@ impl Task {
             group: group.clone(),
             name: name.into(),
             priority,
-            completed: false,
+            finished_at: None,
             description: description.into(),
             due,
         };
@@ -208,8 +208,10 @@ impl Display for Task {
             Priority::Asap => writeln!(f, "Priority: {}", "ASAP".red()),
         }?;
         writeln!(f, "Description:\n {}", self.description)?;
-        if self.completed {
-            write!(f, "{}", "Completed! ✅".green())?;
+        if let Some(time) = self.finished_at {
+            let str = format!("Completed at {} ", time.format("%m/%d/%Y %I:%M:%S %p"));
+            let str = str.green();
+            write!(f, "{str}",)?;
         } else {
             write!(f, "{}", "Incomplete! ❌".red())?;
         }

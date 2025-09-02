@@ -40,5 +40,5 @@ scroll_offset = 4
 "p" = "EditPriority"
 "u" = "EditDue"
 "d" = "EditDescription"
-"f" = "FinishTask"
+"f" = "ToggleFinishTask"
 "t" = "NewTask"

@@ -48,5 +48,5 @@ pub enum Action {
     EditDescription,
     RandomColor,
     EditPriority,
-    FinishTask,
+    ToggleFinishTask,
 }

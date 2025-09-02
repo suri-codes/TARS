@@ -158,7 +158,7 @@ impl<'a> State<'a> {
                     let widget = match entry.data().kind {
                         TarsKind::Root(_) => Paragraph::new("SHOULDNTBEPOSSIBLE"),
                         TarsKind::Task(ref t) => {
-                            if t.completed {
+                            if t.finished_at.is_some() {
                                 style = style.add_modifier(Modifier::CROSSED_OUT);
                             }
 
@@ -279,7 +279,7 @@ impl<'a> State<'a> {
                         let child_node = tree.get(child).expect("child should exist");
 
                         if let TarsKind::Task(ref t) = child_node.data().kind
-                            && !t.completed
+                            && t.finished_at.is_none()
                         {
                             id = Some(child.clone())
                         };
@@ -323,7 +323,7 @@ impl<'a> State<'a> {
 
                     match child_node.data().kind {
                         TarsKind::Task(ref t) => {
-                            if !t.completed {
+                            if t.finished_at.is_none() {
                                 id = Some(child.clone());
                             }
                         }
@@ -379,7 +379,7 @@ impl<'a> State<'a> {
                 // we dont want to render the node
                 TarsKind::Root(_) => {}
                 TarsKind::Task(ref t) => {
-                    if self.show_completed || !t.completed {
+                    if self.show_completed || t.finished_at.is_none() {
                         pot.push((id, node.clone()));
                     }
                 }
@@ -420,7 +420,7 @@ impl<'a> State<'a> {
 
             match child.data().kind {
                 TarsKind::Task(ref t) => {
-                    if !t.completed {
+                    if t.finished_at.is_none() {
                         exists_uncompleted_task = Some(true);
                     }
                 }
