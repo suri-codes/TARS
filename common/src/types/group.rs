@@ -109,12 +109,14 @@ impl Group {
         id: impl Into<Id>,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        priority: Priority,
         color: Color,
     ) -> Self {
         Group {
             id: id.into(),
             name: name.into(),
             parent_id,
+            priority,
             color,
         }
     }
@@ -129,9 +131,10 @@ impl Group {
         client: &TarsClient,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        priority: Priority,
         color: Color,
     ) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name, parent_id, color);
+        let group = Group::with_all_fields(Id::default(), name, parent_id, priority, color);
 
         let res: Group = client
             .conn

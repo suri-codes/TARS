@@ -15,7 +15,14 @@ pub async fn task_handler(client: &TarsClient, t_sub: TaskSubcommand) -> Result<
             let g = match existing {
                 Some(g) => g.to_owned(),
                 None => {
-                    let g = Group::new(client, args.group, None, Color::default()).await?;
+                    let g = Group::new(
+                        client,
+                        args.group,
+                        None,
+                        Default::default(),
+                        Default::default(),
+                    )
+                    .await?;
                     eprintln!("Created new group: {g}");
                     g
                 }
@@ -62,8 +69,14 @@ pub async fn group_handler(client: &TarsClient, g_sub: GroupSubcommand) -> Resul
                 None
             };
 
-            let g =
-                Group::new(client, args.name, parent_id, args.color.unwrap_or_default()).await?;
+            let g = Group::new(
+                client,
+                args.name,
+                parent_id,
+                args.priority.unwrap_or_default(),
+                args.color.unwrap_or_default(),
+            )
+            .await?;
             println!("Added Group: {g}");
         }
         GroupSubcommand::List(args) => {

@@ -61,7 +61,7 @@ pub async fn create_task(
     let group = sqlx::query_as!(
         Group,
         r#"
-        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id", color as "color: Color" FROM Groups WHERE pub_id = ?
+        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id", color as "color: Color", priority as "priority: Priority" FROM Groups WHERE pub_id = ?
         "#,
         inserted.group_id
     )
@@ -133,6 +133,7 @@ async fn fetch_task(
                             row.group_pub_id,
                             row.group_name,
                             row.group_parent_id,
+                            row.priority,
                             row.group_color,
                         ),
                         row.task_name,
@@ -200,6 +201,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                 row.group_pub_id,
                 row.group_name,
                 row.group_parent_id,
+                row.priority,
                 row.group_color,
             ),
             row.task_name,
@@ -231,7 +233,7 @@ async fn recurse_group_fetch(
     let children = sqlx::query_as!(
         Group,
         r#"
-        SELECT pub_id as "id: Id", name as "name: Name", color as "color: Color" , parent_id as "parent_id: Id"
+        SELECT pub_id as "id: Id", name as "name: Name", color as "color: Color" , parent_id as "parent_id: Id", priority as "priority: Priority"
         FROM Groups
         WHERE parent_id = ?
         "#,
@@ -276,6 +278,7 @@ async fn update_task(
             (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
             (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Id",
             (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_color: Color",
+            (SELECT g.priority FROM groups g WHERE g.pub_id = Tasks.group_id) as "group_priority: Priority",
             priority as "priority: Priority",
             description,
             finished_at,
@@ -298,6 +301,7 @@ async fn update_task(
             row.group_id,
             row.group_name,
             row.group_parent_id,
+            row.group_priority,
             row.group_color,
         ),
         row.task_name,
@@ -341,6 +345,7 @@ async fn delete_task(
                 g.name as group_name,
                 g.parent_id as "group_parent_id: Id",
                 g.color as "group_color: Color",
+                g.priority as "group_prio: Priority",
 
                 t.group_id,
                 t.priority as "priority: Priority",
@@ -363,6 +368,7 @@ async fn delete_task(
             row.group_id,
             row.group_name,
             row.group_parent_id,
+            row.group_prio,
             row.group_color,
         ),
         row.task_name,

@@ -44,12 +44,13 @@ async fn create_group(
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color"
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color", Groups.priority as "priority: Priority"
         "#,
         *group.id,
         *group.name,
         group.parent_id,
-        group.color
+        group.color,
+        group.priority
     )
     .fetch_one(&state.pool)
     .await?;
@@ -84,7 +85,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         pub_id as "id: Id",
         name as "name: Name",
         parent_id as "parent_id: Id",
-        color as "color: Color"
+        color as "color: Color",
+        priority as "priority: Priority"
         FROM Groups
         "#
     )
@@ -124,7 +126,8 @@ async fn update_group(
                 name as "name: Name",
                 pub_id as "id: Id",
                 parent_id as "parent_id: Id",
-                color as "color: Color"
+                color as "color: Color",
+                priority as "priority: Priority"
 
         "#,
         *group.name,
@@ -166,7 +169,8 @@ async fn delete_group(
                 pub_id as "id: Id",
                 name as "name: Name",
                 parent_id as "parent_id: Id",
-                color as "color: Color"
+                color as "color: Color",
+                priority as "priority: Priority"
            
         "#,
         *group.id,

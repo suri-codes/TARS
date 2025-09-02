@@ -47,6 +47,10 @@ pub struct GroupAddArgs {
 
     #[arg(short, long,  value_parser=Color::parse_str)]
     pub color: Option<Color>,
+
+    #[arg(short, long, value_parser=Priority::parse_clap)]
+    /// The priority of the group
+    pub priority: Option<Priority>,
 }
 
 #[derive(Debug, Args)]

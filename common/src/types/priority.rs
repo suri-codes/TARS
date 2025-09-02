@@ -7,15 +7,22 @@ use serde::{Deserialize, Serialize};
 use crate::ParseError;
 /// The priority varying priority levels for a Task.
 #[derive(
-    sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord,
+    sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord, Default,
 )]
 #[repr(i32)]
 pub enum Priority {
     Far = 1,
     Low = 2,
+    #[default]
     Medium = 3,
     High = 4,
     Asap = 5,
+}
+
+impl Priority {
+    pub fn parse_clap(str: &str) -> Result<Self, ParseError> {
+        str.try_into()
+    }
 }
 
 impl From<Priority> for Block<'_> {
