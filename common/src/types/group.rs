@@ -10,6 +10,7 @@ use tracing::error;
 
 use std::error::Error;
 
+use crate::types::Priority;
 use crate::{ParseError, TarsClient, TarsError};
 
 use super::{Id, Name};
@@ -19,6 +20,7 @@ use super::{Id, Name};
 pub struct Group {
     pub id: Id,
     pub name: Name,
+    pub priority: Priority,
     pub parent_id: Option<Id>,
     pub color: Color,
 }

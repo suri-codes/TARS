@@ -36,8 +36,9 @@ async fn create_group(
     let inserted = sqlx::query_as!(
         Group,
         r#"
-            INSERT INTO Groups (pub_id, name, parent_id, color)
+            INSERT INTO Groups (pub_id, name, parent_id, color, priority)
             VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
