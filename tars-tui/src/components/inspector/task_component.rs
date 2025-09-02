@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::Local;
 use color_eyre::Result;
 use common::{
     ParseError, TarsClient,
@@ -143,10 +144,10 @@ impl From<&Task> for StaticDrawInfo<'_> {
         );
 
         let completion = {
-            let completion_symbol = if value.completed {
-                " ✅ Awesome"
+            let completion_symbol = if let Some(time) = value.finished_at {
+                format!("{} ", time.format("%m/%d/%Y %I:%M:%S %p"))
             } else {
-                " ❌ Get to work cornball"
+                " ❌ Get to work cornball".to_owned()
             };
 
             Paragraph::new(completion_symbol).block({
@@ -155,7 +156,7 @@ impl From<&Task> for StaticDrawInfo<'_> {
                     .borders(Borders::all())
                     .border_type(BorderType::Rounded);
 
-                let style = if value.completed {
+                let style = if value.finished_at.is_some() {
                     Style::new().fg(Color::Green)
                 } else {
                     Style::new().fg(Color::Red)
@@ -285,8 +286,18 @@ impl Component for TaskComponent<'_> {
                         Ok(Some(Signal::EditDescriptionForTask(self.task.clone())))
                     }
 
-                    Action::FinishTask => {
-                        self.task.completed = !self.task.completed;
+                    Action::ToggleFinishTask => {
+                        if self.task.finished_at.is_some() {
+                            self.task.finished_at = None;
+                        } else {
+                            let current_time = {
+                                let now = Local::now();
+                                now.naive_local()
+                            };
+
+                            self.task.finished_at = Some(current_time);
+                        }
+
                         self.sync().await.map(|_| None)
                     }
                     Action::EditDue => {

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        UPDATE Tasks\n        SET\n            name = ?,\n            priority = ?,\n            description = ?,\n            completed = ?,\n            due = ?,\n            group_id = ?\n        WHERE pub_id = ?\n        RETURNING \n            pub_id as task_pub_id,\n            name as task_name,\n            group_id,\n            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,\n            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_parent_id: Id\",\n            (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_color: Color\",\n            priority as \"priority: Priority\",\n            description,\n            completed,\n            due\n        ",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        g.color as \"group_color: Color\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.finished_at,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                    WHERE g.pub_id = ?\n                        \n                ",
   "describe": {
     "columns": [
       {
@@ -14,12 +14,12 @@
         "type_info": "Text"
       },
       {
-        "name": "group_id",
+        "name": "group_name",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "group_name",
+        "name": "group_pub_id",
         "ordinal": 3,
         "type_info": "Text"
       },
@@ -44,9 +44,9 @@
         "type_info": "Text"
       },
       {
-        "name": "completed",
+        "name": "finished_at",
         "ordinal": 8,
-        "type_info": "Bool"
+        "type_info": "Datetime"
       },
       {
         "name": "due",
@@ -55,7 +55,7 @@
       }
     ],
     "parameters": {
-      "Right": 7
+      "Right": 1
     },
     "nullable": [
       false,
@@ -66,9 +66,9 @@
       false,
       false,
       false,
-      false,
+      true,
       true
     ]
   },
-  "hash": "a6f52dee3e22241f5fc353bbc891fa7781d737098923ff24f13c81656c62f5f8"
+  "hash": "4e82d30a80fe16804ba897f4db2fad19e7d6a72c408aafab560ff88ebb49626b"
 }

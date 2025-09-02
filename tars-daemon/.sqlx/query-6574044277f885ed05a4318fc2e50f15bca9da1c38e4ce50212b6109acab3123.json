@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE Tasks\n        SET\n            name = ?,\n            priority = ?,\n            description = ?,\n            finished_at = ?,\n            due = ?,\n            group_id = ?\n        WHERE pub_id = ?\n        RETURNING \n            pub_id as task_pub_id,\n            name as task_name,\n            group_id,\n            (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,\n            (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_parent_id: Id\",\n            (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as \"group_color: Color\",\n            priority as \"priority: Priority\",\n            description,\n            finished_at,\n            due\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "task_pub_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_name",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_parent_id: Id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "group_color: Color",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "finished_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "due",
+        "ordinal": 9,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "6574044277f885ed05a4318fc2e50f15bca9da1c38e4ce50212b6109acab3123"
+}

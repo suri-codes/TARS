@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: Priority\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed\n            \n        ",
+  "query": "\n            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: Priority\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.finished_at\n            \n        ",
   "describe": {
     "columns": [
       {
@@ -34,9 +34,9 @@
         "type_info": "Text"
       },
       {
-        "name": "completed",
+        "name": "finished_at",
         "ordinal": 6,
-        "type_info": "Bool"
+        "type_info": "Datetime"
       }
     ],
     "parameters": {
@@ -49,8 +49,8 @@
       false,
       true,
       false,
-      false
+      true
     ]
   },
-  "hash": "c17fdb10a162867db89171acf81f63f308a8f4192560205b1d7653eac5bfd9cb"
+  "hash": "417a5979fdc021b11e9acaa73f88a14e7f640bc142ee378d05973a4d8f8eed4e"
 }

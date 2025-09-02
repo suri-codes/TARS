@@ -81,7 +81,7 @@ impl<'a> State<'a> {
             .iter()
             .filter_map(|(id, node)| {
                 if let TarsKind::Task(ref t) = node.data().kind
-                    && !t.completed
+                    && t.finished_at.is_none()
                 {
                     return Some((id.clone(), t.clone()));
                 }

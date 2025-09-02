@@ -45,7 +45,7 @@ pub async fn create_task(
                 ?,
                 ?
             )
-            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: Priority", Tasks.description, Tasks.due, Tasks.group_id, Tasks.completed
+            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: Priority", Tasks.description, Tasks.due, Tasks.group_id, Tasks.finished_at
             
         "#,
         *task.id,
@@ -74,7 +74,7 @@ pub async fn create_task(
         inserted.name,
         inserted.priority,
         inserted.description,
-        inserted.completed,
+        inserted.finished_at,
         inserted.due,
     );
 
@@ -114,7 +114,7 @@ async fn fetch_task(
                         g.color as "group_color: Color",
                         t.priority as "priority: Priority",
                         t.description,
-                        t.completed,
+                        t.finished_at,
                         t.due
                     FROM Tasks t
                     JOIN Groups g ON t.group_id = g.pub_id
@@ -138,7 +138,7 @@ async fn fetch_task(
                         row.task_name,
                         row.priority,
                         row.description,
-                        row.completed,
+                        row.finished_at,
                         row.due,
                     )
                 })
@@ -179,7 +179,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                         g.color as "group_color: Color",
                         t.priority as "priority: Priority",
                         t.description,
-                        t.completed,
+                        t.finished_at,
                         t.due
                     FROM Tasks t
                     JOIN Groups g ON t.group_id = g.pub_id
@@ -205,7 +205,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
             row.task_name,
             row.priority,
             row.description,
-            row.completed,
+            row.finished_at,
             row.due,
         );
 
@@ -265,7 +265,7 @@ async fn update_task(
             name = ?,
             priority = ?,
             description = ?,
-            completed = ?,
+            finished_at = ?,
             due = ?,
             group_id = ?
         WHERE pub_id = ?
@@ -278,13 +278,13 @@ async fn update_task(
             (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_color: Color",
             priority as "priority: Priority",
             description,
-            completed,
+            finished_at,
             due
         "#,
         *task.name,
         task.priority,
         task.description,
-        task.completed,
+        task.finished_at,
         task.due,
         *task.group.id,
         *task.id
@@ -303,7 +303,7 @@ async fn update_task(
         row.task_name,
         row.priority,
         row.description,
-        row.completed,
+        row.finished_at,
         row.due,
     );
 
@@ -345,7 +345,7 @@ async fn delete_task(
                 t.group_id,
                 t.priority as "priority: Priority",
                 t.description,
-                t.completed,
+                t.finished_at,
                 t.due
                 FROM Tasks t
                 JOIN Groups g ON t.group_id = g.pub_id
@@ -368,7 +368,7 @@ async fn delete_task(
         row.task_name,
         row.priority,
         row.description,
-        row.completed,
+        row.finished_at,
         row.due,
     );
 
