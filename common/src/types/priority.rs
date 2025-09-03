@@ -13,12 +13,12 @@ use crate::ParseError;
 )]
 #[repr(i32)]
 pub enum Priority {
-    Far = 1,
-    Low = 2,
+    Far = 5,
+    Low = 4,
     #[default]
     Medium = 3,
-    High = 4,
-    Asap = 5,
+    High = 2,
+    Asap = 1,
 }
 
 impl Priority {

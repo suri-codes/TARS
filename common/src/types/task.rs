@@ -158,14 +158,14 @@ impl Task {
     pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
         let score: f64 = client
             .conn
-            .get(client.base_path.join("/task/score")?)
+            .post(client.base_path.join("/task/score")?)
             .json(&self.id)
             .send()
             .await
             .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?
             .json()
             .await
-            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?;
+            .inspect_err(|e| error!("Error parsing score for Task: {:?}", e))?;
 
         Ok(score)
     }

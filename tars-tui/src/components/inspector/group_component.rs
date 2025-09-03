@@ -147,10 +147,7 @@ impl Component for GroupComponent<'_> {
 
                 if let TarsKind::Group(ref group) = node.data().kind {
                     self.group = group.clone();
-
-                    let reactive_draw_info = ReactiveWidgets::from(group);
-                    self.reactive_widgets.color = reactive_draw_info.color;
-                    self.reactive_widgets.name = reactive_draw_info.name;
+                    self.reactive_widgets = ReactiveWidgets::from(group);
                 }
                 Ok(None)
             }

@@ -222,14 +222,14 @@ impl Group {
     pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
         let score: f64 = client
             .conn
-            .get(client.base_path.join("/group/score")?)
+            .post(client.base_path.join("/group/score")?)
             .json(&self.id)
             .send()
             .await
-            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?
+            .inspect_err(|e| error!("Error fetching score for Group: {:?}", e))?
             .json()
             .await
-            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?;
+            .inspect_err(|e| error!("Error parsing score for Group: {:?}", e))?;
 
         Ok(score)
     }

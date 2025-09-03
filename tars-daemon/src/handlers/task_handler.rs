@@ -312,6 +312,10 @@ async fn update_task(
         row.due,
     );
 
+    if updated_task != task {
+        error!("input: {task:#?}\noutput:{updated_task:#?}");
+    }
+
     // if they dont match, we have a problem!
     assert_eq!(updated_task, task);
 

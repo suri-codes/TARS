@@ -1,4 +1,6 @@
-use common::types::Task;
+use std::collections::HashMap;
+
+use common::{TarsClient, TarsError, types::Task};
 use futures::future::join_all;
 use id_tree::NodeId;
 use ratatui::{
@@ -16,8 +18,9 @@ pub struct State<'a> {
     scope: NodeId,
     selection: Selection,
     pub tree_handle: TarsTreeHandle,
+    client: TarsClient,
     draw_info: Option<DrawInfo<'a>>,
-    tasks: Vec<(NodeId, Task)>,
+    tasks: Vec<(NodeId, Task, f64)>,
     pub scroll_state: ScrollViewState,
     pub frame_height: u16,
 }
@@ -47,7 +50,8 @@ impl<'a> State<'a> {
         scope: NodeId,
         selection: NodeId,
         tree_handle: TarsTreeHandle,
-    ) -> Self {
+        client: TarsClient,
+    ) -> Result<Self, TarsError> {
         let selection = Selection {
             id: selection,
             idx: 0,
@@ -57,6 +61,7 @@ impl<'a> State<'a> {
             active,
             scope,
             selection,
+            client,
             tree_handle,
             draw_info: None,
             tasks: vec![],
@@ -64,16 +69,16 @@ impl<'a> State<'a> {
             frame_height: 50,
         };
 
-        state.calculate_draw_info().await;
+        state.calculate_draw_info().await?;
 
-        state
+        Ok(state)
     }
 
-    pub fn get_tasks(&self) -> &Vec<(NodeId, Task)> {
+    pub fn get_tasks(&self) -> &Vec<(NodeId, Task, f64)> {
         &self.tasks
     }
 
-    async fn refresh_tasks(&mut self) {
+    async fn refresh_tasks(&mut self) -> Result<(), TarsError> {
         let tree = self.tree_handle.read().await;
 
         let pot = tree.traverse(&self.scope);
@@ -91,21 +96,47 @@ impl<'a> State<'a> {
             })
             .collect();
 
-        // join_all(tasks_in_scope.iter().map(
+        let map: HashMap<NodeId, f64> = {
+            let x: Vec<(NodeId, Result<f64, TarsError>)> = join_all(
+                tasks_in_scope
+                    .clone()
+                    .into_iter()
+                    .map(async |(id, task)| (id, task.p_score(&self.client).await))
+                    .collect::<Vec<_>>(),
+            )
+            .await;
 
-        // ))
+            let mut map = HashMap::new();
+
+            for (id, score) in x {
+                let score = score?;
+
+                map.insert(id, score);
+            }
+
+            map
+        };
 
         // sort for least to most
-        tasks_in_scope.sort_by(|(_, a), (_, b)| a.cmp(b));
+        tasks_in_scope.sort_by(|(a, _), (b, _)| map.get(a).unwrap().total_cmp(map.get(b).unwrap()));
 
         // reverse so we see highest first
         tasks_in_scope.reverse();
 
-        self.tasks = tasks_in_scope;
+        self.tasks = tasks_in_scope
+            .into_iter()
+            .map(|(id, task)| {
+                let score = map.get(&id).expect("map must contain this id");
+
+                (id, task, *score)
+            })
+            .collect();
+
+        Ok(())
     }
 
-    pub async fn calculate_draw_info(&mut self) {
-        self.refresh_tasks().await;
+    pub async fn calculate_draw_info(&mut self) -> Result<(), TarsError> {
+        self.refresh_tasks().await?;
 
         let line_layout = {
             let constraints: Vec<Constraint> = self
@@ -123,7 +154,7 @@ impl<'a> State<'a> {
             .get_tasks()
             .iter()
             .enumerate()
-            .map(|(i, (id, task))| {
+            .map(|(i, (id, task, score))| {
                 let layout = Layout::new(
                     Direction::Horizontal,
                     [
@@ -160,7 +191,7 @@ impl<'a> State<'a> {
                                 t.format("%m/%d %I:%M %p").to_string()
                             }
                         }
-                        None => task.priority.into(),
+                        None => score.to_string(),
                     };
                     Paragraph::new(text.to_string()).style(text_style)
                 };
@@ -176,7 +207,9 @@ impl<'a> State<'a> {
 
         self.selection.idx = new_sel_idx;
 
-        self.draw_info = Some(DrawInfo { lines, line_layout })
+        self.draw_info = Some(DrawInfo { lines, line_layout });
+
+        Ok(())
     }
 
     /// Returns a reference to the get scope of this [`State`].
@@ -185,9 +218,10 @@ impl<'a> State<'a> {
         &self.scope
     }
 
-    pub async fn set_scope(&mut self, scope: NodeId) {
+    pub async fn set_scope(&mut self, scope: NodeId) -> Result<(), TarsError> {
         self.scope = scope;
-        self.calculate_draw_info().await;
+        self.calculate_draw_info().await?;
+        Ok(())
     }
 
     pub fn get_selected_id(&self) -> &NodeId {
@@ -198,9 +232,10 @@ impl<'a> State<'a> {
         &self.selection.idx
     }
 
-    pub async fn set_selection(&mut self, selection: NodeId) {
+    pub async fn set_selection(&mut self, selection: NodeId) -> Result<(), TarsError> {
         self.selection.id = selection;
-        self.calculate_draw_info().await;
+        self.calculate_draw_info().await?;
+        Ok(())
     }
     pub fn get_draw_info(&self) -> &DrawInfo<'a> {
         self.draw_info.as_ref().unwrap()
