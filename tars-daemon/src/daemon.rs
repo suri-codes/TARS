@@ -10,7 +10,7 @@ use tracing::{error, info};
 
 use crate::{
     db::Db,
-    handlers::{group_router, subscribe_router, task_router},
+    handlers::{group_router, score_router, subscribe_router, task_router},
 };
 
 /// Daemon that exposes access to the database, as well as being responsible
@@ -49,6 +49,7 @@ impl TarsDaemon {
             .nest("/task", task_router())
             .nest("/group", group_router())
             .nest("/subscribe", subscribe_router())
+            .nest("/score", score_router())
             .with_state(state.clone());
 
         Self { app, state }

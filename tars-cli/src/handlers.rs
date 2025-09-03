@@ -1,7 +1,7 @@
 use color_eyre::eyre::Result;
 use common::{
     TarsClient,
-    types::{Color, Group, Task, TaskFetchOptions},
+    types::{Group, Task, TaskFetchOptions},
 };
 
 use crate::args::{GroupSubcommand, TaskSubcommand};
