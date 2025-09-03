@@ -1,6 +1,6 @@
-use std::{f64, fmt::Display, ops::Div};
+use std::{f64, fmt::Display};
 
-use chrono::{Local, NaiveDateTime};
+use chrono::NaiveDateTime;
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
@@ -171,32 +171,6 @@ impl Task {
             .inspect_err(|e| error!("Error parsing score for Task: {:?}", e))?;
 
         Ok(score)
-    }
-
-    pub fn evaluate(&self) -> f64 {
-        let evald_prio = (self.priority as i32 as f64).div(5.0);
-
-        if self.due.is_none() {
-            return evald_prio;
-        }
-
-        let today = Local::now();
-
-        let due = self
-            .due
-            .unwrap()
-            .and_local_timezone(*today.offset())
-            .unwrap();
-
-        // (e/3)^(delta) + prio
-        let today = today.fixed_offset();
-        let difference = (due - today).num_minutes() as f64 / 8.64E13;
-
-        let e = f64::consts::E / 3.0;
-
-        let x = e.powf(difference);
-
-        x + evald_prio
     }
 }
 

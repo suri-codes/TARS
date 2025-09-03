@@ -191,7 +191,10 @@ impl<'a> State<'a> {
                                 t.format("%m/%d %I:%M %p").to_string()
                             }
                         }
-                        None => score.to_string(),
+                        None => {
+                            let truncd = (score * 1000.0).trunc() / 1000.0;
+                            truncd.to_string()
+                        }
                     };
                     Paragraph::new(text.to_string()).style(text_style)
                 };

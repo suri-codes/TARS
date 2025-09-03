@@ -423,6 +423,10 @@ pub async fn calculate_task_score(
     .fetch_one(&state.pool)
     .await?;
 
+    if task.priority == Priority::Asap {
+        return Ok(Json::from(1.0));
+    }
+
     let task_p_score = 1.0 / task.priority as i32 as f64;
 
     let total_p_score = calculate_group_p_score(&task.group_id, &state.pool).await? * task_p_score;
