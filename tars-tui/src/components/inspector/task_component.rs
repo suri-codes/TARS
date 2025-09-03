@@ -26,15 +26,13 @@ use super::TarsText;
 #[derive(Debug)]
 pub struct TaskComponent<'a> {
     pub task: Task,
-    name: TarsText<'a>,
     description: String,
-    due: TarsText<'a>,
-    priority: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
     signal_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
     static_draw_info: StaticDrawInfo<'a>,
+    reactive_widgets: ReactiveWidgets<'a>,
     on_update: OnUpdate,
     pub active: bool,
 }
@@ -53,13 +51,14 @@ enum EditMode {
     Due,
 }
 
-struct ReactiveDrawInfo<'a> {
+#[derive(Debug)]
+struct ReactiveWidgets<'a> {
     name: TarsText<'a>,
     due: TarsText<'a>,
     priority: TarsText<'a>,
 }
 
-impl From<&Task> for ReactiveDrawInfo<'_> {
+impl From<&Task> for ReactiveWidgets<'_> {
     fn from(value: &Task) -> Self {
         let name = TarsText::new(
             &value.name,
@@ -68,10 +67,7 @@ impl From<&Task> for ReactiveDrawInfo<'_> {
                 .borders(Borders::all())
                 .border_type(BorderType::Rounded),
         );
-        let priority = TarsText::new(
-            Into::<String>::into(value.priority).as_str(),
-            value.priority.into(),
-        );
+        let priority = TarsText::new(&value.priority.to_string(), value.priority.into());
 
         let due = TarsText::new(
             Into::<String>::into(
@@ -87,7 +83,7 @@ impl From<&Task> for ReactiveDrawInfo<'_> {
                 .border_type(BorderType::Rounded),
         );
 
-        ReactiveDrawInfo {
+        ReactiveWidgets {
             name,
             due,
             priority,
@@ -179,14 +175,14 @@ impl From<&Task> for StaticDrawInfo<'_> {
 
 impl<'a> TaskComponent<'a> {
     pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
-        let reactive_draw_info = ReactiveDrawInfo::from(task);
+        //DEBUG
+        info!("new task component! :{task:#?}");
+        let reactive_draw_info = ReactiveWidgets::from(task);
         let static_draw_info = StaticDrawInfo::from(task);
         Ok(Self {
-            name: reactive_draw_info.name,
-            priority: reactive_draw_info.priority,
+            reactive_widgets: reactive_draw_info,
             client,
             description: task.description.clone(),
-            due: reactive_draw_info.due,
             task: task.clone(),
             edit_mode: EditMode::Inactive,
             signal_tx: None,
@@ -198,7 +194,7 @@ impl<'a> TaskComponent<'a> {
     }
 
     async fn sync(&mut self) -> Result<()> {
-        let new_name = self.name.textarea.lines()[0].clone();
+        let new_name = self.reactive_widgets.name.textarea.lines()[0].clone();
 
         if !new_name.is_empty() {
             self.task.name = new_name.into();
@@ -234,10 +230,8 @@ impl Component for TaskComponent<'_> {
                     self.description = task.description.clone();
                     self.static_draw_info = StaticDrawInfo::from(task);
 
-                    let reactive_draw_info = ReactiveDrawInfo::from(task);
-                    self.priority = reactive_draw_info.priority;
-                    self.due = reactive_draw_info.due;
-                    self.name = reactive_draw_info.name;
+                    let reactive_draw_info = ReactiveWidgets::from(task);
+                    self.reactive_widgets = reactive_draw_info;
                 }
                 Ok(None)
             }
@@ -251,11 +245,7 @@ impl Component for TaskComponent<'_> {
                         self.task = task.clone();
                         self.description = task.description.clone();
                         self.static_draw_info = StaticDrawInfo::from(task);
-
-                        let reactive_draw_info = ReactiveDrawInfo::from(task);
-                        self.priority = reactive_draw_info.priority;
-                        self.due = reactive_draw_info.due;
-                        self.name = reactive_draw_info.name;
+                        self.reactive_widgets = ReactiveWidgets::from(task);
                     }
 
                     self.on_update = OnUpdate::NoOp;
@@ -272,12 +262,12 @@ impl Component for TaskComponent<'_> {
 
                 match action {
                     Action::EditName => {
-                        self.name.activate();
+                        self.reactive_widgets.name.activate();
                         self.edit_mode = EditMode::Name;
                         Ok(Some(Signal::RawText))
                     }
                     Action::EditPriority => {
-                        self.priority.activate();
+                        self.reactive_widgets.priority.activate();
                         self.edit_mode = EditMode::Priority;
                         Ok(Some(Signal::RawText))
                     }
@@ -301,7 +291,7 @@ impl Component for TaskComponent<'_> {
                         self.sync().await.map(|_| None)
                     }
                     Action::EditDue => {
-                        self.due.activate();
+                        self.reactive_widgets.due.activate();
                         self.edit_mode = EditMode::Due;
                         Ok(Some(Signal::RawText))
                     }
@@ -327,14 +317,14 @@ impl Component for TaskComponent<'_> {
                     | Input {
                         key: Key::Enter, ..
                     } => {
-                        self.name.deactivate();
+                        self.reactive_widgets.name.deactivate();
                         self.sync().await?;
                         self.edit_mode = EditMode::Inactive;
                         return Ok(Some(Signal::Refresh));
                         // can validate here
                     }
                     input => {
-                        self.name.textarea.input(input);
+                        self.reactive_widgets.name.textarea.input(input);
                         // TextArea::input returns if the input modified its text
                         // if textarea.input(input) {
                         //     is_valid = validate(&mut textarea);
@@ -348,37 +338,42 @@ impl Component for TaskComponent<'_> {
                     | Input {
                         key: Key::Enter, ..
                     } => {
-                        self.priority.deactivate();
-                        if self.priority.is_valid {
+                        self.reactive_widgets.priority.deactivate();
+                        if self.reactive_widgets.priority.is_valid {
                             self.sync().await?;
                         }
-                        self.priority
+                        self.reactive_widgets
+                            .priority
                             .textarea
                             .set_placeholder_text(self.task.priority);
                         self.edit_mode = EditMode::Inactive;
                         return Ok(Some(Signal::Refresh));
                     }
                     input => {
-                        if self.priority.textarea.input(input) {
+                        if self.reactive_widgets.priority.textarea.input(input) {
                             let p: Result<Priority, ParseError> =
-                                self.priority.textarea.lines()[0].as_str().try_into();
-                            let Some(block) = self.priority.textarea.block().cloned() else {
+                                self.reactive_widgets.priority.textarea.lines()[0]
+                                    .as_str()
+                                    .try_into();
+                            let Some(block) =
+                                self.reactive_widgets.priority.textarea.block().cloned()
+                            else {
                                 return Ok(None);
                             };
 
                             let block = match p {
                                 Ok(p) => {
                                     self.task.priority = p;
-                                    self.priority.is_valid = true;
+                                    self.reactive_widgets.priority.is_valid = true;
                                     self.task.priority.into()
                                 }
                                 Err(_) => {
-                                    self.priority.is_valid = false;
+                                    self.reactive_widgets.priority.is_valid = false;
                                     block.border_style(Style::new().fg(Color::Red))
                                 }
                             };
 
-                            self.priority.textarea.set_block(block);
+                            self.reactive_widgets.priority.textarea.set_block(block);
                         };
                     }
                 };
@@ -389,19 +384,21 @@ impl Component for TaskComponent<'_> {
                     | Input {
                         key: Key::Enter, ..
                     } => {
-                        self.due.deactivate();
-                        if self.due.is_valid {
+                        self.reactive_widgets.due.deactivate();
+                        if self.reactive_widgets.due.is_valid {
                             self.sync().await?;
                         }
                         self.edit_mode = EditMode::Inactive;
                         return Ok(Some(Signal::Refresh));
                     }
                     input => {
-                        if self.due.textarea.input(input) {
+                        if self.reactive_widgets.due.textarea.input(input) {
                             // now we want to parse if the due date is valid
 
-                            let entered_date_str = self.due.textarea.lines()[0].as_str();
-                            let Some(block) = self.due.textarea.block().cloned() else {
+                            let entered_date_str =
+                                self.reactive_widgets.due.textarea.lines()[0].as_str();
+                            let Some(block) = self.reactive_widgets.due.textarea.block().cloned()
+                            else {
                                 return Ok(None);
                             };
 
@@ -410,25 +407,28 @@ impl Component for TaskComponent<'_> {
                             let block = match parse_date_time(entered_date_str) {
                                 Ok(date) => {
                                     self.task.due = Some(date);
-                                    self.due.is_valid = true;
+                                    self.reactive_widgets.due.is_valid = true;
                                     block.border_style(Style::new().fg(Color::Green))
                                 }
 
                                 Err(_) => {
                                     if entered_date_str.is_empty() {
                                         self.task.due = None;
-                                        self.due.is_valid = true;
-                                        self.due.textarea.set_placeholder_text("None");
+                                        self.reactive_widgets.due.is_valid = true;
+                                        self.reactive_widgets
+                                            .due
+                                            .textarea
+                                            .set_placeholder_text("None");
 
                                         block.border_style(Style::new().fg(Color::Green))
                                     } else {
-                                        self.due.is_valid = false;
+                                        self.reactive_widgets.due.is_valid = false;
                                         block.border_style(Style::new().fg(Color::Red))
                                     }
                                 }
                             };
 
-                            self.due.textarea.set_block(block);
+                            self.reactive_widgets.due.textarea.set_block(block);
                         };
                     }
                 }
@@ -446,7 +446,7 @@ impl Component for TaskComponent<'_> {
         let task_rects = draw_info.task_layout.split(area);
 
         // Task name:
-        frame.render_widget(&self.name.textarea, task_rects[0]);
+        frame.render_widget(&self.reactive_widgets.name.textarea, task_rects[0]);
 
         // group | priority
         let group_priority = draw_info.group_priority_layout.split(task_rects[1]);
@@ -455,7 +455,7 @@ impl Component for TaskComponent<'_> {
         frame.render_widget(&draw_info.group, group_priority[0]);
 
         // Priority
-        frame.render_widget(&self.priority.textarea, group_priority[1]);
+        frame.render_widget(&self.reactive_widgets.priority.textarea, group_priority[1]);
 
         // Description
         frame.render_widget(&draw_info.description, task_rects[2]);
@@ -465,7 +465,7 @@ impl Component for TaskComponent<'_> {
         frame.render_widget(&draw_info.completion, completion_due[0]);
 
         // Due Date
-        frame.render_widget(&self.due.textarea, completion_due[1]);
+        frame.render_widget(&self.reactive_widgets.due.textarea, completion_due[1]);
 
         Ok(())
     }

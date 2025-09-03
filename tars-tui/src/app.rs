@@ -82,15 +82,12 @@ impl App {
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
 
-        let config = Config::new()?;
-        info!("using config: {config:#?}");
-
         let app = Self {
             tick_rate,
             frame_rate,
             components: vec![
                 Box::new(Explorer::new(&client, tree.clone()).await?),
-                Box::new(TodoList::new(tree.clone()).await?),
+                Box::new(TodoList::new(&client, tree.clone()).await?),
                 Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
             tree,

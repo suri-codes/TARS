@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        g.color as \"group_color: Color\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.finished_at,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
+  "query": "\n                    SELECT\n                        t.pub_id as task_pub_id,\n                        t.name as task_name,\n                        g.name  as group_name,\n                        g.pub_id as group_pub_id ,\n                        g.parent_id as \"group_parent_id: Id\",\n                        g.color as \"group_color: Color\",\n                        g.priority as \"group_priority: Priority\",\n                        t.priority as \"priority: Priority\",\n                        t.description,\n                        t.finished_at,\n                        t.due\n                    FROM Tasks t\n                    JOIN Groups g ON t.group_id = g.pub_id\n                        \n                ",
   "describe": {
     "columns": [
       {
@@ -34,23 +34,28 @@
         "type_info": "Text"
       },
       {
-        "name": "priority: Priority",
+        "name": "group_priority: Priority",
         "ordinal": 6,
         "type_info": "Integer"
       },
       {
-        "name": "description",
+        "name": "priority: Priority",
         "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 8,
         "type_info": "Text"
       },
       {
         "name": "finished_at",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Datetime"
       },
       {
         "name": "due",
-        "ordinal": 9,
+        "ordinal": 10,
         "type_info": "Datetime"
       }
     ],
@@ -66,9 +71,10 @@
       false,
       false,
       false,
+      false,
       true,
       true
     ]
   },
-  "hash": "605c4aff7fd64e3394ca59f463fccb76b85d9aa8813bf4c46ac141b050b4daea"
+  "hash": "21951228d3dea955bd1e22f27e54130fff1758b738d4598b740fbaa5e30a94de"
 }

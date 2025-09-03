@@ -227,9 +227,14 @@ impl<'a> Component for Explorer<'a> {
                             TarsKind::Task(_) => return Ok(None),
                         };
 
-                        let g =
-                            Group::new(&self.client, "new_group", parent_group, Color::random())
-                                .await?;
+                        let g = Group::new(
+                            &self.client,
+                            "new_group",
+                            parent_group,
+                            Default::default(),
+                            Color::random(),
+                        )
+                        .await?;
                         self.on_update = OnUpdate::Select(g.id.clone());
 
                         Ok(Some(Signal::Refresh))
@@ -244,9 +249,14 @@ impl<'a> Component for Explorer<'a> {
                             TarsKind::Root(_) => None,
                         };
 
-                        let g =
-                            Group::new(&self.client, "new_group", curr_node_id, Color::random())
-                                .await?;
+                        let g = Group::new(
+                            &self.client,
+                            "new_group",
+                            curr_node_id,
+                            Default::default(),
+                            Color::random(),
+                        )
+                        .await?;
 
                         self.on_update = OnUpdate::Select(g.id.clone());
                         Ok(Some(Signal::Refresh))

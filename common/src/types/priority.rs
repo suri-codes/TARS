@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ratatui::{
     style::Style,
     widgets::{Block, BorderType, Borders},
@@ -7,15 +9,22 @@ use serde::{Deserialize, Serialize};
 use crate::ParseError;
 /// The priority varying priority levels for a Task.
 #[derive(
-    sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord,
+    sqlx::Type, Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize, PartialOrd, Ord, Default,
 )]
 #[repr(i32)]
 pub enum Priority {
-    Far = 1,
-    Low = 2,
+    Far = 5,
+    Low = 4,
+    #[default]
     Medium = 3,
-    High = 4,
-    Asap = 5,
+    High = 2,
+    Asap = 1,
+}
+
+impl Priority {
+    pub fn parse_clap(str: &str) -> Result<Self, ParseError> {
+        str.try_into()
+    }
 }
 
 impl From<Priority> for Block<'_> {
@@ -79,5 +88,19 @@ impl From<Priority> for String {
             Priority::Asap => "ASAP".to_owned(),
             Priority::Far => "Far".to_owned(),
         }
+    }
+}
+
+impl Display for Priority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            Priority::Low => "Low".to_owned(),
+            Priority::Medium => "Medium".to_owned(),
+            Priority::High => "High".to_owned(),
+            Priority::Asap => "ASAP".to_owned(),
+            Priority::Far => "Far".to_owned(),
+        };
+
+        write!(f, "{string}")
     }
 }

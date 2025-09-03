@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use color_eyre::eyre::{OptionExt, Result};
 use common::{
-    TarsClient,
-    types::{Color as MyColor, Group, Id, Task},
+    ParseError, TarsClient,
+    types::{Color as MyColor, Group, Id, Priority, Task},
 };
 use crossterm::event::KeyEvent;
 use ratatui::{
@@ -25,12 +25,11 @@ use super::TarsText;
 #[derive(Debug)]
 pub struct GroupComponent<'a> {
     group: Group,
-    name: TarsText<'a>,
-    color: TarsText<'a>,
     edit_mode: EditMode,
     client: TarsClient,
     signal_tx: Option<UnboundedSender<Signal>>,
     tree_handle: TarsTreeHandle,
+    reactive_widgets: ReactiveWidgets<'a>,
     on_update: OnUpdate,
     pub active: bool,
 }
@@ -41,6 +40,7 @@ enum EditMode {
     Inactive,
     Name,
     Color,
+    Priority,
 }
 
 #[derive(Debug)]
@@ -50,12 +50,14 @@ enum OnUpdate {
     NewTask(Id),
 }
 
-struct ReactiveDrawInfo<'a> {
+#[derive(Debug)]
+struct ReactiveWidgets<'a> {
     name: TarsText<'a>,
     color: TarsText<'a>,
+    priority: TarsText<'a>,
 }
 
-impl From<&Group> for ReactiveDrawInfo<'_> {
+impl From<&Group> for ReactiveWidgets<'_> {
     fn from(value: &Group) -> Self {
         let name = TarsText::new(
             &value.name,
@@ -74,15 +76,20 @@ impl From<&Group> for ReactiveDrawInfo<'_> {
                 .border_style(Style::new().fg(value.color.clone().into())),
         );
 
-        ReactiveDrawInfo { name, color }
+        let priority = TarsText::new(&value.priority.to_string(), value.priority.into());
+
+        ReactiveWidgets {
+            name,
+            color,
+            priority,
+        }
     }
 }
 impl<'a> GroupComponent<'a> {
     pub fn new(group: &Group, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
-        let reactive_draw_info = ReactiveDrawInfo::from(group);
+        let reactive_widgets = ReactiveWidgets::from(group);
         let comp = Self {
-            name: reactive_draw_info.name,
-            color: reactive_draw_info.color,
+            reactive_widgets,
             group: group.clone(),
             edit_mode: EditMode::Inactive,
             client,
@@ -95,16 +102,23 @@ impl<'a> GroupComponent<'a> {
     }
 
     pub async fn sync(&mut self) -> Result<()> {
-        let new_name = self.name.textarea.lines()[0].clone();
+        let new_name = self.reactive_widgets.name.textarea.lines()[0].clone();
 
         if !new_name.is_empty() {
             self.group.name = new_name.into();
         };
 
-        let new_color = self.color.textarea.lines()[0].clone();
+        let new_color = self.reactive_widgets.color.textarea.lines()[0].clone();
 
         if !new_color.is_empty() {
-            self.group.color = MyColor::parse_str(self.color.textarea.lines()[0].as_str())?;
+            self.group.color =
+                MyColor::parse_str(self.reactive_widgets.color.textarea.lines()[0].as_str())?;
+        }
+
+        let new_prio = self.reactive_widgets.priority.textarea.lines()[0].as_str();
+
+        if !new_prio.is_empty() {
+            self.group.priority = new_prio.try_into()?;
         }
 
         self.group.sync(&self.client).await?;
@@ -133,10 +147,7 @@ impl Component for GroupComponent<'_> {
 
                 if let TarsKind::Group(ref group) = node.data().kind {
                     self.group = group.clone();
-
-                    let reactive_draw_info = ReactiveDrawInfo::from(group);
-                    self.color = reactive_draw_info.color;
-                    self.name = reactive_draw_info.name;
+                    self.reactive_widgets = ReactiveWidgets::from(group);
                 }
                 Ok(None)
             }
@@ -148,10 +159,7 @@ impl Component for GroupComponent<'_> {
 
                     if let TarsKind::Group(ref group) = node.data().kind {
                         self.group = group.clone();
-
-                        let reactive_draw_info = ReactiveDrawInfo::from(group);
-                        self.color = reactive_draw_info.color;
-                        self.name = reactive_draw_info.name;
+                        self.reactive_widgets = ReactiveWidgets::from(group);
                     }
 
                     self.on_update = OnUpdate::NoOp;
@@ -185,13 +193,19 @@ impl Component for GroupComponent<'_> {
 
                 match action {
                     Action::EditName => {
-                        self.name.activate();
+                        self.reactive_widgets.name.activate();
                         self.edit_mode = EditMode::Name;
                         Ok(Some(Signal::RawText))
                     }
                     Action::EditColor => {
-                        self.color.activate();
+                        self.reactive_widgets.color.activate();
                         self.edit_mode = EditMode::Color;
+                        Ok(Some(Signal::RawText))
+                    }
+
+                    Action::EditPriority => {
+                        self.reactive_widgets.priority.activate();
+                        self.edit_mode = EditMode::Priority;
                         Ok(Some(Signal::RawText))
                     }
 
@@ -241,24 +255,71 @@ impl Component for GroupComponent<'_> {
                 | Input {
                     key: Key::Enter, ..
                 } => {
-                    self.name.deactivate();
+                    self.reactive_widgets.name.deactivate();
                     self.sync().await?;
                     self.edit_mode = EditMode::Inactive;
                     return Ok(Some(Signal::Refresh));
                 }
                 input => {
-                    self.name.textarea.input(input);
+                    self.reactive_widgets.name.textarea.input(input);
                 }
             },
+
+            EditMode::Priority => {
+                match key.into() {
+                    Input { key: Key::Esc, .. }
+                    | Input {
+                        key: Key::Enter, ..
+                    } => {
+                        self.reactive_widgets.priority.deactivate();
+                        if self.reactive_widgets.priority.is_valid {
+                            self.sync().await?;
+                        }
+                        self.reactive_widgets
+                            .priority
+                            .textarea
+                            .set_placeholder_text(self.group.priority);
+                        self.edit_mode = EditMode::Inactive;
+                        return Ok(Some(Signal::Refresh));
+                    }
+                    input => {
+                        if self.reactive_widgets.priority.textarea.input(input) {
+                            let p: Result<Priority, ParseError> =
+                                self.reactive_widgets.priority.textarea.lines()[0]
+                                    .as_str()
+                                    .try_into();
+                            let Some(block) =
+                                self.reactive_widgets.priority.textarea.block().cloned()
+                            else {
+                                return Ok(None);
+                            };
+
+                            let block = match p {
+                                Ok(p) => {
+                                    self.group.priority = p;
+                                    self.reactive_widgets.priority.is_valid = true;
+                                    self.group.priority.into()
+                                }
+                                Err(_) => {
+                                    self.reactive_widgets.priority.is_valid = false;
+                                    block.border_style(Style::new().fg(Color::Red))
+                                }
+                            };
+
+                            self.reactive_widgets.priority.textarea.set_block(block);
+                        };
+                    }
+                };
+            }
 
             EditMode::Color => match key.into() {
                 Input { key: Key::Esc, .. }
                 | Input {
                     key: Key::Enter, ..
                 } => {
-                    self.color.deactivate();
+                    self.reactive_widgets.color.deactivate();
 
-                    if self.color.is_valid {
+                    if self.reactive_widgets.color.is_valid {
                         self.sync().await?;
                     }
                     self.edit_mode = EditMode::Inactive;
@@ -266,22 +327,24 @@ impl Component for GroupComponent<'_> {
                 }
 
                 input => {
-                    if self.color.textarea.input(input) {
-                        let entered_color = self.color.textarea.lines()[0].as_str();
-                        let Some(block) = self.color.textarea.block().cloned() else {
+                    if self.reactive_widgets.color.textarea.input(input) {
+                        let entered_color =
+                            self.reactive_widgets.color.textarea.lines()[0].as_str();
+                        let Some(block) = self.reactive_widgets.color.textarea.block().cloned()
+                        else {
                             return Ok(None);
                         };
 
                         let block = block.border_style(Style::new().fg(Color::Red));
 
                         let block = if let Ok(col) = MyColor::parse_str(entered_color) {
-                            self.color.is_valid = true;
+                            self.reactive_widgets.color.is_valid = true;
                             block.border_style(Style::new().fg(col.into()))
                         } else {
-                            self.color.is_valid = false;
+                            self.reactive_widgets.color.is_valid = false;
                             block
                         };
-                        self.color.textarea.set_block(block);
+                        self.reactive_widgets.color.textarea.set_block(block);
                     }
                 }
             },
@@ -295,16 +358,20 @@ impl Component for GroupComponent<'_> {
             [
                 Constraint::Percentage(15), // name
                 Constraint::Percentage(15), // color
-                Constraint::Percentage(15), // parent
+                Constraint::Percentage(15), // priority
             ],
         )
         .split(area);
 
         // Group name:
-        frame.render_widget(&self.name.textarea, group_layout[0]);
+        frame.render_widget(&self.reactive_widgets.name.textarea, group_layout[0]);
 
         // Group color:
-        frame.render_widget(&self.color.textarea, group_layout[1]);
+        frame.render_widget(&self.reactive_widgets.color.textarea, group_layout[1]);
+
+        // Group priority:
+        frame.render_widget(&self.reactive_widgets.priority.textarea, group_layout[2]);
+
         Ok(())
     }
 }

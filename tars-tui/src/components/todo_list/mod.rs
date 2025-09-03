@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::TarsClient;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
@@ -27,14 +28,15 @@ pub struct TodoList<'a> {
 }
 
 impl<'a> TodoList<'a> {
-    pub async fn new(tree_handle: TarsTreeHandle) -> Result<Self> {
+    pub async fn new(client: &TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
         let tree = tree_handle.read().await;
         let pot = tree.traverse_root();
         let (selection, _) = pot.get(if pot.len() >= 2 { 1 } else { 0 }).unwrap().clone();
         let selection = selection.clone();
         let scope = tree.root_node_id().unwrap().clone();
 
-        let state = State::new(false, scope, selection, tree_handle.clone()).await;
+        let state =
+            State::new(false, scope, selection, tree_handle.clone(), client.clone()).await?;
 
         Ok(Self {
             signal_tx: Default::default(),
@@ -86,22 +88,22 @@ impl Component for TodoList<'_> {
             }
             Signal::Action(Action::SwitchTo(_)) => {
                 self.state.active = false;
-                self.state.calculate_draw_info().await;
+                self.state.calculate_draw_info().await?;
                 Ok(None)
             }
             Signal::ScopeUpdate(scope) => {
-                self.state.set_scope(scope).await;
+                self.state.set_scope(scope).await?;
                 Ok(None)
             }
 
             Signal::Refresh => {
-                self.state.calculate_draw_info().await;
+                self.state.calculate_draw_info().await?;
                 Ok(None)
             }
 
             Signal::Select(id) => {
                 if self.state.active {
-                    self.state.set_selection(id).await;
+                    self.state.set_selection(id).await?;
                 }
                 Ok(None)
             }
@@ -115,7 +117,7 @@ impl Component for TodoList<'_> {
                 let sel_idx = *self.state.get_selected_idx();
                 match action {
                     Action::MoveDown => {
-                        if let Some((next_id, _)) = tasks.get(sel_idx + 1) {
+                        if let Some((next_id, _, _)) = tasks.get(sel_idx + 1) {
                             let next_id = next_id.clone();
                             let offset = self.state.scroll_state.offset().y as usize;
 
@@ -132,7 +134,7 @@ impl Component for TodoList<'_> {
                     }
 
                     Action::MoveUp => {
-                        if let Some((prev_id, _)) = tasks.get(sel_idx.saturating_sub(1)) {
+                        if let Some((prev_id, _, _)) = tasks.get(sel_idx.saturating_sub(1)) {
                             let prev_id = prev_id.clone();
                             let offset = self.state.scroll_state.offset().y as usize;
                             if sel_idx - offset < self.config.config.scroll_offset as usize {

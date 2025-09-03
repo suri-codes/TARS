@@ -20,13 +20,25 @@ async fn group_creation() {
         .await
         .expect("failed to instantiate client");
 
-    let group = Group::new(&client, "testing", None, Default::default())
-        .await
-        .unwrap();
+    let group = Group::new(
+        &client,
+        "testing",
+        None,
+        Default::default(),
+        Default::default(),
+    )
+    .await
+    .unwrap();
 
-    let child_group = Group::new(&client, "child", Some(group.id.clone()), Default::default())
-        .await
-        .unwrap();
+    let child_group = Group::new(
+        &client,
+        "child",
+        Some(group.id.clone()),
+        Default::default(),
+        Default::default(),
+    )
+    .await
+    .unwrap();
 
     let mut created = vec![group, child_group];
     created.sort();
@@ -54,9 +66,15 @@ async fn group_sync() {
         .await
         .expect("failed to instantiate client");
 
-    let mut group = Group::new(&client, "testing", None, Default::default())
-        .await
-        .unwrap();
+    let mut group = Group::new(
+        &client,
+        "testing",
+        None,
+        Default::default(),
+        Default::default(),
+    )
+    .await
+    .unwrap();
     group.name = "testing_2".to_owned().into();
 
     group.sync(&client).await.unwrap();
@@ -80,9 +98,15 @@ async fn group_delete() {
         .await
         .expect("failed to instantiate client");
 
-    let group = Group::new(&client, "testing", None, Default::default())
-        .await
-        .unwrap();
+    let group = Group::new(
+        &client,
+        "testing",
+        None,
+        Default::default(),
+        Default::default(),
+    )
+    .await
+    .unwrap();
 
     group.delete(&client).await.unwrap();
 

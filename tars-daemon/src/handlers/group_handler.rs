@@ -1,4 +1,5 @@
 use crate::DaemonState;
+use async_recursion::async_recursion;
 use axum::{
     Json, Router, debug_handler,
     extract::State,
@@ -6,6 +7,7 @@ use axum::{
 };
 use common::{Diff, DiffInner, TarsError, types::*};
 
+use sqlx::{Pool, Sqlite};
 use tracing::{info, instrument};
 
 /// Returns a router with all the group specific endpoints
@@ -15,6 +17,7 @@ pub fn group_router() -> Router<DaemonState> {
         .route("/create", post(create_group))
         .route("/update", post(update_group))
         .route("/delete", post(delete_group))
+        .route("/score", post(calculate_group_score))
 }
 
 /// Takes in a `Group` and then writes that group to the database.
@@ -36,19 +39,21 @@ async fn create_group(
     let inserted = sqlx::query_as!(
         Group,
         r#"
-            INSERT INTO Groups (pub_id, name, parent_id, color)
+            INSERT INTO Groups (pub_id, name, parent_id, color, priority)
             VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color"
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color", Groups.priority as "priority: Priority"
         "#,
         *group.id,
         *group.name,
         group.parent_id,
-        group.color
+        group.color,
+        group.priority
     )
     .fetch_one(&state.pool)
     .await?;
@@ -83,7 +88,8 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         pub_id as "id: Id",
         name as "name: Name",
         parent_id as "parent_id: Id",
-        color as "color: Color"
+        color as "color: Color",
+        priority as "priority: Priority"
         FROM Groups
         "#
     )
@@ -117,17 +123,20 @@ async fn update_group(
             UPDATE Groups
             SET
             name = ?,
-            color = ?
+            color = ?,
+            priority = ?
             WHERE pub_id = ?
             RETURNING
                 name as "name: Name",
                 pub_id as "id: Id",
                 parent_id as "parent_id: Id",
-                color as "color: Color"
+                color as "color: Color",
+                priority as "priority: Priority"
 
         "#,
         *group.name,
         col,
+        group.priority,
         *group.id
     )
     .fetch_one(&state.pool)
@@ -165,7 +174,8 @@ async fn delete_group(
                 pub_id as "id: Id",
                 name as "name: Name",
                 parent_id as "parent_id: Id",
-                color as "color: Color"
+                color as "color: Color",
+                priority as "priority: Priority"
            
         "#,
         *group.id,
@@ -178,4 +188,45 @@ async fn delete_group(
 
     let _ = state.diff_tx.send(Diff::Deleted(deleted.id.clone()));
     Ok(Json::from(deleted))
+}
+
+/// Returns the p_score for this group.
+///
+/// # Errors
+///
+/// This function will return an error if something goes wrong with the sql query.
+#[instrument(skip(state))]
+#[debug_handler]
+pub async fn calculate_group_score(
+    State(state): State<DaemonState>,
+    Json(id): Json<Id>,
+) -> Result<Json<f64>, TarsError> {
+    Ok(Json::from(calculate_group_p_score(&id, &state.pool).await?))
+}
+
+#[async_recursion]
+pub async fn calculate_group_p_score(group_id: &Id, pool: &Pool<Sqlite>) -> Result<f64, TarsError> {
+    let group = sqlx::query!(
+        r#"
+
+            SELECT
+            pub_id as "id: Id",
+            parent_id as "parent_id: Id",
+            priority as "priority: Priority"
+            FROM Groups
+            WHERE pub_id = ?
+        "#,
+        *group_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let current_p_score = 1.0 / group.priority as i32 as f64;
+
+    if group.parent_id.is_none() {
+        // we are the root
+        return Ok(current_p_score);
+    }
+
+    return Ok(calculate_group_p_score(&group.parent_id.unwrap(), pool).await? * current_p_score);
 }

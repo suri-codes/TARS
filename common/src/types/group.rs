@@ -10,6 +10,7 @@ use tracing::error;
 
 use std::error::Error;
 
+use crate::types::Priority;
 use crate::{ParseError, TarsClient, TarsError};
 
 use super::{Id, Name};
@@ -19,6 +20,7 @@ use super::{Id, Name};
 pub struct Group {
     pub id: Id,
     pub name: Name,
+    pub priority: Priority,
     pub parent_id: Option<Id>,
     pub color: Color,
 }
@@ -107,12 +109,14 @@ impl Group {
         id: impl Into<Id>,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        priority: Priority,
         color: Color,
     ) -> Self {
         Group {
             id: id.into(),
             name: name.into(),
             parent_id,
+            priority,
             color,
         }
     }
@@ -127,9 +131,10 @@ impl Group {
         client: &TarsClient,
         name: impl Into<Name>,
         parent_id: Option<Id>,
+        priority: Priority,
         color: Color,
     ) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name, parent_id, color);
+        let group = Group::with_all_fields(Id::default(), name, parent_id, priority, color);
 
         let res: Group = client
             .conn
@@ -211,6 +216,22 @@ impl Group {
         assert_eq!(deleted, *self);
 
         Ok(())
+    }
+
+    /// Returns the p score of this [`Group`].
+    pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
+        let score: f64 = client
+            .conn
+            .post(client.base_path.join("/group/score")?)
+            .json(&self.id)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error fetching score for Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error parsing score for Group: {:?}", e))?;
+
+        Ok(score)
     }
 }
 

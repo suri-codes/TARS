@@ -6,10 +6,10 @@ use common::{
     Diff, DiffInner, TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, types::chrono::Local};
 use tracing::{error, info, instrument};
 
-use crate::DaemonState;
+use crate::{DaemonState, handlers::calculate_group_p_score};
 
 /// Returns a router with all the task specific endpoints
 pub fn task_router() -> Router<DaemonState> {
@@ -18,6 +18,7 @@ pub fn task_router() -> Router<DaemonState> {
         .route("/fetch", post(fetch_task))
         .route("/update", post(update_task))
         .route("/delete", post(delete_task))
+        .route("/score", post(calculate_task_score))
 }
 
 /// Takes in a task and then writes that task to the database.
@@ -61,7 +62,7 @@ pub async fn create_task(
     let group = sqlx::query_as!(
         Group,
         r#"
-        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id", color as "color: Color" FROM Groups WHERE pub_id = ?
+        SELECT name as "name: Name", pub_id as "id: Id", parent_id as "parent_id: Id", color as "color: Color", priority as "priority: Priority" FROM Groups WHERE pub_id = ?
         "#,
         inserted.group_id
     )
@@ -112,6 +113,7 @@ async fn fetch_task(
                         g.pub_id as group_pub_id ,
                         g.parent_id as "group_parent_id: Id",
                         g.color as "group_color: Color",
+                        g.priority as "group_priority: Priority",
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
@@ -133,6 +135,7 @@ async fn fetch_task(
                             row.group_pub_id,
                             row.group_name,
                             row.group_parent_id,
+                            row.group_priority,
                             row.group_color,
                         ),
                         row.task_name,
@@ -177,6 +180,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                         g.pub_id as group_pub_id ,
                         g.parent_id as "group_parent_id: Id",
                         g.color as "group_color: Color",
+                        g.priority as "group_priority: Priority",
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
@@ -200,6 +204,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                 row.group_pub_id,
                 row.group_name,
                 row.group_parent_id,
+                row.group_priority,
                 row.group_color,
             ),
             row.task_name,
@@ -231,7 +236,7 @@ async fn recurse_group_fetch(
     let children = sqlx::query_as!(
         Group,
         r#"
-        SELECT pub_id as "id: Id", name as "name: Name", color as "color: Color" , parent_id as "parent_id: Id"
+        SELECT pub_id as "id: Id", name as "name: Name", color as "color: Color" , parent_id as "parent_id: Id", priority as "priority: Priority"
         FROM Groups
         WHERE parent_id = ?
         "#,
@@ -276,6 +281,7 @@ async fn update_task(
             (SELECT g.name FROM Groups g WHERE g.pub_id = Tasks.group_id) as group_name,
             (SELECT g.parent_id FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_parent_id: Id",
             (SELECT g.color FROM Groups g WHERE g.pub_id = Tasks.group_id) as "group_color: Color",
+            (SELECT g.priority FROM groups g WHERE g.pub_id = Tasks.group_id) as "group_priority: Priority",
             priority as "priority: Priority",
             description,
             finished_at,
@@ -298,6 +304,7 @@ async fn update_task(
             row.group_id,
             row.group_name,
             row.group_parent_id,
+            row.group_priority,
             row.group_color,
         ),
         row.task_name,
@@ -341,6 +348,7 @@ async fn delete_task(
                 g.name as group_name,
                 g.parent_id as "group_parent_id: Id",
                 g.color as "group_color: Color",
+                g.priority as "group_priority: Priority",
 
                 t.group_id,
                 t.priority as "priority: Priority",
@@ -363,6 +371,7 @@ async fn delete_task(
             row.group_id,
             row.group_name,
             row.group_parent_id,
+            row.group_priority,
             row.group_color,
         ),
         row.task_name,
@@ -383,4 +392,61 @@ async fn delete_task(
 
     let _ = state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()));
     Ok(Json::from(deleted_task))
+}
+
+/// Returns the p_score for this task.
+///
+/// # Errors
+///
+/// This function will return an error if something goes wrong with the sql query.
+#[instrument(skip(state))]
+#[debug_handler]
+pub async fn calculate_task_score(
+    State(state): State<DaemonState>,
+    Json(id): Json<Id>,
+) -> Result<Json<f64>, TarsError> {
+    let task = sqlx::query!(
+        r#"
+        SELECT
+        group_id as "group_id: Id",
+        priority as "priority: Priority",
+        due 
+        FROM Tasks
+        WHERE pub_id = ?
+    "#,
+        *id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    if task.priority == Priority::Asap {
+        return Ok(Json::from(1.0));
+    }
+
+    let task_p_score = 1.0 / task.priority as i32 as f64;
+
+    let total_p_score = calculate_group_p_score(&task.group_id, &state.pool).await? * task_p_score;
+
+    let final_p_score = if task.due.is_none() {
+        total_p_score
+    } else {
+        let today = Local::now();
+
+        let due = task
+            .due
+            .unwrap()
+            .and_local_timezone(*today.offset())
+            .unwrap();
+
+        // (e/3)^(delta (in days)) + prio
+        let today = today.fixed_offset();
+        let difference = (due - today).num_minutes() as f64 / 1440.0;
+
+        let e = std::f64::consts::E / 3.0;
+
+        let y = e.powf(difference);
+        y + total_p_score
+    };
+
+    Ok(Json::from(final_p_score))
 }
