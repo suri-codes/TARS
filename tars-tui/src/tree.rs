@@ -13,7 +13,7 @@ use common::{
 };
 use id_tree::{InsertBehavior, MoveBehavior, Node, NodeId, RemoveBehavior, Tree, TreeBuilder};
 use tokio::sync::RwLock;
-use tracing::{error, info};
+use tracing::error;
 
 #[derive(Debug)]
 pub struct TarsTree(Tree<TarsNode>);

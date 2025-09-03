@@ -10,7 +10,6 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
 use tui_textarea::TextArea;
 
 use crate::{

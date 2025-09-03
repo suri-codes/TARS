@@ -3,7 +3,7 @@ use std::{f64, fmt::Display};
 use chrono::NaiveDateTime;
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{TarsClient, TarsError};
 
