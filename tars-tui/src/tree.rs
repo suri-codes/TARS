@@ -151,8 +151,6 @@ impl TarsTree {
             *map = inverted_map
         }
 
-        // DEBUG
-        info!("{tree:#?}");
         Ok(tree)
     }
 

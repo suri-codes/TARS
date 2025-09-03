@@ -205,8 +205,6 @@ impl<'a> Component for Inspector<'a> {
                 let node = tree.get(id)?;
                 match node.data().kind {
                     TarsKind::Task(ref t) => {
-                        //DEBUG
-                        info!("creating task_component with :{t:#?}");
                         if self.rendered_component.task_component.is_none() {
                             let mut task_component = TaskComponent::new(
                                 t,
