@@ -10,7 +10,7 @@ use crate::{TarsClient, TarsError};
 use super::{Group, Id, Name, Priority};
 
 /// Task type that holds all information relavant to a task.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
 pub struct Task {
     pub id: Id,
     pub name: Name,
@@ -19,20 +19,6 @@ pub struct Task {
     pub description: String,
     pub finished_at: Option<NaiveDateTime>,
     pub due: Option<NaiveDateTime>,
-}
-
-impl Ord for Task {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let self_eval = self.evaluate();
-        let other_eval = other.evaluate();
-        self_eval.total_cmp(&other_eval)
-    }
-}
-
-impl PartialOrd for Task {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 impl Task {
@@ -166,6 +152,22 @@ impl Task {
         assert_eq!(deleted_task, *self);
 
         Ok(())
+    }
+
+    /// Returns the p score of this [`Task`].
+    pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
+        let score: f64 = client
+            .conn
+            .get(client.base_path.join("/task/score")?)
+            .json(&self.id)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?;
+
+        Ok(score)
     }
 
     pub fn evaluate(&self) -> f64 {

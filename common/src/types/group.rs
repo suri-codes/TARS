@@ -217,6 +217,22 @@ impl Group {
 
         Ok(())
     }
+
+    /// Returns the p score of this [`Group`].
+    pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
+        let score: f64 = client
+            .conn
+            .get(client.base_path.join("/group/score")?)
+            .json(&self.id)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?;
+
+        Ok(score)
+    }
 }
 
 impl Display for Group {

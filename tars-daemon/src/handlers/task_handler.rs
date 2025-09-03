@@ -9,7 +9,7 @@ use common::{
 use sqlx::{Pool, Sqlite};
 use tracing::{error, info, instrument};
 
-use crate::DaemonState;
+use crate::{DaemonState, handlers::calculate_group_p_score};
 
 /// Returns a router with all the task specific endpoints
 pub fn task_router() -> Router<DaemonState> {
@@ -18,6 +18,7 @@ pub fn task_router() -> Router<DaemonState> {
         .route("/fetch", post(fetch_task))
         .route("/update", post(update_task))
         .route("/delete", post(delete_task))
+        .route("/score", post(calculate_task_score))
 }
 
 /// Takes in a task and then writes that task to the database.
@@ -389,4 +390,34 @@ async fn delete_task(
 
     let _ = state.diff_tx.send(Diff::Deleted(deleted_task.id.clone()));
     Ok(Json::from(deleted_task))
+}
+
+/// Returns the p_score for this task.
+///
+/// # Errors
+///
+/// This function will return an error if something goes wrong with the sql query.
+#[instrument(skip(state))]
+#[debug_handler]
+pub async fn calculate_task_score(
+    State(state): State<DaemonState>,
+    Json(id): Json<Id>,
+) -> Result<Json<f64>, TarsError> {
+    let task = sqlx::query!(
+        r#"
+        SELECT
+        group_id as "group_id: Id",
+        priority as "priority: Priority"
+        FROM Tasks
+        WHERE pub_id = ?
+    "#,
+        *id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    let task_p_score = 1.0 / task.priority as i32 as f64;
+    Ok(Json::from(
+        calculate_group_p_score(&task.group_id, &state.pool).await? * task_p_score,
+    ))
 }

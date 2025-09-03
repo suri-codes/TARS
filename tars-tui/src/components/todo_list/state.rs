@@ -1,4 +1,5 @@
 use common::types::Task;
+use futures::future::join_all;
 use id_tree::NodeId;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -89,6 +90,10 @@ impl<'a> State<'a> {
                 None
             })
             .collect();
+
+        // join_all(tasks_in_scope.iter().map(
+
+        // ))
 
         // sort for least to most
         tasks_in_scope.sort_by(|(_, a), (_, b)| a.cmp(b));
