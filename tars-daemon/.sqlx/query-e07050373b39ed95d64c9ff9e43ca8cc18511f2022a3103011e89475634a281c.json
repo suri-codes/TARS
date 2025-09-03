@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM Groups\n            WHERE pub_id = ?\n            RETURNING\n                pub_id as \"id: Id\",\n                name as \"name: Name\",\n                parent_id as \"parent_id: Id\",\n                color as \"color: Color\",\n                priority as \"priority: Priority\"\n           \n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: Id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name: Name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id: Id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "color: Color",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "e07050373b39ed95d64c9ff9e43ca8cc18511f2022a3103011e89475634a281c"
+}

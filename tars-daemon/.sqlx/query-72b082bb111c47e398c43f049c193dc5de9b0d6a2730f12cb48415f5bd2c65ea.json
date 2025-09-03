@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT\n        pub_id as \"id: Id\",\n        name as \"name: Name\",\n        parent_id as \"parent_id: Id\",\n        color as \"color: Color\"\n        FROM Groups\n        ",
+  "query": "\n        SELECT\n        pub_id as \"id: Id\",\n        name as \"name: Name\",\n        parent_id as \"parent_id: Id\",\n        color as \"color: Color\",\n        priority as \"priority: Priority\"\n        FROM Groups\n        ",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "name": "color: Color",
         "ordinal": 3,
         "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 4,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -31,8 +36,9 @@
       false,
       false,
       true,
+      false,
       false
     ]
   },
-  "hash": "9b21f435e131ba778f08f44c805ec1cc67fee8c96d6d429a394dd851978f848a"
+  "hash": "72b082bb111c47e398c43f049c193dc5de9b0d6a2730f12cb48415f5bd2c65ea"
 }
