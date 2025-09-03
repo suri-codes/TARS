@@ -6,7 +6,7 @@ use common::{
     Diff, DiffInner, TarsError,
     types::{Color, Group, Id, Name, Priority, Task, TaskFetchOptions},
 };
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, types::chrono::Local};
 use tracing::{error, info, instrument};
 
 use crate::{DaemonState, handlers::calculate_group_p_score};
@@ -113,6 +113,7 @@ async fn fetch_task(
                         g.pub_id as group_pub_id ,
                         g.parent_id as "group_parent_id: Id",
                         g.color as "group_color: Color",
+                        g.priority as "group_priority: Priority",
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
@@ -134,7 +135,7 @@ async fn fetch_task(
                             row.group_pub_id,
                             row.group_name,
                             row.group_parent_id,
-                            row.priority,
+                            row.group_priority,
                             row.group_color,
                         ),
                         row.task_name,
@@ -179,6 +180,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                         g.pub_id as group_pub_id ,
                         g.parent_id as "group_parent_id: Id",
                         g.color as "group_color: Color",
+                        g.priority as "group_priority: Priority",
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
@@ -202,7 +204,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                 row.group_pub_id,
                 row.group_name,
                 row.group_parent_id,
-                row.priority,
+                row.group_priority,
                 row.group_color,
             ),
             row.task_name,
@@ -350,7 +352,7 @@ async fn delete_task(
                 g.name as group_name,
                 g.parent_id as "group_parent_id: Id",
                 g.color as "group_color: Color",
-                g.priority as "group_prio: Priority",
+                g.priority as "group_priority: Priority",
 
                 t.group_id,
                 t.priority as "priority: Priority",
@@ -373,7 +375,7 @@ async fn delete_task(
             row.group_id,
             row.group_name,
             row.group_parent_id,
-            row.group_prio,
+            row.group_priority,
             row.group_color,
         ),
         row.task_name,
@@ -411,7 +413,8 @@ pub async fn calculate_task_score(
         r#"
         SELECT
         group_id as "group_id: Id",
-        priority as "priority: Priority"
+        priority as "priority: Priority",
+        due 
         FROM Tasks
         WHERE pub_id = ?
     "#,
@@ -421,7 +424,29 @@ pub async fn calculate_task_score(
     .await?;
 
     let task_p_score = 1.0 / task.priority as i32 as f64;
-    Ok(Json::from(
-        calculate_group_p_score(&task.group_id, &state.pool).await? * task_p_score,
-    ))
+
+    let total_p_score = calculate_group_p_score(&task.group_id, &state.pool).await? * task_p_score;
+
+    let final_p_score = if task.due.is_none() {
+        total_p_score
+    } else {
+        let today = Local::now();
+
+        let due = task
+            .due
+            .unwrap()
+            .and_local_timezone(*today.offset())
+            .unwrap();
+
+        // (e/3)^(delta (in days)) + prio
+        let today = today.fixed_offset();
+        let difference = (due - today).num_minutes() as f64 / 1440.0;
+
+        let e = std::f64::consts::E / 3.0;
+
+        let y = e.powf(difference);
+        y + total_p_score
+    };
+
+    Ok(Json::from(final_p_score))
 }

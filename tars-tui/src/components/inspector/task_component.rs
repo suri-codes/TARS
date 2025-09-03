@@ -175,6 +175,8 @@ impl From<&Task> for StaticDrawInfo<'_> {
 
 impl<'a> TaskComponent<'a> {
     pub fn new(task: &Task, client: TarsClient, tree_handle: TarsTreeHandle) -> Result<Self> {
+        //DEBUG
+        info!("new task component! :{task:#?}");
         let reactive_draw_info = ReactiveWidgets::from(task);
         let static_draw_info = StaticDrawInfo::from(task);
         Ok(Self {

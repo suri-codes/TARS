@@ -13,7 +13,7 @@ use common::{
 };
 use id_tree::{InsertBehavior, MoveBehavior, Node, NodeId, RemoveBehavior, Tree, TreeBuilder};
 use tokio::sync::RwLock;
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct TarsTree(Tree<TarsNode>);
@@ -151,7 +151,8 @@ impl TarsTree {
             *map = inverted_map
         }
 
-        // info!("{tree:#?}");
+        // DEBUG
+        info!("{tree:#?}");
         Ok(tree)
     }
 

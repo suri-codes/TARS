@@ -10,6 +10,7 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 use tui_textarea::TextArea;
 
 use crate::{
@@ -204,6 +205,8 @@ impl<'a> Component for Inspector<'a> {
                 let node = tree.get(id)?;
                 match node.data().kind {
                     TarsKind::Task(ref t) => {
+                        //DEBUG
+                        info!("creating task_component with :{t:#?}");
                         if self.rendered_component.task_component.is_none() {
                             let mut task_component = TaskComponent::new(
                                 t,

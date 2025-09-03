@@ -3,7 +3,7 @@ use std::{f64, fmt::Display, ops::Div};
 use chrono::{Local, NaiveDateTime};
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{TarsClient, TarsError};
 
@@ -114,6 +114,9 @@ impl Task {
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if the sync'd task doesnt match with `self`
     pub async fn sync(&self, client: &TarsClient) -> Result<(), TarsError> {
+        // DEBUG
+        info!("before sync! :{self:#?}");
+
         let task: Task = client
             .conn
             .post(client.base_path.join("/task/update")?)
