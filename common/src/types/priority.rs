@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ratatui::{
     style::Style,
     widgets::{Block, BorderType, Borders},
@@ -86,5 +88,19 @@ impl From<Priority> for String {
             Priority::Asap => "ASAP".to_owned(),
             Priority::Far => "Far".to_owned(),
         }
+    }
+}
+
+impl Display for Priority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            Priority::Low => "Low".to_owned(),
+            Priority::Medium => "Medium".to_owned(),
+            Priority::High => "High".to_owned(),
+            Priority::Asap => "ASAP".to_owned(),
+            Priority::Far => "Far".to_owned(),
+        };
+
+        write!(f, "{string}")
     }
 }

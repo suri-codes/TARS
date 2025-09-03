@@ -120,7 +120,8 @@ async fn update_group(
             UPDATE Groups
             SET
             name = ?,
-            color = ?
+            color = ?,
+            priority = ?
             WHERE pub_id = ?
             RETURNING
                 name as "name: Name",
@@ -132,6 +133,7 @@ async fn update_group(
         "#,
         *group.name,
         col,
+        group.priority,
         *group.id
     )
     .fetch_one(&state.pool)
