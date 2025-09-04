@@ -9,7 +9,7 @@ use id_tree::NodeId;
 use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
+use tracing::{debug, info};
 use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
@@ -150,7 +150,7 @@ impl<'a> Component for Explorer<'a> {
                     return Ok(None);
                 }
 
-                info!("Processing {}", action);
+                debug!("Processing {}", action);
 
                 match action {
                     Action::ToggleShowFinished => {

@@ -10,7 +10,7 @@ use ratatui::{
 };
 use task_component::TaskComponent;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::info;
+use tracing::debug;
 use tui_textarea::TextArea;
 
 use crate::{
@@ -199,8 +199,7 @@ impl<'a> Component for Inspector<'a> {
             Signal::Select(ref id) => {
                 // on first select
                 // we make sure that we carry the task and group components
-                //
-                info!("Processing select for {id:#?}");
+                debug!("Processing select for {id:#?}");
 
                 // we can use this id to determine what we should be using
                 let tree = self.tree_handle.read().await;
@@ -224,11 +223,6 @@ impl<'a> Component for Inspector<'a> {
                         {
                             group_component.active = false;
                         }
-                        self.rendered_component
-                            .task_component
-                            .as_mut()
-                            .unwrap()
-                            .active = true;
 
                         self.rendered_component.active_component = RenderedComponentKind::Task;
                     }
@@ -252,12 +246,6 @@ impl<'a> Component for Inspector<'a> {
                         if let Some(task_component) = &mut self.rendered_component.task_component {
                             task_component.active = false;
                         }
-
-                        self.rendered_component
-                            .group_component
-                            .as_mut()
-                            .unwrap()
-                            .active = true;
 
                         self.rendered_component.active_component = RenderedComponentKind::Group;
                     }

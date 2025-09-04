@@ -16,6 +16,7 @@ use tui_textarea::{Input, Key};
 
 use crate::{
     action::{Action, Signal},
+    app::Mode,
     components::Component,
     tree::{TarsKind, TarsTreeHandle},
 };
@@ -172,11 +173,14 @@ impl Component for GroupComponent<'_> {
                         .translate_id_to_node_id(id)
                         .ok_or_eyre("node should exist in here")?;
 
-                    self.signal_tx
+                    let signal_tx = self
+                        .signal_tx
                         .as_mut()
-                        .ok_or_eyre("command tx should exist")?
-                        .send(Signal::Select(node_id))
-                        .unwrap();
+                        .ok_or_eyre("signal_tx should exist")?;
+
+                    signal_tx.send(Signal::Select(node_id))?;
+
+                    signal_tx.send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;
 
                     info!("sent out select signal!");
 
