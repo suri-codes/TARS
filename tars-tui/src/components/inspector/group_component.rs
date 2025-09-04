@@ -178,6 +178,8 @@ impl Component for GroupComponent<'_> {
                         .send(Signal::Select(node_id))
                         .unwrap();
 
+                    info!("sent out select signal!");
+
                     self.on_update = OnUpdate::NoOp;
 
                     Ok(None)
@@ -214,12 +216,14 @@ impl Component for GroupComponent<'_> {
                             &self.client,
                             &self.group,
                             "new task",
-                            common::types::Priority::Medium,
+                            Default::default(),
                             "",
                             None,
                         )
                         .await?
                         .id;
+
+                        info!("created new task! :{id:?}");
 
                         self.on_update = OnUpdate::NewTask(id);
                         Ok(None)
