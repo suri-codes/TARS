@@ -34,10 +34,11 @@ pub struct Explorer<'a> {
     on_update: OnUpdate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum OnUpdate {
     None,
-    Select(Id),
+    /// Shows this in the inspector and then switches focus to it
+    SelectAndSwitch(Id),
 }
 
 impl<'a> Explorer<'a> {
@@ -105,27 +106,38 @@ impl<'a> Component for Explorer<'a> {
                 Ok(None)
             }
 
-            Signal::Update => match self.on_update {
-                OnUpdate::Select(ref id) => {
-                    let tree = self.tree_handle.read().await;
+            Signal::Update => {
+                if self.on_update == OnUpdate::None {
+                    return Ok(None);
+                };
 
-                    let sel_idx = *self.state.get_selected_idx();
-                    let offset = self.state.scroll_state.offset().y as usize;
-                    if sel_idx - offset + self.config.config.scroll_offset as usize
-                        >= self.state.frame_height as usize
-                    {
-                        self.state.scroll_state.scroll_down();
-                    }
+                let id = match self.on_update {
+                    OnUpdate::None => return Ok(None),
+                    OnUpdate::SelectAndSwitch(ref id) => id,
+                };
 
-                    let node_id = tree
-                        .translate_id_to_node_id(id)
-                        .ok_or_eyre("missing node id")?;
+                let tree = self.tree_handle.read().await;
 
-                    self.on_update = OnUpdate::None;
-                    Ok(Some(Signal::Select(node_id.clone())))
+                let sel_idx = *self.state.get_selected_idx();
+                let offset = self.state.scroll_state.offset().y as usize;
+                if sel_idx - offset + self.config.config.scroll_offset as usize
+                    >= self.state.frame_height as usize
+                {
+                    self.state.scroll_state.scroll_down();
                 }
-                OnUpdate::None => Ok(None),
-            },
+
+                let node_id = tree
+                    .translate_id_to_node_id(id)
+                    .ok_or_eyre("missing node id")?;
+
+                let signal_tx = self.signal_tx.as_ref().expect("should exist");
+                self.on_update = OnUpdate::None;
+
+                signal_tx.send(Signal::Select(node_id.clone()))?;
+                signal_tx.send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;
+
+                Ok(None)
+            }
 
             Signal::Action(Action::SwitchTo(Mode::Explorer)) => {
                 self.state.active = true;
@@ -209,7 +221,7 @@ impl<'a> Component for Explorer<'a> {
                         )
                         .await?;
 
-                        self.on_update = OnUpdate::Select(t.id.clone());
+                        self.on_update = OnUpdate::SelectAndSwitch(t.id.clone());
 
                         Ok(Some(Signal::Refresh))
                     }
@@ -231,7 +243,7 @@ impl<'a> Component for Explorer<'a> {
                             Color::random(),
                         )
                         .await?;
-                        self.on_update = OnUpdate::Select(g.id.clone());
+                        self.on_update = OnUpdate::SelectAndSwitch(g.id.clone());
 
                         Ok(Some(Signal::Refresh))
                     }
@@ -254,7 +266,7 @@ impl<'a> Component for Explorer<'a> {
                         )
                         .await?;
 
-                        self.on_update = OnUpdate::Select(g.id.clone());
+                        self.on_update = OnUpdate::SelectAndSwitch(g.id.clone());
                         Ok(Some(Signal::Refresh))
                     }
 
