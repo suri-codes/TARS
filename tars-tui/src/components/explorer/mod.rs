@@ -121,12 +121,8 @@ impl<'a> Component for Explorer<'a> {
                         .translate_id_to_node_id(id)
                         .ok_or_eyre("missing node id")?;
 
-                    let command_tx = self.signal_tx.as_ref().expect("should exist");
-
-                    command_tx.send(Signal::Select(node_id.clone()))?;
                     self.on_update = OnUpdate::None;
-
-                    Ok(Some(Signal::Action(Action::SwitchTo(Mode::Inspector))))
+                    Ok(Some(Signal::Select(node_id.clone())))
                 }
                 OnUpdate::None => Ok(None),
             },

@@ -224,6 +224,14 @@ impl<'a> Component for Inspector<'a> {
                             group_component.active = false;
                         }
 
+                        if self.active {
+                            self.rendered_component
+                                .task_component
+                                .as_mut()
+                                .unwrap()
+                                .active = true;
+                        }
+
                         self.rendered_component.active_component = RenderedComponentKind::Task;
                     }
 
@@ -245,6 +253,14 @@ impl<'a> Component for Inspector<'a> {
 
                         if let Some(task_component) = &mut self.rendered_component.task_component {
                             task_component.active = false;
+                        }
+
+                        if self.active {
+                            self.rendered_component
+                                .group_component
+                                .as_mut()
+                                .unwrap()
+                                .active = true;
                         }
 
                         self.rendered_component.active_component = RenderedComponentKind::Group;
