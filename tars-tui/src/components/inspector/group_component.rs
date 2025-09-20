@@ -49,6 +49,7 @@ enum OnUpdate {
     NoOp,
     ReRender,
     NewTask(Id),
+    NewSubGroup(Id),
 }
 
 #[derive(Debug)]
@@ -166,7 +167,7 @@ impl Component for GroupComponent<'_> {
                     self.on_update = OnUpdate::NoOp;
                     Ok(None)
                 }
-                OnUpdate::NewTask(ref id) => {
+                OnUpdate::NewTask(ref id) | OnUpdate::NewSubGroup(ref id) => {
                     let tree = self.tree_handle.read().await;
 
                     let node_id = tree
@@ -179,15 +180,13 @@ impl Component for GroupComponent<'_> {
                         .ok_or_eyre("signal_tx should exist")?;
 
                     signal_tx.send(Signal::Select(node_id))?;
-
                     signal_tx.send(Signal::Action(Action::SwitchTo(Mode::Inspector)))?;
-
-                    info!("sent out select signal!");
 
                     self.on_update = OnUpdate::NoOp;
 
                     Ok(None)
                 }
+
                 OnUpdate::NoOp => Ok(None),
             },
 
@@ -213,6 +212,23 @@ impl Component for GroupComponent<'_> {
                         self.reactive_widgets.priority.activate();
                         self.edit_mode = EditMode::Priority;
                         Ok(Some(Signal::RawText))
+                    }
+
+                    Action::NewSubGroup => {
+                        let id = Group::new(
+                            &self.client,
+                            "new group",
+                            Some(self.group.id.clone()),
+                            Default::default(),
+                            MyColor::random(),
+                        )
+                        .await?
+                        .id;
+
+                        info!("created new subgroup! :{id:?}");
+
+                        self.on_update = OnUpdate::NewSubGroup(id);
+                        Ok(None)
                     }
 
                     Action::NewTask => {

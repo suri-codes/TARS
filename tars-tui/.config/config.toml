@@ -42,3 +42,4 @@ scroll_offset = 4
 "d" = "EditDescription"
 "f" = "ToggleFinishTask"
 "t" = "NewTask"
+"g" = "NewSubGroup"
