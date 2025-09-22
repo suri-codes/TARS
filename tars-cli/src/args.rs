@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use color_eyre::owo_colors::OwoColorize;
 use common::{
@@ -15,13 +17,16 @@ pub struct CliArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Manage tars groups.
+    /// Manage TARS groups.
     #[command(subcommand)]
     Group(GroupSubcommand),
 
-    /// Manage tars tasks.
+    /// Manage TARS tasks.
     #[command(subcommand)]
     Task(TaskSubcommand),
+
+    /// Exports TARS data.
+    Export(ExportArgs),
 }
 
 #[derive(Subcommand, Debug)]
@@ -31,6 +36,23 @@ pub enum GroupSubcommand {
     Add(GroupAddArgs),
     /// List groups.
     List(GroupListArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct ExportArgs {
+    #[arg(short, long, default_value = "./tars.json")]
+    /// The file-path for data to pe put into.
+    pub out_file: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct ImportArgs {
+    #[arg(short, long)]
+    /// The file-path for data to sourced from.
+    pub in_file: PathBuf,
+
+    #[arg(short, long, default_value = "false")]
+    pub strict: bool,
 }
 
 #[derive(Debug, Args)]
