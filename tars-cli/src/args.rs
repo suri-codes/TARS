@@ -27,6 +27,9 @@ pub enum Commands {
 
     /// Exports TARS data.
     Export(ExportArgs),
+
+    /// Imports bulk data into TARS
+    Import(ImportArgs),
 }
 
 #[derive(Subcommand, Debug)]
