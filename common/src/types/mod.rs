@@ -1,10 +1,11 @@
+mod color;
 mod group;
 mod id;
 mod name;
 mod priority;
 mod task;
 
-use chrono::{Datelike, NaiveDate, NaiveDateTime, Utc};
+pub use color::*;
 pub use group::*;
 pub use id::*;
 pub use name::*;
@@ -12,6 +13,7 @@ pub use priority::*;
 pub use task::*;
 
 use crate::ParseError;
+use chrono::{Datelike, NaiveDate, NaiveDateTime, Utc};
 
 pub fn parse_date_time(possible_date: &str) -> Result<NaiveDateTime, ParseError> {
     let date;
