@@ -1,6 +1,6 @@
 use std::{f64, fmt::Display};
 
-use chrono::NaiveDateTime;
+use chrono::{Local, NaiveDateTime};
 use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -18,11 +18,13 @@ pub struct Task {
     pub priority: Priority,
     pub description: String,
     pub finished_at: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
     pub due: Option<NaiveDateTime>,
 }
 
 impl Task {
     /// Initializes a `Task` with all fields.
+    #[allow(clippy::too_many_arguments)]
     pub fn with_all_fields(
         id: impl Into<Id>,
         group: impl Into<Group>,
@@ -30,6 +32,7 @@ impl Task {
         priority: Priority,
         description: String,
         finished_at: Option<NaiveDateTime>,
+        created_at: NaiveDateTime,
         due: Option<NaiveDateTime>,
     ) -> Self {
         Self {
@@ -39,6 +42,7 @@ impl Task {
             priority,
             description,
             finished_at,
+            created_at,
             due,
         }
     }
@@ -55,9 +59,10 @@ impl Task {
         name: impl Into<Name>,
         priority: Priority,
         description: impl Into<String>,
-
         due: Option<NaiveDateTime>,
     ) -> Result<Self, TarsError> {
+        let created_at = Local::now().naive_local();
+
         let task = Self {
             id: Default::default(),
             group: group.clone(),
@@ -65,6 +70,7 @@ impl Task {
             priority,
             finished_at: None,
             description: description.into(),
+            created_at,
             due,
         };
 

@@ -7,6 +7,7 @@ use common::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::types::chrono::Local;
 
 use crate::args::{ExportArgs, ImportArgs};
 
@@ -140,6 +141,18 @@ pub fn extract_task(task_json: &Value) -> Task {
         }
     });
 
+    let created_at = if let Some(v) = task_json.get("created_at")
+        && let Some(str) = v.as_str()
+        && v.is_string()
+    {
+        parse_date_time(str).expect(
+            "created_at datetime exists but couldnt be
+            parsed properly!",
+        )
+    } else {
+        Local::now().naive_local()
+    };
+
     let due = task_json.get("due").and_then(|v| {
         if let Some(str) = v.as_str()
             && v.is_string()
@@ -153,7 +166,16 @@ pub fn extract_task(task_json: &Value) -> Task {
         }
     });
 
-    Task::with_all_fields(id, group, name, priority, description, finished_at, due)
+    Task::with_all_fields(
+        id,
+        group,
+        name,
+        priority,
+        description,
+        finished_at,
+        created_at,
+        due,
+    )
 }
 
 pub fn extract_group(group_json: &Value) -> Group {

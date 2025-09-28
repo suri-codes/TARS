@@ -37,8 +37,9 @@ pub async fn create_task(
 ) -> Result<Json<Task>, TarsError> {
     let inserted = sqlx::query!(
         r#"
-            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due)
+            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due, created_at)
             VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
@@ -46,7 +47,7 @@ pub async fn create_task(
                 ?,
                 ?
             )
-            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: Priority", Tasks.description, Tasks.due, Tasks.group_id, Tasks.finished_at
+            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as "priority: Priority", Tasks.description, Tasks.due, Tasks.group_id, Tasks.finished_at, Tasks.created_at
             
         "#,
         *task.id,
@@ -54,7 +55,8 @@ pub async fn create_task(
         *task.name,
         task.priority,
         task.description,
-        task.due
+        task.due,
+        task.created_at,
     )
     .fetch_one(&state.pool)
     .await.inspect_err(|e|error!("{:?}", e))?;
@@ -76,6 +78,7 @@ pub async fn create_task(
         inserted.priority,
         inserted.description,
         inserted.finished_at,
+        inserted.created_at,
         inserted.due,
     );
 
@@ -117,6 +120,7 @@ async fn fetch_task(
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
+                        t.created_at,
                         t.due
                     FROM Tasks t
                     JOIN Groups g ON t.group_id = g.pub_id
@@ -142,6 +146,7 @@ async fn fetch_task(
                         row.priority,
                         row.description,
                         row.finished_at,
+                        row.created_at,
                         row.due,
                     )
                 })
@@ -184,6 +189,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
                         t.priority as "priority: Priority",
                         t.description,
                         t.finished_at,
+                        t.created_at,
                         t.due
                     FROM Tasks t
                     JOIN Groups g ON t.group_id = g.pub_id
@@ -211,6 +217,7 @@ async fn fetch_group(group_id: Id, pool: &Pool<Sqlite>) -> Result<Vec<Task>, Tar
             row.priority,
             row.description,
             row.finished_at,
+            row.created_at,
             row.due,
         );
 
@@ -285,6 +292,7 @@ async fn update_task(
             priority as "priority: Priority",
             description,
             finished_at,
+            created_at,
             due
         "#,
         *task.name,
@@ -311,6 +319,7 @@ async fn update_task(
         row.priority,
         row.description,
         row.finished_at,
+        row.created_at,
         row.due,
     );
 
@@ -354,6 +363,7 @@ async fn delete_task(
                 t.priority as "priority: Priority",
                 t.description,
                 t.finished_at,
+                t.created_at,
                 t.due
                 FROM Tasks t
                 JOIN Groups g ON t.group_id = g.pub_id
@@ -378,6 +388,7 @@ async fn delete_task(
         row.priority,
         row.description,
         row.finished_at,
+        row.created_at,
         row.due,
     );
 
