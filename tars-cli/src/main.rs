@@ -1,6 +1,6 @@
 use crate::{
     args::{CliArgs, Commands},
-    export::{export, import},
+    serializer::{export, import},
 };
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
@@ -8,8 +8,8 @@ use common::TarsClient;
 use handlers::{group_handler, task_handler};
 use rustyline::{Config, Editor, history::FileHistory};
 mod args;
-mod export;
 mod handlers;
+mod serializer;
 
 #[tokio::main]
 async fn main() -> Result<()> {

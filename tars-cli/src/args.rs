@@ -29,6 +29,9 @@ pub enum Commands {
     Export(ExportArgs),
 
     /// Imports bulk data into TARS
+    /// NOTE: By default the importer will fill in fields with
+    // default values if they arent present / aren't able to be
+    // parsed properly
     Import(ImportArgs),
 }
 
@@ -55,6 +58,8 @@ pub struct ImportArgs {
     pub in_file: PathBuf,
 
     #[arg(short, long, default_value = "false")]
+    /// Will make the importer import strictly, failing on any schema mismatch
+    /// or missing fields.
     pub strict: bool,
 }
 
