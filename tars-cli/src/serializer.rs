@@ -213,6 +213,18 @@ pub fn extract_group(group_json: &Value) -> Group {
         })
         .unwrap_or_default();
 
+    let created_at = if let Some(v) = group_json.get("created_at")
+        && let Some(str) = v.as_str()
+        && v.is_string()
+    {
+        parse_date_time(str).expect(
+            "created_at datetime exists but couldnt be
+            parsed properly!",
+        )
+    } else {
+        Local::now().naive_local()
+    };
+
     let color = group_json
         .get("color")
         .map(|c| {
@@ -224,5 +236,5 @@ pub fn extract_group(group_json: &Value) -> Group {
         })
         .unwrap_or_else(Color::random);
 
-    Group::with_all_fields(id, name, parent_id, priority, color)
+    Group::with_all_fields(id, name, parent_id, priority, created_at, color)
 }
