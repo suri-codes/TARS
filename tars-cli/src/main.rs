@@ -1,4 +1,7 @@
-use crate::args::{CliArgs, Commands};
+use crate::{
+    args::{CliArgs, Commands},
+    serializer::{export, import},
+};
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
 use common::TarsClient;
@@ -6,6 +9,7 @@ use handlers::{group_handler, task_handler};
 use rustyline::{Config, Editor, history::FileHistory};
 mod args;
 mod handlers;
+mod serializer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,6 +22,9 @@ async fn main() -> Result<()> {
         Commands::Group(g_sub) => group_handler(&client, g_sub).await,
 
         Commands::Task(t_sub) => task_handler(&client, t_sub).await,
+
+        Commands::Export(ex_args) => export(ex_args).await,
+        Commands::Import(im_args) => import(im_args).await,
     }
 }
 

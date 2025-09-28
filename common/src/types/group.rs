@@ -150,6 +150,29 @@ impl Group {
         Ok(res)
     }
 
+    /// Forcefully creates this `Group`...
+    /// WARN: If youre just trying to make a new group / don't know
+    /// what youre doing, use `Group::new()` instead.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
+    pub async fn raw_create(&self, client: &TarsClient) -> Result<(), TarsError> {
+        let _: Group = client
+            .conn
+            .post(client.base_path.join("/group/create")?)
+            .json(&self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?;
+
+        Ok(())
+    }
+
     /// Fetches all `Group`s.
     ///
     /// # Errors

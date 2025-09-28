@@ -81,6 +81,28 @@ impl Task {
 
         Ok(res)
     }
+    /// Forcefully creates this `Task`...
+    /// WARN: If youre just trying to make a new task / don't know
+    /// what youre doing, use `Task::new()` instead.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
+    pub async fn raw_create(&self, client: &TarsClient) -> Result<(), TarsError> {
+        let _: Task = client
+            .conn
+            .post(client.base_path.join("/task/create")?)
+            .json(&self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
+
+        Ok(())
+    }
 
     /// Fetches `Task`s that match the criteria specified by `TaskFetchOptions`.
     ///

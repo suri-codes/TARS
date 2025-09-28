@@ -1,4 +1,5 @@
 /target
 .env
+*.json
 
 .DS_Store
