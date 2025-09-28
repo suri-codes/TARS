@@ -25,7 +25,10 @@ pub async fn export(args: ExportArgs) -> Result<()> {
 
     let export_info_str = serde_json::to_string_pretty(&export_info)?;
 
-    fs::write(args.out_file, export_info_str).map_err(|e| eyre!(e))
+    fs::write(args.out_file.as_path(), export_info_str).map_err(|e| eyre!(e))?;
+
+    println!("Exported to file {}", args.out_file.to_string_lossy());
+    Ok(())
 }
 
 pub async fn import(args: ImportArgs) -> Result<()> {
@@ -68,9 +71,17 @@ pub async fn import(args: ImportArgs) -> Result<()> {
         SerializedInfo { groups, tasks }
     };
 
+    let client = TarsClient::default().await?;
+
     for group in import_info.groups {
-        
+        group.raw_create(&client).await?;
     }
+
+    for task in import_info.tasks {
+        task.raw_create(&client).await?;
+    }
+
+    println!("Successfully imported tasks!");
 
     Ok(())
 }
@@ -97,7 +108,7 @@ pub fn extract_task(task_json: &Value) -> Task {
     let group = extract_group(
         task_json
             .get("group")
-            //TODO: ideally we would handle this kind of error nicely but im too lazy rn
+            //NOTE: dont think there is a nice way to handle this
             .expect("Error while extracting! Task doesn't contain group!"),
     );
 

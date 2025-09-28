@@ -1,6 +1,6 @@
 use crate::{
     args::{CliArgs, Commands},
-    export::export,
+    export::{export, import},
 };
 use clap::Parser;
 use color_eyre::{eyre::Result, owo_colors::OwoColorize};
@@ -24,6 +24,7 @@ async fn main() -> Result<()> {
         Commands::Task(t_sub) => task_handler(&client, t_sub).await,
 
         Commands::Export(ex_args) => export(ex_args).await,
+        Commands::Import(im_args) => import(im_args).await,
     }
 }
 

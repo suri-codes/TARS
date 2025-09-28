@@ -150,7 +150,7 @@ impl Group {
         Ok(res)
     }
 
-    /// Takes in a raw group and forcefully creates it..
+    /// Forcefully creates this `Group`...
     /// WARN: If youre just trying to make a new group / don't know
     /// what youre doing, use `Group::new()` instead.
     ///
