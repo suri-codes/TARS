@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO Groups (pub_id, name, parent_id, color, created_at,priority)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Groups.name as \"name: Name\", Groups.pub_id as \"id: Id\", Groups.parent_id as \"parent_id: Id\", Groups.color as \"color: Color\",Groups.created_at, Groups.priority as \"priority: Priority\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name: Name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "id: Id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id: Id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "color: Color",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "fb485072017e95e13e9b255fc8eb2eebed4a4c5d9b88bfb7a6888e8be79e0e1a"
+}

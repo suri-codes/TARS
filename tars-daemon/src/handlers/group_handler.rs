@@ -39,20 +39,22 @@ async fn create_group(
     let inserted = sqlx::query_as!(
         Group,
         r#"
-            INSERT INTO Groups (pub_id, name, parent_id, color, priority)
+            INSERT INTO Groups (pub_id, name, parent_id, color, created_at,priority)
             VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
                 ?,
                 ?
             )
-            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color", Groups.priority as "priority: Priority"
+            RETURNING Groups.name as "name: Name", Groups.pub_id as "id: Id", Groups.parent_id as "parent_id: Id", Groups.color as "color: Color",Groups.created_at, Groups.priority as "priority: Priority"
         "#,
         *group.id,
         *group.name,
         group.parent_id,
         group.color,
+        group.created_at,
         group.priority
     )
     .fetch_one(&state.pool)
@@ -89,6 +91,7 @@ async fn fetch_groups(State(state): State<DaemonState>) -> Result<Json<Vec<Group
         name as "name: Name",
         parent_id as "parent_id: Id",
         color as "color: Color",
+        created_at,
         priority as "priority: Priority"
         FROM Groups
         "#
@@ -131,6 +134,7 @@ async fn update_group(
                 pub_id as "id: Id",
                 parent_id as "parent_id: Id",
                 color as "color: Color",
+                created_at,
                 priority as "priority: Priority"
 
         "#,
@@ -175,6 +179,7 @@ async fn delete_group(
                 name as "name: Name",
                 parent_id as "parent_id: Id",
                 color as "color: Color",
+                created_at,
                 priority as "priority: Priority"
            
         "#,

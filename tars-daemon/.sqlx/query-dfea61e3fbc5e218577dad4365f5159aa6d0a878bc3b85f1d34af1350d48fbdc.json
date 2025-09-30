@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                g.parent_id as \"group_parent_id: Id\",\n                g.color as \"group_color: Color\",\n                g.priority as \"group_priority: Priority\",\n\n                t.group_id,\n                t.priority as \"priority: Priority\",\n                t.description,\n                t.finished_at,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
+  "query": "\n            SELECT\n                t.pub_id as task_id,\n                t.name as task_name,\n                g.name as group_name,\n                g.parent_id as \"group_parent_id: Id\",\n                g.color as \"group_color: Color\",\n                g.created_at as group_created_at,\n                g.priority as \"group_priority: Priority\",\n                t.group_id,\n                t.priority as \"priority: Priority\",\n                t.description,\n                t.finished_at,\n                t.created_at,\n                t.due\n                FROM Tasks t\n                JOIN Groups g ON t.group_id = g.pub_id\n                WHERE t.pub_id = ?\n\n        ",
   "describe": {
     "columns": [
       {
@@ -29,33 +29,43 @@
         "type_info": "Text"
       },
       {
-        "name": "group_priority: Priority",
+        "name": "group_created_at",
         "ordinal": 5,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "group_priority: Priority",
+        "ordinal": 6,
         "type_info": "Integer"
       },
       {
         "name": "group_id",
-        "ordinal": 6,
+        "ordinal": 7,
         "type_info": "Text"
       },
       {
         "name": "priority: Priority",
-        "ordinal": 7,
+        "ordinal": 8,
         "type_info": "Integer"
       },
       {
         "name": "description",
-        "ordinal": 8,
+        "ordinal": 9,
         "type_info": "Text"
       },
       {
         "name": "finished_at",
-        "ordinal": 9,
+        "ordinal": 10,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 11,
         "type_info": "Datetime"
       },
       {
         "name": "due",
-        "ordinal": 10,
+        "ordinal": 12,
         "type_info": "Datetime"
       }
     ],
@@ -72,9 +82,11 @@
       false,
       false,
       false,
+      false,
       true,
+      false,
       true
     ]
   },
-  "hash": "6244e872f3757ca29f1809acf212154b0a4a0b77966fbba3b61adc96f34627e2"
+  "hash": "dfea61e3fbc5e218577dad4365f5159aa6d0a878bc3b85f1d34af1350d48fbdc"
 }

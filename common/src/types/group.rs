@@ -1,17 +1,16 @@
-use rand::random_range;
+use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use sqlx::Decode;
 use sqlx::{Database, Encode, Sqlite, Type};
 use std::fmt::Display;
 
 use color_eyre::owo_colors::OwoColorize;
-use ratatui::style::Color as RatColor;
 use tracing::error;
 
 use std::error::Error;
 
-use crate::types::Priority;
-use crate::{ParseError, TarsClient, TarsError};
+use crate::types::{Color, Priority};
+use crate::{TarsClient, TarsError};
 
 use super::{Id, Name};
 
@@ -22,94 +21,17 @@ pub struct Group {
     pub name: Name,
     pub priority: Priority,
     pub parent_id: Option<Id>,
+    pub created_at: NaiveDateTime,
     pub color: Color,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone, PartialOrd, Ord)]
-/// A wrapper type for colors that can directly be converted to ratatui colors.
-pub struct Color(String);
-
-impl TryFrom<String> for Color {
-    type Error = ParseError;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let _col: RatColor = value.parse().map_err(|_| ParseError::FailedToParse)?;
-
-        Ok(Self(value))
-    }
-}
-
-impl From<&Color> for RatColor {
-    fn from(value: &Color) -> Self {
-        let col: RatColor = value.0.parse().unwrap();
-        col
-    }
-}
-
-impl From<Color> for RatColor {
-    fn from(value: Color) -> Self {
-        let col: RatColor = value.0.parse().unwrap();
-        col
-    }
-}
-
-impl From<RatColor> for Color {
-    fn from(value: RatColor) -> Self {
-        Color(value.to_string())
-    }
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Self("white".to_owned())
-    }
-}
-
-impl AsRef<Color> for Color {
-    fn as_ref(&self) -> &Color {
-        self
-    }
-}
-
-impl Color {
-    /// Parser for clap to form this type from a string.
-    pub fn parse_str(str: &str) -> Result<Self, ParseError> {
-        let x: Color = str.to_owned().try_into()?;
-
-        Ok(x)
-    }
-
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-
-    pub fn random() -> Self {
-        let rat_col = match random_range(0..=13) {
-            0 => RatColor::Red,
-            1 => RatColor::Green,
-            2 => RatColor::Yellow,
-            3 => RatColor::Blue,
-            4 => RatColor::Magenta,
-            5 => RatColor::Cyan,
-            6 => RatColor::Gray,
-            7 => RatColor::DarkGray,
-            8 => RatColor::LightRed,
-            9 => RatColor::LightGreen,
-            10 => RatColor::LightYellow,
-            11 => RatColor::LightBlue,
-            12 => RatColor::LightMagenta,
-            13 => RatColor::LightCyan,
-            _ => panic!("impossible"),
-        };
-
-        rat_col.into()
-    }
-}
 impl Group {
     pub fn with_all_fields(
         id: impl Into<Id>,
         name: impl Into<Name>,
         parent_id: Option<Id>,
         priority: Priority,
+        created_at: NaiveDateTime,
         color: Color,
     ) -> Self {
         Group {
@@ -117,6 +39,7 @@ impl Group {
             name: name.into(),
             parent_id,
             priority,
+            created_at,
             color,
         }
     }
@@ -134,7 +57,10 @@ impl Group {
         priority: Priority,
         color: Color,
     ) -> Result<Self, TarsError> {
-        let group = Group::with_all_fields(Id::default(), name, parent_id, priority, color);
+        let created_at = Local::now().naive_local();
+
+        let group =
+            Group::with_all_fields(Id::default(), name, parent_id, priority, created_at, color);
 
         let res: Group = client
             .conn
@@ -148,6 +74,29 @@ impl Group {
             .inspect_err(|e| error!("Error creating Group: {:?}", e))?;
 
         Ok(res)
+    }
+
+    /// Forcefully creates this `Group`...
+    /// WARN: If youre just trying to make a new group / don't know
+    /// what youre doing, use `Group::new()` instead.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if
+    /// Something goes wrong with the requests to the Daemon.
+    pub async fn raw_create(&self, client: &TarsClient) -> Result<(), TarsError> {
+        let _: Group = client
+            .conn
+            .post(client.base_path.join("/group/create")?)
+            .json(&self)
+            .send()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?
+            .json()
+            .await
+            .inspect_err(|e| error!("Error creating Group: {:?}", e))?;
+
+        Ok(())
     }
 
     /// Fetches all `Group`s.
