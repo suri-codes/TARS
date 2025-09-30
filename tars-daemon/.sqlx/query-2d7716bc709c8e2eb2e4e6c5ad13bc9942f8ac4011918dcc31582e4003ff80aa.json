@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT name as \"name: Name\", pub_id as \"id: Id\", parent_id as \"parent_id: Id\", color as \"color: Color\",created_at, priority as \"priority: Priority\" FROM Groups WHERE pub_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name: Name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "id: Id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id: Id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "color: Color",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2d7716bc709c8e2eb2e4e6c5ad13bc9942f8ac4011918dcc31582e4003ff80aa"
+}

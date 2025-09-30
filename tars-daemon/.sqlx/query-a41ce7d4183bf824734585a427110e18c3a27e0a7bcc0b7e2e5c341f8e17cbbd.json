@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO Tasks (pub_id, group_id, name, priority, description, due, created_at)\n            VALUES (\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?,\n                ?\n            )\n            RETURNING Tasks.pub_id, Tasks.name, Tasks.priority as \"priority: Priority\", Tasks.description, Tasks.due, Tasks.group_id, Tasks.finished_at, Tasks.created_at\n            \n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "pub_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority: Priority",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "due",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "group_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "finished_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "a41ce7d4183bf824734585a427110e18c3a27e0a7bcc0b7e2e5c341f8e17cbbd"
+}
