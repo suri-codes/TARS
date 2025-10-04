@@ -39,7 +39,10 @@
 <h3 align="center">TARS</h3>
 
   <p align="center">
-    project_description
+    For my first piece of highly personalized software that solves highly
+    personalized problems, I decided to make some software that would help me
+    keep track of short-term and longterm goals while also being quick and easy
+    to use! 
     <br />
     <a href="https://github.com/suri-codes/TARS"><strong>Explore the docs »</strong></a>
     <br />
@@ -60,9 +63,6 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
@@ -85,26 +85,13 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+[![TARS Tui][product-screenshot]](https://suri.codes/TARS_DEMO.png)
 
-Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `suri-codes`, `TARS`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `TARS`, `project_description`, `project_license`
+TODO: Blurb about tars
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-### Built With
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
@@ -181,9 +168,6 @@ If you have a suggestion that would make this better, please fork the repo and c
 Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -208,26 +192,14 @@ Distributed under the project_license. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+TODO: Blurb about tars
+
 
 Project Link: [https://github.com/suri-codes/TARS](https://github.com/suri-codes/TARS)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
+-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/suri-codes/TARS.svg?style=for-the-badge
 [contributors-url]: https://github.com/suri-codes/TARS/graphs/contributors
