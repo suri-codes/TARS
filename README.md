@@ -39,10 +39,6 @@
 <h3 align="center">TARS</h3>
 
   <p align="center">
-    For my first piece of highly personalized software that solves highly
-    personalized problems, I decided to make some software that would help me
-    keep track of short-term and longterm goals while also being quick and easy
-    to use! 
     <br />
     <a href="https://github.com/suri-codes/TARS"><strong>Explore the docs »</strong></a>
     <br />
@@ -55,42 +51,16 @@
   </p>
 </div>
 
-
-
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
-
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
 [![TARS Tui][product-screenshot]](https://suri.codes/TARS_DEMO.png)
+    For my first piece of highly personalized software that solves highly
+    personalized problems, I decided to make some software that would help me
+    keep track of short-term and longterm goals while also being quick and easy
+    to use! 
 
-TODO: Blurb about tars
 
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
@@ -102,35 +72,28 @@ This is an example of how you may give instructions on setting up your project l
 To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+This project only requires rust, preferably the latest release.
 
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+I plan to distribute prebuilt binaries in the future but for now you can do the following to build and install locally.
+
+1. Clone the repo
    ```sh
    git clone https://github.com/suri-codes/TARS.git
    ```
-3. Install NPM packages
+2. Set up the Daemon
+  If you want it running to try one time just
    ```sh
-   npm install
+   cargo run --bin tars-daemon
    ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-5. Change git remote url to avoid accidental pushes to base project
+  If you want to use TARS long-term, I reccomend building the binary and adding it to your startup script. 
+3. Run the TUI
    ```sh
-   git remote set-url origin suri-codes/TARS
-   git remote -v # confirm the changes
+  cargo run --bin tars-tui
    ```
+  You can also alias this in your shell as `tars`.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
@@ -140,9 +103,6 @@ This is an example of how to list things you need to use the software and how to
 Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
 
 _For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- ROADMAP -->
@@ -155,12 +115,10 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 See the [open issues](https://github.com/suri-codes/TARS/issues) for a full list of proposed features (and known issues).
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- CONTRIBUTING -->
 ## Contributing
+
+// Not too big on contributions since the project is so early but if you really want to help out please make a PR and I can take a look
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
@@ -183,7 +141,7 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the project_license. See `LICENSE.txt` for more information.
+Distributed under the project_license. See `LICENSE` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -192,7 +150,7 @@ Distributed under the project_license. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-TODO: Blurb about tars
+maybe my socials
 
 
 Project Link: [https://github.com/suri-codes/TARS](https://github.com/suri-codes/TARS)
