@@ -161,7 +161,7 @@ My policy on contributions will likely change once I deem the project 1.0'd, tha
 <!-- LICENSE -->
 ## License
 
-Distributed under the project_license. See `LICENSE` for more information.
+Distributed under the MIT license. See `LICENSE` for more information.
 
 
 <!-- CONTACT -->
@@ -187,8 +187,7 @@ Project Link: [https://github.com/suri-codes/TARS](https://github.com/suri-codes
 [license-shield]: https://img.shields.io/github/license/suri-codes/TARS.svg?style=for-the-badge
 [license-url]: https://github.com/suri-codes/TARS/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: https://suri.codes/TARS_DEMO.png
+[linkedin-url]: https://linkedin.com/in/suri-codes
 <!-- Shields.io badges. You can a comprehensive list with many more badges at: https://github.com/inttter/md-badges -->
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
