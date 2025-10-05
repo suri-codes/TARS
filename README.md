@@ -43,7 +43,7 @@ An opinionated take on task management.
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-<img src="https://suri.codes/tars/explorer_scoped.png" alt="Image of TARS Full" />
+<img src="https://suri.codes/tars/full.png" alt="Image of TARS Full" />
 
 I've been thinking about writing highly personal solutions that solve my problems
 precisely, rather than being satisfied with off-the-shelf tools.  I'm the kind of
