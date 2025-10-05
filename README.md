@@ -174,7 +174,7 @@ Website: www.suri.codes
 Project Link: [https://github.com/suri-codes/TARS](https://github.com/suri-codes/TARS)
 
 
-<-- MARKDOWN LINKS & IMAGES -->
+<!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/suri-codes/TARS.svg?style=for-the-badge
 [contributors-url]: https://github.com/suri-codes/TARS/graphs/contributors
