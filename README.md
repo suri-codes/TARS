@@ -37,6 +37,7 @@
   </a>
 
 <h3 align="center">TARS</h3>
+An opinionated take on task management.
 
   <p align="center">
     <br />
@@ -55,21 +56,16 @@
 ## About The Project
 
 [![TARS Tui][product-screenshot]](https://suri.codes/TARS_DEMO.png)
-    For my first piece of highly personalized software that solves highly
-    personalized problems, I decided to make some software that would help me
-    keep track of short-term and longterm goals while also being quick and easy
-    to use! 
 
-
-
-
-
+I've been thining about writing highly personal solutions that solve my problems
+exactly rather than being satisfied by off-the-shelf tools.  I'm the kind of
+person to work on 5 different things at the same time, and keeping track of what
+I'm trying to do with each project while also balancing school assignments is a
+chore. So, I decided to make some software that would help me keep track of
+short-term and longterm goals while also being quick and easy to use!
 
 <!-- GETTING STARTED -->
 ## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 This project only requires rust, preferably the latest release.
@@ -79,23 +75,20 @@ This project only requires rust, preferably the latest release.
 I plan to distribute prebuilt binaries in the future but for now you can do the following to build and install locally.
 
 1. Clone the repo
+
    ```sh
    git clone https://github.com/suri-codes/TARS.git
    ```
-2. Set up the Daemon
-  If you want it running to try one time just
+2. Run the Daemon
    ```sh
    cargo run --bin tars-daemon
    ```
-  If you want to use TARS long-term, I reccomend building the binary and adding it to your startup script. 
+  If you want to use TARS long-term, I reccomend building the binary and adding this to your startup script. The TARS-TUI will not start without the daemon running. 
 3. Run the TUI
    ```sh
   cargo run --bin tars-tui
    ```
   You can also alias this in your shell as `tars`.
-
-
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
