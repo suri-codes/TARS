@@ -38,24 +38,12 @@
 
 <h3 align="center">TARS</h3>
 An opinionated take on task management.
-
-  <!-- <p align="center"> -->
-    <!-- <br /> -->
-    <!-- <a href="https://github.com/suri-codes/TARS"><strong>Explore the docs »</strong></a> -->
-    <!-- <br /> -->
-    <!-- <br /> -->
-    <!-- <a href="https://github.com/suri-codes/TARS">View Demo</a> -->
-    <!-- &middot; -->
-    <!-- <a href="https://github.com/suri-codes/TARS/issues/new?labels=bug&template=bug-report---.md">Report Bug</a> -->
-    <!-- &middot; -->
-    <!-- <a href="https://github.com/suri-codes/TARS/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a> -->
-  <!-- </p> -->
 </div>
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![TARS Tui][product-screenshot]](https://suri.codes/tars/full.png)
+<img src="https://suri.codes/tars/explorer_scoped.png" alt="Image of TARS Full" />
 
 I've been thinking about writing highly personal solutions that solve my problems
 precisely, rather than being satisfied with off-the-shelf tools.  I'm the kind of
@@ -186,7 +174,7 @@ Website: www.suri.codes
 Project Link: [https://github.com/suri-codes/TARS](https://github.com/suri-codes/TARS)
 
 
--- MARKDOWN LINKS & IMAGES -->
+<-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/suri-codes/TARS.svg?style=for-the-badge
 [contributors-url]: https://github.com/suri-codes/TARS/graphs/contributors
