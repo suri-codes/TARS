@@ -1,0 +1,9 @@
+[package]
+name = "providers"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitflags = { version = "2.9.4", features = ["serde", "std"] }
+chrono = "0.4.42"
+serde = "1.0.228"

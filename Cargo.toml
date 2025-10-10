@@ -1,5 +1,5 @@
 
 
 [workspace]
-members = [ "tars-cli","tars-tui","tars-daemon", "common"]
+members = [ "tars-cli","tars-tui","tars-daemon", "common", "providers"]
 resolver = "3"
