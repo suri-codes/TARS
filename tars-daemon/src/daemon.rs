@@ -6,7 +6,6 @@ use sqlx::{Pool, Sqlite};
 use tokio::{
     net::TcpListener,
     sync::broadcast::{self, Sender},
-    task::JoinError,
 };
 use tracing::{error, info, warn};
 
@@ -98,9 +97,8 @@ async fn spawn_providers() -> Result<()> {
             return Ok(());
         };
 
-        info!("config_table: {config_table:#?}");
         // hard check for provider being a table
-        if let Some(provider_table) = config_table.get("provider")
+        if let Some(provider_table) = config_table.get("providers")
             && provider_table.is_table()
         {
             provider_table.as_table().cloned().unwrap()

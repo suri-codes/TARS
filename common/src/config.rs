@@ -49,7 +49,7 @@ impl TarsConfig {
 
         let table: Table = config_as_str
             .parse()
-            .map_err(|e| TarsError::Parse(ParseError::FailedToParse))?;
+            .map_err(|_e| TarsError::Parse(ParseError::FailedToParse))?;
 
         Ok(Some(table))
     }
