@@ -47,11 +47,11 @@ interval = "30d"
         info!("found reg: {}", reg.id);
         if enabled_ids.contains(&reg.id) {
             let cfg = raw_config.get(reg.id).expect("config missing");
-            tokio::spawn((reg.create_and_run)(cfg));
+            let x = tokio::spawn((reg.create_and_run)(cfg));
         }
     }
 
-    tokio::join!(daemon_handle);
-
+    //Make this actually work
+    let _ = tokio::join!(daemon_handle);
     Ok(())
 }
