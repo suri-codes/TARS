@@ -51,15 +51,7 @@ interval = "30d"
         }
     }
 
-    // let providers_handle = tokio::spawn(async move {
-    //     let client = TarsClient::default().await.expect("should be just fine");
-    //     for reg in inventory::iter::<ProviderRegistration> {
-    //         if let Some(cfg) = configs.get(reg.id) {
-    //             // Assuming run() is async and sequential execution is fine
-    //             reg.runtime.run(cfg, &client).await;
-    //         }
-    //     }
-    // });
+    tokio::join!(daemon_handle);
 
     Ok(())
 }

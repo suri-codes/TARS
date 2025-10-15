@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
 use common::TarsClient;
 use provider_types::{ProviderRegistration, ProviderRuntime};
 use serde::{Deserialize, Serialize};
+use tokio::time::sleep;
 use toml::Value;
 
+use tracing::info;
 bitflags! {
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Days: u32 {
@@ -64,8 +68,11 @@ impl ProviderRuntime for RecurringProvider {
         client: &TarsClient,
     ) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
         Box::pin(async move {
-            println!("running recurring!");
-            println!("running client!")
+            loop {
+                info!("running recurring!");
+                info!("running client!");
+                sleep(Duration::from_secs(5)).await
+            }
         })
     }
 }

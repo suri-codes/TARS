@@ -12,3 +12,5 @@ inventory = "0.3.21"
 provider-types = {path = "../../provider-types"}
 
 common = {path="../../common"}
+tracing = "0.1.41"
+tokio = "1.48.0"
