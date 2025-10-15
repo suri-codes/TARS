@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
-use common::{ParseError, TarsClient, TarsError};
+use common::{TarsClient, TarsError};
 use provider_types::{ProviderRegistration, ProviderRuntime};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -47,12 +47,12 @@ pub struct RecurringProviderConfig {
 
 /// A simple provider that can handle recurring events
 pub struct RecurringProvider {
-    config: RecurringProviderConfig,
+    _config: RecurringProviderConfig,
 }
 
 //NOTE: this should be try_from
 impl TryFrom<&Value> for RecurringProviderConfig {
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+    fn try_from(_value: &Value) -> Result<Self, Self::Error> {
         // Err(TarsError::Parse(ParseError::FailedToParse))
 
         Ok(Self { events: Vec::new() })
@@ -63,7 +63,7 @@ impl TryFrom<&Value> for RecurringProviderConfig {
 
 impl RecurringProvider {
     pub fn new(config: RecurringProviderConfig) -> Self {
-        RecurringProvider { config }
+        RecurringProvider { _config: config }
     }
 }
 
@@ -74,7 +74,7 @@ impl ProviderRuntime for RecurringProvider {
         RECURRING_ID
     }
 
-    fn run(&self, client: TarsClient) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
+    fn run(&self, _client: TarsClient) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
         Box::pin(async move {
             loop {
                 info!("running recurring!");

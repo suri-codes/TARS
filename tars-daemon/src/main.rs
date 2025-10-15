@@ -1,10 +1,10 @@
 use color_eyre::Result;
 use common::DAEMON_ADDR;
+use common::TarsConfig;
 use common::logging;
 use provider_types::ProviderRegistration;
 use tars_daemon::{DaemonState, Db, TarsDaemon};
 use toml::Table;
-use toml::Value;
 use tracing::info;
 
 // need to do this to link to providers
@@ -18,40 +18,6 @@ async fn main() -> Result<()> {
 
     let state = DaemonState::new(db, DAEMON_ADDR);
 
-    let raw = r#"
-providers = ["recurring"]
-
-[recurring]
-interval = "30d"
-"#;
-
-    let raw_config: Table = raw.trim().parse().expect("invalid TOML");
-
-    // Spawn Axum daemon in background — does NOT block
-    let daemon_handle = tokio::spawn(async move {
-        let daemon = TarsDaemon::init(state).await;
-        daemon.run().await; // This will run Axum forever unless shutdown signal
-    });
-
-    let enabled = raw_config
-        .get("providers")
-        .and_then(|v| v.as_array())
-        .expect("providers array missing");
-
-    info!("enabled providers: {:#?}", enabled);
-
-    let enabled_ids: Vec<_> = enabled.iter().filter_map(|v| v.as_str()).collect();
-    info!("enabled provider_ids: {:#?}", enabled_ids);
-
-    for reg in inventory::iter::<ProviderRegistration> {
-        info!("found reg: {}", reg.id);
-        if enabled_ids.contains(&reg.id) {
-            let cfg = raw_config.get(reg.id).expect("config missing");
-            let x = tokio::spawn((reg.create_and_run)(cfg));
-        }
-    }
-
-    //Make this actually work
-    let _ = tokio::join!(daemon_handle);
-    Ok(())
+    let daemon = TarsDaemon::init(state).await;
+    daemon.run().await // This will run Axum forever unless shutdown signal
 }

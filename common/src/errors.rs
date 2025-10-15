@@ -1,3 +1,5 @@
+use std::io;
+
 use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use thiserror::Error;
@@ -26,7 +28,10 @@ pub enum TarsError {
     UrlError(#[from] url::ParseError),
 
     #[error("Send Error!")]
-    SendError(#[from] SendError<Diff>),
+    SendError(#[from] SendError<Box<Diff>>),
+
+    #[error("Io Error!")]
+    IOError(#[from] io::Error),
 }
 
 impl IntoResponse for TarsError {
@@ -38,10 +43,8 @@ impl IntoResponse for TarsError {
                 sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             },
-            TarsError::Parse(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            // this would never be hit
-            TarsError::UrlError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            TarsError::SendError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         tracing::error!("TarsError: {:?}, returning status code: {}", self, status);

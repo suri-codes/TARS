@@ -1,3 +1,5 @@
+use std::fs::OpenOptions;
+
 use color_eyre::{Result, eyre::eyre};
 use tracing::{Level, level_filters::LevelFilter};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
@@ -11,7 +13,13 @@ pub fn init(logfile_name: &str, term_out: bool) -> Result<()> {
     let directory = get_data_dir();
     std::fs::create_dir_all(directory.clone())?;
     let log_path = directory.join(logfile_name);
-    let log_file = std::fs::File::create(log_path)?;
+
+    let log_file = OpenOptions::new()
+        .read(true)
+        .create(true)
+        .truncate(false)
+        .append(true)
+        .open(log_path)?;
 
     let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::INFO.into());
     // If the `RUST_LOG` environment variable is set, use that as the default, otherwise use the

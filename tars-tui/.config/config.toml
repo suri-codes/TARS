@@ -44,7 +44,7 @@ scroll_offset = 4
 "t" = "NewTask"
 "g" = "NewSubGroup"
 
-providers = ["recurring"]
 
-[recurring]
+
+[providers.recurring]
 interval = "30d"
