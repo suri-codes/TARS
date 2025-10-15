@@ -1,8 +1,8 @@
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
+use provider_types::ProviderRuntime;
 use serde::{Deserialize, Serialize};
-
-use crate::Provider;
+use toml::Value;
 
 bitflags! {
     #[derive(Serialize, Deserialize, Debug)]
@@ -45,6 +45,20 @@ pub struct RecurringProvider {
     config: RecurringProviderConfig,
 }
 
-impl Provider for RecurringProvider {
-    
+const RECURRING_ID: &str = "recurring";
+
+impl ProviderRuntime for RecurringProvider {
+    fn id(&self) -> &'static str {
+        RECURRING_ID
+    }
+
+    fn register(&self, config: &Value) {
+        
+    }
+
+    fn run(
+        &self,
+        config: &Box<dyn std::any::Any>,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Option<provider_types::RunResult>> + Send>> {
+    }
 }

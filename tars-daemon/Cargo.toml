@@ -19,7 +19,6 @@ futures-util = "0.3.31"
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 serde_json = "1.0.141"
 
-
 [[bench]]
 name = "task"
 harness = false
@@ -27,3 +26,8 @@ harness = false
 [[bench]]
 name = "group"
 harness = false
+
+
+[lib]
+crate-type = ["rlib", "dylib"]
+

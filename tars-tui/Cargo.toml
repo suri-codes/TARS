@@ -43,7 +43,7 @@ tokio-util = "0.7.12"
 tracing = "0.1.40"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "serde"] }
-toml = "0.8.23"
+toml = "0.9.8"
 async-trait = "0.1.88"
 # id_tree = {version = "1.8.0", features = ["serde_support"]}
 id_tree = { git = "https://github.com/Suri312006/id-tree.git", features = ["serde_support"] }
