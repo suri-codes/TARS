@@ -4676,6 +4676,7 @@ dependencies = [
  "futures-util",
  "inventory",
  "provider-types",
+ "recurring",
  "serde",
  "serde_json",
  "sqlx",

@@ -18,13 +18,16 @@ pub enum RunInterval {
 }
 
 pub trait ProviderRuntime: Sync + Send {
+    type Config: Send + Sync + 'static;
+
     fn id(&self) -> &'static str;
 
-    fn register(&self, config: &Value);
+    fn parse_config(&self, config: &Value) -> Self::Config;
 
     fn run(
         &self,
-        config: &Box<dyn Any>,
+        config: &Self::Config,
         client: &TarsClient,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+
 }

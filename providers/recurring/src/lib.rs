@@ -1,9 +1,7 @@
-use std::any::Any;
-
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
 use common::TarsClient;
-use provider_types::{ProviderRegistration, ProviderRuntime, register_provider};
+use provider_types::{ProviderRegistration, ProviderRuntime};
 use serde::{Deserialize, Serialize};
 use toml::Value;
 
@@ -49,36 +47,40 @@ pub struct RecurringProvider;
 const RECURRING_ID: &str = "recurring";
 
 impl ProviderRuntime for RecurringProvider {
+    type Config = RecurringProviderConfig;
+
     fn id(&self) -> &'static str {
         RECURRING_ID
     }
 
-    fn register(&self, config: &Value) {
-        register_provider(RECURRING_ID, |value| {
-            println!("{:#?}", value);
-
-            let cfg = RecurringProviderConfig { events: Vec::new() };
-
-            Box::new(cfg)
-        });
+    fn parse_config(&self, raw: &Value) -> RecurringProviderConfig {
+        RecurringProviderConfig { events: Vec::new() }
+        // raw.clone().try_into().expect("Failed to parse MyConfig") // or serde::Deserialize
     }
 
     fn run(
         &self,
-        config: &Box<dyn Any>,
+        config: &RecurringProviderConfig,
         client: &TarsClient,
     ) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
-        let config = config
-            .downcast_ref::<RecurringProviderConfig>()
-            .expect("should be valid");
-
         Box::pin(async move {
             println!("running recurring!");
             println!("running client!")
         })
     }
 }
-inventory::submit! {ProviderRegistration {
-    id: RECURRING_ID,
-    runtime: &RecurringProvider
-}}
+
+inventory::submit! {
+    ProviderRegistration {
+        id: RECURRING_ID,
+        create_and_run: |raw: &Value| {
+            let recurring_provider = RecurringProvider;
+            let cfg = recurring_provider.parse_config(raw);
+            Box::pin(async move {
+
+                let client = TarsClient::default().await.unwrap();
+                recurring_provider.run(&cfg, &client).await;
+            })
+        }
+    }
+}

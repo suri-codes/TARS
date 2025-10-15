@@ -21,6 +21,7 @@ serde_json = "1.0.141"
 provider-types = {path = "../provider-types"}
 toml = "0.9.8"
 inventory = "0.3.21"
+recurring = {path = "../providers/recurring"}
 
 [[bench]]
 name = "task"
