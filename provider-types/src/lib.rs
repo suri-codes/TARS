@@ -7,9 +7,10 @@ pub trait ProviderRuntime: Sync + Send {
     fn run(&self, client: TarsClient) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 }
 
+type RunResult = Pin<Box<dyn Future<Output = ()> + Send>>;
 pub struct ProviderRegistration {
     pub id: &'static str,
-    pub create_and_run: fn(&Value) -> Pin<Box<dyn Future<Output = ()> + Send>>,
+    pub create_and_run: fn(&Value, TarsClient) -> RunResult,
 }
 
 inventory::collect!(ProviderRegistration);

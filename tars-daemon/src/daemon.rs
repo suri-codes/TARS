@@ -1,6 +1,6 @@
 use axum::{Router, routing::get};
 use color_eyre::eyre::{Result, eyre};
-use common::{Diff, TarsConfig};
+use common::{Diff, TarsClient, TarsConfig};
 use provider_types::ProviderRegistration;
 use sqlx::{Pool, Sqlite};
 use tokio::{
@@ -73,13 +73,13 @@ impl TarsDaemon {
 
         match axum_res {
             Err(join_err) => return Err(eyre!("Axum task panicked: {}", join_err)),
-            Ok(inner) => inner?, // This propagates serve(...) errors (eyre::Report)
+            Ok(inner) => inner?,
         }
 
         match provider_res {
             Err(join_err) => warn!("Provider task panicked: {}", join_err),
             Ok(Err(e)) => warn!("Provider returned error: {}", e),
-            Ok(Ok(())) => {} // All good
+            Ok(Ok(())) => {}
         }
 
         Ok(())
@@ -107,9 +107,11 @@ async fn spawn_providers() -> Result<()> {
         }
     };
 
+    let shared_client = TarsClient::default().await?;
+
     for provider in inventory::iter::<ProviderRegistration> {
         if let Some(cfg) = provider_configs.get(provider.id) {
-            tokio::spawn((provider.create_and_run)(cfg));
+            tokio::spawn((provider.create_and_run)(cfg, shared_client.clone()));
         }
     }
 

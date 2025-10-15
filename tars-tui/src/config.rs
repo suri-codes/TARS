@@ -5,7 +5,6 @@ use derive_deref::{Deref, DerefMut};
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, de::Deserializer};
 use std::{collections::HashMap, fs};
-use tracing::info;
 
 use crate::{action::Action, app::Mode};
 
@@ -167,6 +166,7 @@ fn parse_key_code_with_modifiers(
     Ok(KeyEvent::new(c, modifiers))
 }
 
+#[allow(dead_code)]
 pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let char;
     let key_code = match key_event.code {

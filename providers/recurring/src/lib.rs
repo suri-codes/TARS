@@ -88,11 +88,10 @@ impl ProviderRuntime for RecurringProvider {
 inventory::submit! {
     ProviderRegistration {
         id: RECURRING_ID,
-        create_and_run: |raw: &Value| {
+        create_and_run: |raw: &Value, client: TarsClient| {
             let cfg = RecurringProviderConfig::try_from(raw).unwrap();
             let recurring_provider = RecurringProvider::new(cfg);
             Box::pin(async move {
-                let client = TarsClient::default().await.unwrap();
                 recurring_provider.run(client).await;
             })
         }
