@@ -27,7 +27,6 @@ pub trait ProviderRuntime: Sync + Send {
     fn run(
         &self,
         config: &Self::Config,
-        client: &TarsClient,
+        client: TarsClient,
     ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
-
 }

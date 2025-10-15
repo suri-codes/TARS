@@ -2,7 +2,10 @@ use std::time::Duration;
 
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
-use common::TarsClient;
+use common::{
+    TarsClient,
+    types::{Color, Group},
+};
 use provider_types::{ProviderRegistration, ProviderRuntime};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -65,13 +68,22 @@ impl ProviderRuntime for RecurringProvider {
     fn run(
         &self,
         config: &RecurringProviderConfig,
-        client: &TarsClient,
+        client: TarsClient,
     ) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
         Box::pin(async move {
             loop {
                 info!("running recurring!");
                 info!("running client!");
-                sleep(Duration::from_secs(5)).await
+                sleep(Duration::from_secs(5)).await;
+                // Group::new(
+                //     &client,
+                //     "default",
+                //     None,
+                //     common::types::Priority::Far,
+                //     Color::random(),
+                // )
+                // .await
+                // .unwrap();
             }
         })
     }
@@ -86,7 +98,7 @@ inventory::submit! {
             Box::pin(async move {
 
                 let client = TarsClient::default().await.unwrap();
-                recurring_provider.run(&cfg, &client).await;
+                recurring_provider.run(&cfg, client).await;
             })
         }
     }
