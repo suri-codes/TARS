@@ -1,8 +1,9 @@
 use std::{any::Any, collections::HashMap, sync::Mutex};
 
 use once_cell::sync::Lazy;
-use provider_types::ProviderRuntime;
 use toml::{Table, Value};
+
+use crate::ProviderRuntime;
 
 pub type ConfigFactory = Box<dyn Fn(&Value) -> Box<dyn Any> + Send + Sync>;
 
@@ -26,7 +27,7 @@ pub struct ProviderRegistration {
 
 inventory::collect!(ProviderRegistration);
 
-pub fn initialize_providers(raw_config: &Table) {
+pub fn initialize_providers(raw_config: &Value) {
     if let Some(enabled) = raw_config.get("providers").and_then(|v| v.as_array()) {
         let enabled_ids: Vec<_> = enabled.iter().filter_map(|v| v.as_str()).collect();
 
@@ -34,14 +35,14 @@ pub fn initialize_providers(raw_config: &Table) {
             if enabled_ids.contains(&reg.id) {
                 let provider_cfg = raw_config.get(reg.id).expect("config should exist");
 
-                reg.runtime.maybe_register(provider_cfg);
+                reg.runtime.register(provider_cfg);
             }
         }
     }
 }
 
 // example final parse entry point, optional praceholder
-pub fn parse_all_configs(raw_config: &Table) -> HashMap<String, Box<dyn Any>> {
+pub fn parse_all_configs(raw_config: &Value) -> HashMap<String, Box<dyn Any>> {
     let mut out = HashMap::new();
 
     for (id, factory) in REGISTRY.lock().unwrap().iter() {

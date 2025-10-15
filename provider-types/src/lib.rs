@@ -1,6 +1,10 @@
 use std::{any::Any, pin::Pin};
 
-use common::types::Task;
+mod provider;
+
+pub use provider::*;
+
+use common::TarsClient;
 use toml::Value;
 
 // implement this after we finish poc
@@ -18,6 +22,9 @@ pub trait ProviderRuntime: Sync + Send {
 
     fn register(&self, config: &Value);
 
-    fn run(&self, config: &Box<dyn Any>)
-    -> Pin<Box<dyn Future<Output = Option<RunResult>> + Send>>;
+    fn run(
+        &self,
+        config: &Box<dyn Any>,
+        client: &TarsClient,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send>>;
 }

@@ -1,6 +1,9 @@
+use std::any::Any;
+
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
-use provider_types::ProviderRuntime;
+use common::TarsClient;
+use provider_types::{ProviderRegistration, ProviderRuntime, register_provider};
 use serde::{Deserialize, Serialize};
 use toml::Value;
 
@@ -41,9 +44,7 @@ pub struct RecurringProviderConfig {
 }
 
 /// A simple provider that can handle recurring events
-pub struct RecurringProvider {
-    config: RecurringProviderConfig,
-}
+pub struct RecurringProvider;
 
 const RECURRING_ID: &str = "recurring";
 
@@ -53,12 +54,31 @@ impl ProviderRuntime for RecurringProvider {
     }
 
     fn register(&self, config: &Value) {
-        
+        register_provider(RECURRING_ID, |value| {
+            println!("{:#?}", value);
+
+            let cfg = RecurringProviderConfig { events: Vec::new() };
+
+            Box::new(cfg)
+        });
     }
 
     fn run(
         &self,
-        config: &Box<dyn std::any::Any>,
-    ) -> std::pin::Pin<Box<dyn Future<Output = Option<provider_types::RunResult>> + Send>> {
+        config: &Box<dyn Any>,
+        client: &TarsClient,
+    ) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
+        let config = config
+            .downcast_ref::<RecurringProviderConfig>()
+            .expect("should be valid");
+
+        Box::pin(async move {
+            println!("running recurring!");
+            println!("running client!")
+        })
     }
 }
+inventory::submit! {ProviderRegistration {
+    id: RECURRING_ID,
+    runtime: &RecurringProvider
+}}

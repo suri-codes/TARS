@@ -3560,6 +3560,8 @@ name = "provider-types"
 version = "0.1.0"
 dependencies = [
  "common",
+ "inventory",
+ "once_cell",
  "toml 0.9.8",
 ]
 
@@ -3704,6 +3706,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "chrono",
+ "common",
  "inventory",
  "provider-types",
  "serde",
@@ -4671,11 +4674,14 @@ dependencies = [
  "common",
  "criterion",
  "futures-util",
+ "inventory",
+ "provider-types",
  "serde",
  "serde_json",
  "sqlx",
  "tokio",
  "tokio-stream",
+ "toml 0.9.8",
  "tracing",
  "tracing-subscriber",
 ]
