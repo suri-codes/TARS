@@ -3528,6 +3528,7 @@ dependencies = [
 name = "provider-types"
 version = "0.1.0"
 dependencies = [
+ "color-eyre",
  "common",
  "inventory",
  "once_cell",
@@ -3675,6 +3676,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "chrono",
+ "color-eyre",
  "common",
  "inventory",
  "provider-types",

@@ -111,7 +111,12 @@ async fn spawn_providers() -> Result<()> {
 
     for provider in inventory::iter::<ProviderRegistration> {
         if let Some(cfg) = provider_configs.get(provider.id) {
-            tokio::spawn((provider.create_and_run)(cfg, shared_client.clone()));
+            tokio::spawn((provider.create_and_run)(
+                cfg.clone(),
+                shared_client.clone(),
+            ));
+
+            info!("Started {} provider!", provider.id)
         }
     }
 

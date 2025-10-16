@@ -2,13 +2,13 @@ use std::time::Duration;
 
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
-use common::{TarsClient, TarsError};
-use provider_types::{ProviderRegistration, ProviderRuntime};
+use common::TarsClient;
+use provider_types::{ProviderRegistration, ProviderRuntime, RunResult};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use toml::Value;
 
-use tracing::info;
+use tracing::{error, info};
 bitflags! {
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Days: u32 {
@@ -26,7 +26,7 @@ bitflags! {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum RepeatInterval {
     Daily,
-    Weeky,
+    Weekly,
     BiWeekly,
     Monthly,
     Yearly,
@@ -47,23 +47,12 @@ pub struct RecurringProviderConfig {
 
 /// A simple provider that can handle recurring events
 pub struct RecurringProvider {
-    _config: RecurringProviderConfig,
-}
-
-//NOTE: this should be try_from
-impl TryFrom<&Value> for RecurringProviderConfig {
-    fn try_from(_value: &Value) -> Result<Self, Self::Error> {
-        // Err(TarsError::Parse(ParseError::FailedToParse))
-
-        Ok(Self { events: Vec::new() })
-    }
-
-    type Error = TarsError;
+    config: RecurringProviderConfig,
 }
 
 impl RecurringProvider {
     pub fn new(config: RecurringProviderConfig) -> Self {
-        RecurringProvider { _config: config }
+        RecurringProvider { config }
     }
 }
 
@@ -74,11 +63,12 @@ impl ProviderRuntime for RecurringProvider {
         RECURRING_ID
     }
 
-    fn run(&self, _client: TarsClient) -> std::pin::Pin<Box<dyn Future<Output = ()> + Send>> {
+    fn run(self, _client: TarsClient) -> RunResult {
         Box::pin(async move {
             loop {
-                info!("running recurring!");
-                info!("running client!");
+                for event in self.config.events.iter() {
+                    info!("{event:#?}");
+                }
                 sleep(Duration::from_secs(5)).await;
             }
         })
@@ -88,11 +78,21 @@ impl ProviderRuntime for RecurringProvider {
 inventory::submit! {
     ProviderRegistration {
         id: RECURRING_ID,
-        create_and_run: |raw: &Value, client: TarsClient| {
-            let cfg = RecurringProviderConfig::try_from(raw).unwrap();
+        create_and_run: |config: Value, client: TarsClient| -> RunResult{
+           Box::pin(async move {
+
+            info!("{config:#?}");
+
+            let cfg: RecurringProviderConfig = config.try_into().inspect_err(|e|{
+                error!("{e}")
+            })?;
+
             let recurring_provider = RecurringProvider::new(cfg);
-            Box::pin(async move {
-                recurring_provider.run(client).await;
+
+            recurring_provider.run(client).await.inspect_err(|e|{
+                error!("{e}")
+            })
+
             })
         }
     }
