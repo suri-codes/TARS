@@ -1,7 +1,7 @@
 use axum::{Router, routing::get};
 use color_eyre::eyre::{Result, eyre};
 use common::{Diff, TarsClient, TarsConfig};
-use provider_types::ProviderRegistration;
+use providers::ProviderRegistration;
 use sqlx::{Pool, Sqlite};
 use tokio::{
     net::TcpListener,

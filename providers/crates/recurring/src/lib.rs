@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use common::{TarsClient, types::Group};
-use provider_types::{ProviderRegistration, ProviderRuntime, RunResult};
+use common::TarsClient;
+use providers::{ProviderRegistration, ProviderRuntime, RunResult};
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use toml::Value;
@@ -13,7 +13,7 @@ mod recur_task;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecurringProviderConfig {
-    events: Vec<RecurringTask>,
+    tasks: Vec<RecurringTask>,
 }
 
 /// A simple provider that can handle recurring events
@@ -34,11 +34,11 @@ impl ProviderRuntime for RecurringProvider {
         RECURRING_ID
     }
 
-    fn run(self, client: TarsClient) -> RunResult {
+    fn run(self, _client: TarsClient) -> RunResult {
         Box::pin(async move {
             loop {
-                for _event in self.config.events.iter() {
-                    let _groups = Group::fetch_all(&client).await?;
+                for _event in self.config.tasks.iter() {
+                    // let _groups = Group::fetch_all(&client).await?;
 
                     // let group =
                     //     groups

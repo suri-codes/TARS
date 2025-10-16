@@ -3525,7 +3525,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "provider-types"
+name = "providers"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
@@ -3679,7 +3679,7 @@ dependencies = [
  "color-eyre",
  "common",
  "inventory",
- "provider-types",
+ "providers",
  "serde",
  "tokio",
  "toml 0.9.8",
@@ -4637,7 +4637,7 @@ dependencies = [
  "criterion",
  "futures-util",
  "inventory",
- "provider-types",
+ "providers",
  "recurring",
  "serde",
  "serde_json",

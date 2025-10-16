@@ -1,5 +1,17 @@
 
 
 [workspace]
-members = [ "tars-cli","tars-tui","tars-daemon", "common", "provider-types", "providers/recurring", ]
+members = [
+"tars-cli",
+"tars-tui",
+"tars-daemon",
+"common",
+"providers", 
+"providers/crates/recurring",
+]
 resolver = "3"
+
+[workspace.dependencies]
+common = {path = "./common"}
+providers = {path = "./providers"}
+recurring = {path = "./providers/crates/recurring"}

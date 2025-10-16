@@ -11,17 +11,17 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 color-eyre = "0.6.3"
 sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs" ,"sqlite", "macros", "migrate", "chrono"] }
-
-common = {path = "../common"}
 criterion = { version = "0.6.0", features = ["async_tokio"] }
 async-recursion = "1.1.1"
 futures-util = "0.3.31"
 tokio-stream = { version = "0.1.17", features = ["sync"] }
 serde_json = "1.0.141"
-provider-types = {path = "../provider-types"}
 toml = "0.9.8"
 inventory = "0.3.21"
-recurring = {path = "../providers/recurring"}
+
+common = {workspace = true}
+providers = {workspace = true}
+recurring = {workspace = true}
 
 [[bench]]
 name = "task"
