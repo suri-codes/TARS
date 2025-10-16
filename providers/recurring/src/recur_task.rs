@@ -1,11 +1,8 @@
-use std::time::Duration;
-
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
-use color_eyre::eyre::eyre;
 use common::{
-    TarsClient, TarsResult,
-    types::{Group, Priority, Task},
+    TarsResult,
+    types::{Group, Priority},
 };
 use serde::{Deserialize, Serialize};
 
@@ -73,6 +70,7 @@ pub struct RecurringTask {
 }
 
 impl RecurringTask {
+    #[allow(dead_code)]
     fn canonicalize_group(&self) -> TarsResult<Option<Group>> {
         unimplemented!()
     }

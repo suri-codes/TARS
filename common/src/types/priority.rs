@@ -74,7 +74,9 @@ impl TryFrom<&str> for Priority {
             "F" => Ok(Priority::Far),
             "f" => Ok(Priority::Far),
 
-            _ => Err(ParseError::FailedToParse),
+            _ => Err(ParseError::new(format!(
+                "Failed to parse {value} as a valid Priority!"
+            ))),
         }
     }
 }

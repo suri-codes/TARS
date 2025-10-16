@@ -5,7 +5,7 @@ use color_eyre::owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-use crate::{TarsClient, TarsError};
+use crate::{TarsClient, TarsResult};
 
 use super::{Group, Id, Name, Priority};
 
@@ -60,7 +60,7 @@ impl Task {
         priority: Priority,
         description: impl Into<String>,
         due: Option<NaiveDateTime>,
-    ) -> Result<Self, TarsError> {
+    ) -> TarsResult<Self> {
         let created_at = Local::now().naive_local();
 
         let task = Self {
@@ -95,7 +95,7 @@ impl Task {
     ///
     /// This function will return an error if
     /// Something goes wrong with the requests to the Daemon.
-    pub async fn raw_create(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn raw_create(&self, client: &TarsClient) -> TarsResult<()> {
         let _: Task = client
             .conn
             .post(client.base_path.join("/task/create")?)
@@ -116,10 +116,7 @@ impl Task {
     ///
     /// This function will return an error if
     /// Something goes wrong with the requests to the Daemon.
-    pub async fn fetch(
-        client: &TarsClient,
-        opts: TaskFetchOptions,
-    ) -> Result<Vec<Task>, TarsError> {
+    pub async fn fetch(client: &TarsClient, opts: TaskFetchOptions) -> TarsResult<Vec<Task>> {
         let res: Vec<Task> = client
             .conn
             .post(client.base_path.join("task/fetch")?)
@@ -141,7 +138,7 @@ impl Task {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if the sync'd task doesnt match with `self`
-    pub async fn sync(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn sync(&self, client: &TarsClient) -> TarsResult<()> {
         let task: Task = client
             .conn
             .post(client.base_path.join("/task/update")?)
@@ -165,7 +162,7 @@ impl Task {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if deleted task doesnt match the task we wanted to delete.
-    pub async fn delete(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn delete(&self, client: &TarsClient) -> TarsResult<()> {
         let deleted_task: Task = client
             .conn
             .post(client.base_path.join("/task/delete")?)
@@ -183,7 +180,7 @@ impl Task {
     }
 
     /// Returns the p score of this [`Task`].
-    pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
+    pub async fn p_score(&self, client: &TarsClient) -> TarsResult<f64> {
         let score: f64 = client
             .conn
             .post(client.base_path.join("/task/score")?)

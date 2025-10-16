@@ -1,16 +1,12 @@
 use chrono::{Local, NaiveDateTime};
 use serde::{Deserialize, Serialize};
-use sqlx::Decode;
-use sqlx::{Database, Encode, Sqlite, Type};
 use std::fmt::Display;
 
 use color_eyre::owo_colors::OwoColorize;
 use tracing::error;
 
-use std::error::Error;
-
 use crate::types::{Color, Priority};
-use crate::{TarsClient, TarsError};
+use crate::{TarsClient, TarsResult};
 
 use super::{Id, Name};
 
@@ -56,7 +52,7 @@ impl Group {
         parent_id: Option<Id>,
         priority: Priority,
         color: Color,
-    ) -> Result<Self, TarsError> {
+    ) -> TarsResult<Self> {
         let created_at = Local::now().naive_local();
 
         let group =
@@ -84,7 +80,7 @@ impl Group {
     ///
     /// This function will return an error if
     /// Something goes wrong with the requests to the Daemon.
-    pub async fn raw_create(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn raw_create(&self, client: &TarsClient) -> TarsResult<()> {
         let _: Group = client
             .conn
             .post(client.base_path.join("/group/create")?)
@@ -105,7 +101,7 @@ impl Group {
     ///
     /// This function will return an error if
     /// Something goes wrong with the requests to the Daemon.
-    pub async fn fetch_all(client: &TarsClient) -> Result<Vec<Group>, TarsError> {
+    pub async fn fetch_all(client: &TarsClient) -> TarsResult<Vec<Group>> {
         let res: Vec<Group> = client
             .conn
             .get(client.base_path.join("/group")?)
@@ -126,7 +122,7 @@ impl Group {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if the sync'd `Group` doesnt match with `self`
-    pub async fn sync(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn sync(&self, client: &TarsClient) -> TarsResult<()> {
         let res: Group = client
             .conn
             .post(client.base_path.join("/group/update")?)
@@ -150,7 +146,7 @@ impl Group {
     /// This function will return an error if
     /// + Something goes wrong with the requests to the Daemon.
     /// + Will panic at runtime if deleted `Group` doesnt match the `Group` we wanted to delete.
-    pub async fn delete(&self, client: &TarsClient) -> Result<(), TarsError> {
+    pub async fn delete(&self, client: &TarsClient) -> TarsResult<()> {
         let deleted: Group = client
             .conn
             .post(client.base_path.join("/group/delete")?)
@@ -168,7 +164,7 @@ impl Group {
     }
 
     /// Returns the p score of this [`Group`].
-    pub async fn p_score(&self, client: &TarsClient) -> Result<f64, TarsError> {
+    pub async fn p_score(&self, client: &TarsClient) -> TarsResult<f64> {
         let score: f64 = client
             .conn
             .post(client.base_path.join("/group/score")?)
@@ -193,55 +189,5 @@ impl Display for Group {
         }
 
         Ok(())
-    }
-}
-
-// DB is the database driver
-// `'r` is the lifetime of the `Row` being decoded
-impl<'r, DB: Database> Decode<'r, DB> for Color
-where
-    // we want to delegate some of the work to string decoding so let's make sure strings
-    // are supported by the database
-    &'r str: Decode<'r, DB>,
-{
-    fn decode(
-        value: <DB as Database>::ValueRef<'r>,
-    ) -> Result<Color, Box<dyn Error + 'static + Send + Sync>> {
-        // the interface of ValueRef is largely unstable at the moment
-        // so this is not directly implementable
-
-        // however, you can delegate to a type that matches the format of the type you want
-        // to decode (such as a UTF-8 string)
-
-        let value = <&str as Decode<DB>>::decode(value)?;
-
-        // now you can parse this into your type (assuming there is a `FromStr`)
-
-        Ok(Color(value.parse()?))
-    }
-}
-
-impl<'q> Encode<'q, Sqlite> for Color {
-    fn encode(
-        self,
-        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
-    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError>
-    where
-        Self: Sized,
-    {
-        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode(self.0, buf)
-    }
-
-    fn encode_by_ref(
-        &self,
-        buf: &mut <Sqlite as Database>::ArgumentBuffer<'q>,
-    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
-        <std::string::String as sqlx::Encode<'_, Sqlite>>::encode_by_ref(&self.0, buf)
-    }
-}
-
-impl Type<Sqlite> for Color {
-    fn type_info() -> <Sqlite as Database>::TypeInfo {
-        todo!()
     }
 }

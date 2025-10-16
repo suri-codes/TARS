@@ -28,7 +28,13 @@ pub fn parse_date_time(possible_date: &str) -> Result<NaiveDateTime, ParseError>
     ) {
         date = parsed.and_hms_opt(23, 59, 59).unwrap()
     } else {
-        return Err(ParseError::FailedToParse);
+        return Err(ParseError::new(format!(
+            "{possible_date} is not in a valid format!!
+            support formats are:
+            %m/%d/%Y %H:%M:%S,
+            %m/%d/%Y            
+            "
+        )));
     }
     Ok(date)
 }

@@ -169,17 +169,10 @@ pub fn clap_parse_date(arg: &str) -> Result<Option<NaiveDateTime>, ParseError> {
 
     match parse_date_time(arg) {
         Ok(res) => Ok(Some(res)),
-        Err(_) => {
-            println!(
-                "{}",
-                "Unable to parse date, we support the following formats!
-%m/%d/%Y %H:%M:%S
-%m/%d/%Y
-%m/%d               "
-                    .magenta()
-            );
-
-            Err(ParseError::FailedToParse)
+        Err(e) => {
+            let str = e.to_string();
+            println!("{}", str.magenta());
+            Err(e)
         }
     }
 }

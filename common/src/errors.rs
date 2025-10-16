@@ -11,8 +11,14 @@ pub type TarsResult<T> = Result<T, TarsError>;
 
 #[derive(Error, Debug)]
 pub enum ParseError {
-    #[error("Failed to Parse")]
-    FailedToParse,
+    #[error("Parse error: {0}")]
+    Message(String),
+}
+
+impl ParseError {
+    pub fn new(msg: impl Into<String>) -> Self {
+        ParseError::Message(msg.into())
+    }
 }
 
 #[derive(Error, Debug)]

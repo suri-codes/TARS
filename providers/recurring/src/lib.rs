@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use color_eyre::eyre::eyre;
 use common::{TarsClient, types::Group};
 use provider_types::{ProviderRegistration, ProviderRuntime, RunResult};
 use serde::{Deserialize, Serialize};
@@ -38,8 +37,8 @@ impl ProviderRuntime for RecurringProvider {
     fn run(self, client: TarsClient) -> RunResult {
         Box::pin(async move {
             loop {
-                for event in self.config.events.iter() {
-                    let groups = Group::fetch_all(&client).await?;
+                for _event in self.config.events.iter() {
+                    let _groups = Group::fetch_all(&client).await?;
 
                     // let group =
                     //     groups

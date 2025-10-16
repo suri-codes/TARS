@@ -49,7 +49,7 @@ impl TarsConfig {
 
         let table: Table = config_as_str
             .parse()
-            .map_err(|_e| TarsError::Parse(ParseError::FailedToParse))?;
+            .map_err(|e| ParseError::new(format!("Unable to parse config as toml!: {}", e)))?;
 
         Ok(Some(table))
     }
