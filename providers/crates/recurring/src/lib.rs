@@ -14,6 +14,8 @@ mod recur_task;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecurringProviderConfig {
     tasks: Vec<RecurringTask>,
+    // TODO: work on the frequency inside the providers crate and use that here instead
+    // update_period: Duration,
 }
 
 /// A simple provider that can handle recurring events
@@ -34,35 +36,13 @@ impl ProviderRuntime for RecurringProvider {
         RECURRING_ID
     }
 
-    fn run(self, _client: TarsClient) -> RunResult {
+    fn run(self, client: TarsClient) -> RunResult {
         Box::pin(async move {
             loop {
-                for _event in self.config.tasks.iter() {
-                    // let _groups = Group::fetch_all(&client).await?;
-
-                    // let group =
-                    //     groups
-                    //         .iter()
-                    //         .find(|e| *e.name == event.group_name)
-                    //         .ok_or(eyre!(format!(
-                    //             "Group: {}, does not exist! unable to create event: {}",
-                    //             event.group_name, event.name
-                    //         )))?;
-
-                    // let task = Task::new(
-                    //     &client,
-                    //     group,
-                    //     event.name.clone(),
-                    //     event.priority,
-                    //     event.description.clone(),
-                    //     event.due,
-                    // )
-                    // .await?;
-                    // 3
-                    // 3
-
-                    // info!("{task:#?}");
+                for recur_task in self.config.tasks.iter() {
+                    recur_task.materialize_tasks(&client).await?;
                 }
+
                 sleep(Duration::from_secs(5)).await;
             }
         })

@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use chrono::NaiveDateTime;
 use common::{
-    TarsResult,
+    TarsClient, TarsResult,
     types::{Group, Priority},
 };
 use serde::{Deserialize, Serialize};
@@ -72,6 +72,11 @@ pub struct RecurringTask {
 impl RecurringTask {
     #[allow(dead_code)]
     fn canonicalize_group(&self) -> TarsResult<Option<Group>> {
+        unimplemented!()
+    }
+
+    #[allow(dead_code)]
+    pub async fn materialize_tasks(&self, client: &TarsClient) -> TarsResult<()> {
         unimplemented!()
     }
 }
