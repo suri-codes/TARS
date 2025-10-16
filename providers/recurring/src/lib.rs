@@ -79,19 +79,19 @@ inventory::submit! {
     ProviderRegistration {
         id: RECURRING_ID,
         create_and_run: |config: Value, client: TarsClient| -> RunResult{
-           Box::pin(async move {
+            Box::pin(async move {
 
-            info!("{config:#?}");
+                info!("{config:#?}");
 
-            let cfg: RecurringProviderConfig = config.try_into().inspect_err(|e|{
-                error!("{e}")
-            })?;
+                let cfg: RecurringProviderConfig = config.try_into().inspect_err(|e|{
+                    error!("{e}")
+                })?;
 
-            let recurring_provider = RecurringProvider::new(cfg);
+                let recurring_provider = RecurringProvider::new(cfg);
 
-            recurring_provider.run(client).await.inspect_err(|e|{
-                error!("{e}")
-            })
+                recurring_provider.run(client).await.inspect_err(|e|{
+                    error!("{e}")
+                })
 
             })
         }
