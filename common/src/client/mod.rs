@@ -4,7 +4,7 @@ use reqwest::{Client, ClientBuilder, Url};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    TarsError,
+    TarsResult,
     types::{Group, Id, Task},
 };
 /// Holds the reqwest `Client` and the base path for accessing the `TarsDaemon`
@@ -34,7 +34,7 @@ impl TarsClient {
     ///
     /// This function will return an error if .
     /// + Connecting to the daemon fails.
-    pub async fn new(base_url: String) -> Result<Self, TarsError> {
+    pub async fn new(base_url: String) -> TarsResult<Self> {
         let app_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
         let client = ClientBuilder::new().user_agent(app_agent).build()?;
 
@@ -44,7 +44,7 @@ impl TarsClient {
         })
     }
 
-    pub async fn default() -> Result<Self, TarsError> {
+    pub async fn default() -> TarsResult<Self> {
         TarsClient::new("http://127.0.0.1:42069".to_owned()).await
     }
 }

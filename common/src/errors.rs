@@ -7,6 +7,8 @@ use tokio::sync::broadcast::error::SendError;
 
 use crate::Diff;
 
+pub type TarsResult<T> = Result<T, TarsError>;
+
 #[derive(Error, Debug)]
 pub enum ParseError {
     #[error("Failed to Parse")]
