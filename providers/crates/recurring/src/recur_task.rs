@@ -71,7 +71,11 @@ pub struct RecurringTask {
 
 impl RecurringTask {
     #[allow(dead_code)]
-    fn canonicalize_group(&self) -> TarsResult<Option<Group>> {
+    async fn canonicalize_group(&self, client: &TarsClient) -> TarsResult<Option<Group>> {
+        let group_names: Vec<&str> = self.group_name.split('/').collect();
+
+        let groups = Group::fetch_all(client).await?;
+
         unimplemented!()
     }
 

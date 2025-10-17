@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use common::TarsClient;
-use providers::{ProviderRegistration, ProviderRuntime, RunResult};
+use providers::{Frequency, ProviderRegistration, ProviderRuntime, RunResult};
 use serde::{Deserialize, Serialize};
-use tokio::time::sleep;
+use tokio::time::{interval, sleep};
 use toml::Value;
 
 use tracing::{error, info};
@@ -14,8 +14,8 @@ mod recur_task;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecurringProviderConfig {
     tasks: Vec<RecurringTask>,
-    // TODO: work on the frequency inside the providers crate and use that here instead
-    // update_period: Duration,
+
+    update_frequency: Frequency,
 }
 
 /// A simple provider that can handle recurring events
@@ -38,12 +38,14 @@ impl ProviderRuntime for RecurringProvider {
 
     fn run(self, client: TarsClient) -> RunResult {
         Box::pin(async move {
+            let mut interval = interval(self.config.update_frequency.into());
+
             loop {
-                for recur_task in self.config.tasks.iter() {
+                interval.tick().await;
+
+                for recur_task in &self.config.tasks {
                     recur_task.materialize_tasks(&client).await?;
                 }
-
-                sleep(Duration::from_secs(5)).await;
             }
         })
     }

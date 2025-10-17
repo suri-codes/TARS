@@ -163,7 +163,6 @@ async fn fetch_task(
         } => {
             let tasks = if recursive {
                 let mut tasks: Vec<Task> = Vec::new();
-
                 recurse_group_fetch(&mut tasks, group_id, &state.pool).await?;
                 tasks
             } else {

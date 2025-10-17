@@ -25,7 +25,7 @@ async fn diff_handler(
             Ok(data) => {
                 let json = serde_json::to_string(&data).unwrap_or_default();
 
-                info!("sending: {json}");
+                info!("sending: {json:#?}");
 
                 Event::default().data(json)
             }
