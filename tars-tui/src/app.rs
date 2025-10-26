@@ -14,31 +14,7 @@ use common::{Diff, TarsClient};
 use crossterm::event::KeyEvent;
 use futures::StreamExt;
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
-    prelude::Rect,
-};
-use reqwest_eventsource::{Event as EsEvent, EventSource};
-use serde::{Deserialize, Serialize};
-use tokio::{
-    sync::{
-        RwLock,
-        mpsc::{self, UnboundedSender},
-        oneshot,
-    },
-    task::JoinHandle,
-};
-use tracing::{debug, error, info};
-
-use crate::{
-    action::{Action, Signal},
-    components::{Component, explorer::Explorer, inspector::Inspector, todo_list::TodoList},
-    config::Config,
-    tree::{TarsTree, TarsTreeHandle},
-    tui::{Event, Tui},
-};
-
-pub struct App {
-    config: Config,
+    layout::{Co
     tick_rate: f64,
     frame_rate: f64,
     components: Vec<Box<dyn Component>>,
@@ -67,26 +43,7 @@ pub enum Mode {
 
 impl From<Mode> for u8 {
     fn from(value: Mode) -> Self {
-        match value {
-            Mode::Explorer => 1,
-            Mode::TodoList => 2,
-            Mode::Inspector => 3,
-        }
-    }
-}
-
-impl App {
-    pub async fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
-        let (signal_tx, signal_rx) = mpsc::unbounded_channel();
-        let client = TarsClient::default().await.unwrap();
-
-        let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));
-
-        let app = Self {
-            tick_rate,
-            frame_rate,
-            components: vec![
-                Box::new(Explorer::new(&client, tree.clone()).await?),
+w(&client, tree.clone()).await?),
                 Box::new(TodoList::new(&client, tree.clone()).await?),
                 Box::new(Inspector::new(&client, tree.clone()).await?),
             ],
