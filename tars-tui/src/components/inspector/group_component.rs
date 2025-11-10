@@ -381,8 +381,8 @@ impl Component for GroupComponent<'_> {
             Direction::Vertical,
             [
                 Constraint::Percentage(15), // name
-                Constraint::Percentage(15), // color
-                Constraint::Percentage(15), // priority
+                Constraint::Percentage(20), // color
+                Constraint::Percentage(20), // priority
             ],
         )
         .split(area);

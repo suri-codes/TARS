@@ -4,6 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::{Constraint, Direction, Layout, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::info;
 use tui_scrollview::{ScrollView, ScrollbarVisibility};
 
 use crate::{
@@ -24,6 +25,7 @@ pub struct TodoList<'a> {
     signal_tx: Option<UnboundedSender<Signal>>,
     config: Config,
     state: State<'a>,
+    client: TarsClient,
     _tree_handle: TarsTreeHandle,
 }
 
@@ -41,6 +43,7 @@ impl<'a> TodoList<'a> {
         Ok(Self {
             signal_tx: Default::default(),
             config: Default::default(),
+            client: client.clone(),
             _tree_handle: tree_handle.clone(),
             state,
         })
@@ -55,6 +58,7 @@ impl<'a> TodoList<'a> {
 impl Component for TodoList<'_> {
     async fn init(
         &mut self,
+
         _area: ratatui::prelude::Size,
         default_mode: Mode,
     ) -> color_eyre::eyre::Result<()> {
@@ -113,9 +117,26 @@ impl Component for TodoList<'_> {
                     return Ok(None);
                 }
 
+                info!("handling action:{action:#?}");
+
                 let tasks = self.state.get_tasks();
                 let sel_idx = *self.state.get_selected_idx();
                 match action {
+                    // we listen to toggle finish task but we dont actually toggle since it
+                    // must be completed at this point, and then we move to the next task
+                    Action::ToggleFinishTask => {
+                        let (id, mut task, _) =
+                            tasks.get(sel_idx).cloned().expect("this task must exist");
+                        info!("inside action handler:{action:#?}");
+
+                        // we finish the task and move down
+
+                        task.toggle_finish(&self.client).await?;
+
+                        self.state.calculate_draw_info().await?;
+
+                        Ok(Some(Signal::Action(Action::MoveDown)))
+                    }
                     Action::MoveDown => {
                         if let Some((next_id, _, _)) = tasks.get(sel_idx + 1) {
                             let next_id = next_id.clone();

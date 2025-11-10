@@ -6,7 +6,7 @@ use common::{
 };
 use crossterm::event::{KeyCode, KeyEvent};
 use id_tree::NodeId;
-use ratatui::layout::{Constraint, Direction, Layout, Size};
+use ratatui::layout::{Constraint, Direction, Layout, Position, Size};
 use state::State;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, info};
@@ -295,23 +295,50 @@ impl<'a> Component for Explorer<'a> {
                     }
                     Action::MoveUp => {
                         let render_list = self.state.generate_render_list().await;
-                        let tree = self.tree_handle.read().await;
                         let sel_idx = *self.state.get_selected_idx();
-                        if let Some((prev_id, _)) = render_list.get({
+                        if let Some((prev_id, _)) = render_list.get(sel_idx.saturating_sub(1)) {
                             let offset = self.state.scroll_state.offset().y as usize;
                             if sel_idx - offset < self.config.config.scroll_offset as usize {
                                 self.state.scroll_state.scroll_up();
                             }
+                            self.state.set_selection(prev_id.clone()).await;
+                            return Ok(Some(Signal::Select(prev_id.clone())));
+                        }
 
-                            let Some(i) = sel_idx.checked_sub(1) else {
-                                return Ok(None);
-                            };
-                            i
+                        Ok(None)
+                    }
+
+                    Action::MovePageDown => {
+                        let render_list = self.state.generate_render_list().await;
+                        let sel_idx = *self.state.get_selected_idx();
+
+                        if let Some((next_id, _)) = render_list.get(sel_idx + 10) {
+                            let target_offset = Position::new(
+                                0,
+                                (sel_idx as u16 + 10).saturating_sub(self.state.frame_height / 2),
+                            );
+                            self.state.scroll_state.set_offset(target_offset);
+
+                            self.state.set_selection(next_id.clone()).await;
+                            return Ok(Some(Signal::Select(next_id.clone())));
+                        }
+                        Ok(None)
+                    }
+                    Action::MovePageUp => {
+                        let render_list = self.state.generate_render_list().await;
+                        let sel_idx = *self.state.get_selected_idx();
+
+                        if let Some((prev_id, _)) = render_list.get({
+                            // we cant do saturating sub here because if the result is zero we would set it to the root node
+                            sel_idx.saturating_sub(10)
                         }) {
-                            if tree.root_node_id().unwrap() == prev_id {
-                                return Ok(None);
-                            }
-
+                            let target_offset = Position::new(
+                                0,
+                                (sel_idx as u16)
+                                    .saturating_sub(10)
+                                    .saturating_sub(self.state.frame_height / 2),
+                            );
+                            self.state.scroll_state.set_offset(target_offset);
                             self.state.set_selection(prev_id.clone()).await;
                             return Ok(Some(Signal::Select(prev_id.clone())));
                         }

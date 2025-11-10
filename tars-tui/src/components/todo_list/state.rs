@@ -17,7 +17,7 @@ pub struct State<'a> {
     pub active: bool,
     scope: NodeId,
     selection: Selection,
-    pub tree_handle: TarsTreeHandle,
+    tree_handle: TarsTreeHandle,
     client: TarsClient,
     draw_info: Option<DrawInfo<'a>>,
     tasks: Vec<(NodeId, Task, f64)>,

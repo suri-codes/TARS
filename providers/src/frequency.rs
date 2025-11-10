@@ -14,6 +14,14 @@ pub enum Frequency {
 
 impl From<Frequency> for Duration {
     fn from(value: Frequency) -> Self {
+        // this is too simplistic, think about how we actually want to set this up
+        //
+        // because we ideally want to refresh on like set times
+        //
+        // think about scenarios where we are opening and closing the
+        //
+        // application a lot, we dont want to spam providers
+
         let secs = match value {
             Frequency::Second => 1,
 

@@ -2,7 +2,6 @@
 scroll_offset = 4
 [keybindings.Explorer]
 "<q>" = "Quit"  # Quit the application
-"<Ctrl-d>" = "Quit"  # Another way to quit
 "<Ctrl-c>" = "Quit"  # Yet another way to quit
 "<Ctrl-z>" = "Suspend"  # Suspend the application
 "<2>" = { SwitchTo = "TodoList" }
@@ -14,6 +13,9 @@ scroll_offset = 4
 "<Shift-g>" = "NewGroup"
 "j" = "MoveDown"
 "k" = "MoveUp"
+"<Ctrl-d>" = "MovePageDown"
+"<Ctrl-u>" = "MovePageUp"
+
 "l" = "MoveInto"
 "h" = "MoveOutOf"
 
@@ -26,6 +28,7 @@ scroll_offset = 4
 "<3>" = { SwitchTo = "Inspector" }
 "j" = "MoveDown"
 "k" = "MoveUp"
+"f" = "ToggleFinishTask"
 
 [keybindings.Inspector]
 "<q>" = "Quit"  # Quit the application

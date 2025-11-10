@@ -108,7 +108,7 @@ impl From<&Task> for StaticDrawInfo<'_> {
             Direction::Vertical,
             [
                 Constraint::Percentage(15), // name
-                Constraint::Percentage(15), // group | Priority
+                Constraint::Percentage(20), // group | Priority
                 Constraint::Percentage(50), // Description
                 Constraint::Percentage(15), // completion | Due
             ],
@@ -277,18 +277,21 @@ impl Component for TaskComponent<'_> {
                     }
 
                     Action::ToggleFinishTask => {
-                        if self.task.finished_at.is_some() {
-                            self.task.finished_at = None;
-                        } else {
-                            let current_time = {
-                                let now = Local::now();
-                                now.naive_local()
-                            };
+                        // if self.task.finished_at.is_some() {
+                        //     self.task.finished_at = None;
+                        // } else {
+                        //     let current_time = {
+                        //         let now = Local::now();
+                        //         now.naive_local()
+                        //     };
 
-                            self.task.finished_at = Some(current_time);
-                        }
+                        //     self.task.finished_at = Some(current_time);
+                        // }
+                        //
+                        self.task.toggle_finish(&self.client).await?;
 
-                        self.sync().await.map(|_| None)
+                        self.on_update = OnUpdate::ReRender;
+                        Ok(None)
                     }
                     Action::EditDue => {
                         self.reactive_widgets.due.activate();

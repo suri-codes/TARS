@@ -155,6 +155,21 @@ impl Task {
         Ok(())
     }
 
+    pub async fn toggle_finish(&mut self, client: &TarsClient) -> TarsResult<()> {
+        if self.finished_at.is_some() {
+            self.finished_at = None;
+        } else {
+            let current_time = {
+                let now = Local::now();
+                now.naive_local()
+            };
+
+            self.finished_at = Some(current_time);
+        };
+
+        self.sync(client).await
+    }
+
     /// Deletes this `Task` via the `TarsDaemon`.
     ///
     /// # Errors
