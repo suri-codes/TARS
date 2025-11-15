@@ -123,10 +123,10 @@ impl Task {
             .json(&opts)
             .send()
             .await
-            .inspect_err(|e| error!("Error creating Task: {:?}", e))?
+            .inspect_err(|e| error!("Error fetching Task: {:?}", e))?
             .json()
             .await
-            .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
+            .inspect_err(|e| error!("Error fetching Task: {:?}", e))?;
 
         Ok(res)
     }
@@ -145,10 +145,10 @@ impl Task {
             .json(&self)
             .send()
             .await
-            .inspect_err(|e| error!("Error creating Task: {:?}", e))?
+            .inspect_err(|e| error!("Error syncing Task: {:?}", e))?
             .json()
             .await
-            .inspect_err(|e| error!("Error creating Task: {:?}", e))?;
+            .inspect_err(|e| error!("Error syncing Task: {:?}", e))?;
 
         // make sure that its actually sync'd
         assert_eq!(*self, task);
@@ -205,7 +205,7 @@ impl Task {
             .inspect_err(|e| error!("Error fetching score for Task: {:?}", e))?
             .json()
             .await
-            .inspect_err(|e| error!("Error parsing score for Task: {:?}", e))?;
+            .inspect_err(|e| error!("Error parsing score for Task: {self:?}, error: {:?}", e))?;
 
         Ok(score)
     }

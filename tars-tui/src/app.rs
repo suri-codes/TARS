@@ -78,6 +78,7 @@ impl From<Mode> for u8 {
 impl App {
     pub async fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
         let (signal_tx, signal_rx) = mpsc::unbounded_channel();
+
         let client = TarsClient::default().await.unwrap();
 
         let tree = Arc::new(RwLock::new(TarsTree::generate(&client).await?));

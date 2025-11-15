@@ -400,6 +400,7 @@ impl Component for TaskComponent<'_> {
 
                             let entered_date_str =
                                 self.reactive_widgets.due.textarea.lines()[0].as_str();
+
                             let Some(block) = self.reactive_widgets.due.textarea.block().cloned()
                             else {
                                 return Ok(None);

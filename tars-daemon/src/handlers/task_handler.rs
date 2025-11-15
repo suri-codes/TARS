@@ -457,6 +457,7 @@ pub async fn calculate_task_score(
 
         // (e/3)^(delta (in days)) + prio
         let today = today.fixed_offset();
+
         let difference = (due - today).num_minutes() as f64 / 1440.0;
 
         let e = std::f64::consts::E / 3.0;
