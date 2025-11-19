@@ -47,8 +47,6 @@ pub enum GroupSubcommand {
 #[derive(Debug, Args)]
 pub struct ExportArgs {
     #[arg(short, long, default_value = "./tars.json")]
-            let (s_key, v_key) = SigningKey::new_keypair(&SigningScheme::Ecdsa, Default::default())
-                .expect("should have worked");
     /// The file-path for data to pe put into.
     pub out_file: PathBuf,
 }

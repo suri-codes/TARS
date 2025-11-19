@@ -10,7 +10,7 @@ pub use group::*;
 pub use id::*;
 pub use name::*;
 pub use priority::*;
-ub use task::*;
+pub use task::*;
 
 use crate::ParseError;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, Utc};
@@ -25,8 +25,9 @@ pub fn parse_date_time(possible_date: &str) -> Result<NaiveDateTime, ParseError>
     ];
 
     let formats_date = [
-        "%m/%d/%Y",   // 12/02/2025
         "%-m/%-d/%y", // 12/2/25
+        "%-m/%d/%y",  // 12/2/25
+        "%m/%d/%Y",   // 12/02/2025
         "%-m/%-d/%Y", // 12/2/2025
     ];
 
