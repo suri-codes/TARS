@@ -29,6 +29,14 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
 
+# ARCHIVED
+
+Thanks for checking this project out, and it's not dead!
+I'm focusing on an offline-first, multidevice version of tars with an
+accompanying iOS app, and decided that a ground up rewrite would be the best
+for the project. The reboot of the project can be found
+[here](https://github.com/suri-codes/filaments).
+
 
 <!-- PROJECT LOGO -->
 <br />
